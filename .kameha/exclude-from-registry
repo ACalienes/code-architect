@@ -1,0 +1,4 @@
+# Paths excluded from CA registry walks (one path per line; comments via #).
+# Populated when test-fixtures or synthetic agents need to be excluded
+# from manifest-validator and registry scans.
+test-fixtures/

@@ -1,0 +1,19 @@
+{
+  "name": "code-architect",
+  "version": "0.1.0",
+  "description": "Engineering capacity for the Kameha mesh — plans, implements, audits cross-agent changes.",
+  "main": "scripts/code-architect.js",
+  "type": "commonjs",
+  "bin": {
+    "code-architect": "scripts/code-architect.js"
+  },
+  "scripts": {
+    "memory-doctor": "node scripts/lib/memory-doctor.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "author": "Alex Calienes",
+  "license": "UNLICENSED",
+  "private": true
+}
