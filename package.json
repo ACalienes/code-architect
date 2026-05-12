@@ -8,7 +8,9 @@
     "code-architect": "scripts/code-architect.js"
   },
   "scripts": {
-    "memory-doctor": "node scripts/lib/memory-doctor.js"
+    "test": "node --test test/*.test.js",
+    "memory-doctor": "node scripts/lib/memory-doctor.js",
+    "ci-check": "node --test test/*.test.js && node scripts/lib/memory-doctor.js --skip-integrity"
   },
   "engines": {
     "node": ">=20"

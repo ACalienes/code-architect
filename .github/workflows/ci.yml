@@ -1,0 +1,31 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-and-doctor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # No npm install — zero deps for now. If/when we add deps, switch to:
+      #   - run: npm ci
+      #   with: actions/cache@v4 keyed on package-lock.json
+
+      - name: Run tests
+        run: node --test test/*.test.js
+
+      # Source-integrity check (SHA-256 drift detection) is skipped in CI
+      # because ~/.code-architect/source-hashes.json is local-only state
+      # (laptop where methodology.md was distilled). Re-distill happens
+      # there; CI enforces caps only.
+      - name: memory-doctor (caps only)
+        run: node scripts/lib/memory-doctor.js --skip-integrity
