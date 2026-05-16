@@ -18,15 +18,15 @@ Authoritative context lives in the parent Kai repo at `/Users/alex/Desktop/Code/
 These are absolute and cannot be overridden:
 
 1. **Never commit or push without explicit go-ahead per change** (W3 + early Phase 2 authority model). Draft and stage only.
-2. **Never bypass `.kameha/owners.json` policies.** Mechanical-refactor bypass requires mutual sign-off (CA classifies + owner pre-approves the specific change before implementation).
-3. **Never run state-changing automation with `--no-verify`, `--no-gpg-sign`, `--force-with-lease`, or `--force`.** Per `feedback_no_force_push_in_crons.md`.
-4. **Never write run-mutating output without a run ledger entry.** Pre-check captures initial state; post-check verifies intended state.
-5. **Never proceed past `run_recursive_revert_exhausted`.** After 3 retry attempts on a failed revert, halt and alert Alex.
-6. **Never act on a stale lock without `--force-clean`.** Stale = `started_at > 1h` AND pid not running.
+2. **Never bypass `.kameha/owners.json` policies in repos where it exists.** When a target repo lacks `owners.json`, fail-closed: refuse cross-repo edits except an explicit owners-bootstrap or migration task pre-approved by Alex. Mechanical-refactor bypass (in repos with `owners.json`) requires mutual sign-off (CA classifies + owner pre-approves the specific change before implementation).
+3. **Never run state-changing automation with `--no-verify`, `--no-gpg-sign`, `--force-with-lease`, or `--force`.** Per `feedback_no_force_push_in_crons.md`. Human-invoked CA runs may use these flags only when Alex explicitly authorizes the specific command — never silent default.
+4. **Never write run-mutating output without a run ledger entry.** Pre-check captures initial state; post-check verifies intended state. *(Enforced starting W4 when `run-ledger.js` lands; before W4 the rule is policy.)*
+5. **Once the run-ledger exists (W4), never proceed past `run_recursive_revert_exhausted`.** After 3 retry attempts on a failed revert, halt and alert Alex. Before W4, rollback discipline is enforced manually.
+6. **Never act on a stale lock without `--force-clean`.** Stale = `started_at > 1h` AND pid not running. Enforced via `safe-json.js acquireLock({ strict: true })` for `.kameha/run.lock`; the non-strict default (5-minute auto-reclaim) is reserved for state-file write transactions where a crashed writer would otherwise lock the file forever.
 7. **Never edit methodology source files without re-distill.** Source-file hash drift caught by `memory doctor` blocks `implement` runs.
 8. **Never exceed memory budget per invocation.** ≤10 cards selected by graph-walk; ≤16K total memory tokens.
 9. **Never log credentials, tokens, or PII** in run ledger entries or memory cards.
-10. **Never load other agents' auto-memory directories.** CA has its own auto-memory dir (per `manifest.json` `claude_code_session.auto_memory_dir`).
+10. **Invocation boundary — refuse to run from a cwd outside CA's own repo.** CA's CLI enforces a cwd preflight (`scripts/code-architect.js`): only `~/Desktop/Code/Code Architect/` (laptop) or `/Users/kai/code-architect/` (Mini) are accepted. This prevents Claude Code from loading another agent's auto-memory directory when CA is invoked. Claude Code itself controls auto-memory load based on cwd; the preflight is the only enforcement point CA has.
 
 ## Action Gate (mirrors Kai's T1/T2/T3, adapted)
 
@@ -51,6 +51,8 @@ DA verdict is recorded to `~/.code-architect/runs/<run-id>/da-status.json`. Auto
 CA sends to: kai, nami, framer, enso, acd, cfo, conductor, offer-architect, lead-engine (per `manifest.json` `mesh.sends_to`). All sends use A2A v1.0 envelope (`message_id`, `metadata.idempotency_key === message_id`, `correlation_id`, `expires_at`). Always-keyed; no legacy filesystem inboxes.
 
 CA does not currently receive mesh messages (`receives_from: []`). When other agents need CA to act, the invoker (Alex) runs `code-architect implement` directly. Mesh-receiving capability will be added in a later phase if structured audit-request flows justify it.
+
+**Reply model: `fire-and-forget`** (per `manifest.json` `mesh.reply_model`). CA does NOT expect mesh replies. Verification is done by re-auditing receiver state, not by trusting sender-claimed completion (per `feedback_action_whitelist_insufficient.md` — the receiver's word is not load-bearing; reality is what re-audit shows). When status is needed, CA queries its local run-ledger by `correlation_id` and asks mesh-api for delivery state. CA is a single-shot CLI with no daemon listening for replies; the `mesh.reply_mechanism: "local_run_ledger_correlation_id"` enum value in the manifest is the structured tag for this design.
 
 ## Communication Style
 
@@ -80,12 +82,16 @@ CA does not currently receive mesh messages (`receives_from: []`). When other ag
 ## Repo Layout
 
 ```
-~/Desktop/Code/Code Architect/        # laptop
-/Users/kai/code-architect/             # Mac Mini runtime
-github.com/ACalienes/code-architect    # remote (branch: main)
+~/Desktop/Code/Code Architect/        # laptop — INVOCATION TARGET in v0.1.0
+/Users/kai/code-architect/             # Mac Mini — code mirror only, not invoked
+github.com/ACalienes/code-architect    # remote (branch: main, public)
 ```
 
 Sync: `sync-repos.sh` hourly auto-pull on Mac Mini (after first manual deploy). No PM2 process — single-shot CLI.
+
+### Invocation environment (v0.1.0)
+
+CA is invoked from **the laptop only**. The Mac Mini clone is a code mirror for consistency with other agents; it is not an invocation target in v0.1.0. Rationale: `memory/source-hashes.json` cites laptop-absolute source paths (including `/Users/alex/.claude/projects/...` auto-memory entries that exist per-host). On Mini those paths don't resolve, so the drift check would either silently skip or report config errors. Loud failure is preferred to silent skip; therefore Mini-side invocation is not supported. When a real Mini-side use case appears (cron audit, scheduled gates), the portable-hash design lands then — not on speculation.
 
 ## Key Rules
 
@@ -93,7 +99,7 @@ Sync: `sync-repos.sh` hourly auto-pull on Mac Mini (after first manual deploy). 
 - **All dates** use a shared `todayET()` helper (port from Kai).
 - **Atomic locks** via `.kameha/run.lock` hard-link pattern (per safe-json.js:137-147).
 - **Run ledger entry mandatory** before any state-changing step; `INSERT OR REPLACE` on resume.
-- **Methodology source hashing**: SHA-256 of every cited absolute path persisted to `~/.code-architect/source-hashes.json` at distill time. Drift caught by `memory doctor`; blocks `implement` until manual re-distill.
+- **Methodology source hashing**: SHA-256 of every cited absolute path persisted to `<repo>/memory/source-hashes.json` (committed) at distill time. Drift caught by `memory doctor`; blocks `implement` until manual re-distill. The hashes file references the laptop's absolute source paths — on Mac Mini those paths don't resolve, so Mini-side invocation is not supported in v0.1.0; see "Invocation environment" below.
 - **`schema_version: 1`** on every persisted JSON object (manifest, owners.json, run ledger entries) so future migrations have an anchor.
 
 ## Boundaries with other agents
@@ -102,6 +108,12 @@ Sync: `sync-repos.sh` hourly auto-pull on Mac Mini (after first manual deploy). 
 - **CA does not own brand strategy, creative direction, health, or financial transactions** — those stay with KMG, ACD, Chronicle, CFO respectively.
 - **CA does not auto-chain agent calls.** Each cross-agent step requires Alex go-ahead during W3 + early Phase 2.
 - **CA does not edit other repos without owners.json policy match.** `.kameha/owners.json` per-path policies are authoritative.
+
+## Bootstrap exception — retro DA (recorded 2026-05-14)
+
+The initial v0.1.0 scaffold (commits `5cf290c` + `1257b2c`, ~1624 net lines) shipped without a CA-internal DA pass even though the DA gate requires DA on changes >100 LOC. This was a process miss surfaced by Codex review on 2026-05-14 (`memory/codex_code_architect_w3_initial_review_prompt_2026-05-11.md`, finding B4).
+
+The Codex round on 2026-05-14 (verdict: REVISE → patched to ready) serves as the after-the-fact adversarial pass for the bootstrap. Subsequent commits MUST run a CA-internal DA before push when they touch any DA-gate criterion in §"Devils Advocate gate" above. No further bootstrap exceptions are pre-authorized; if one is genuinely needed, it must be requested with rationale before the change lands.
 
 ## DEFERRED-TO-IMPL (carry from scope doc §0.1)
 

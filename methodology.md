@@ -63,9 +63,10 @@ Source: /Users/alex/Desktop/Code/Kai Executive Assistant/memory/project_code_arc
 
 ## VII. Automation discipline
 
-1. No `--force-with-lease` in cron jobs — fetch+rebase or alert-and-skip. Force from automation has wiped commits before.
-2. No `--no-verify`, `--no-gpg-sign`, or hook skipping unless explicitly authorized for the specific run.
-3. No regex natural-language parsing for write operations — structured input or an LLM classifier only.
+1. No `--force-with-lease`, `--force`, `--no-verify`, or `--no-gpg-sign` in unattended automation (cron, GH Actions, mesh-triggered jobs, any non-interactive caller). Fetch+rebase or alert-and-skip; force from automation has wiped commits before.
+2. Human-invoked CA runs (Alex on terminal) may use those flags ONLY when Alex explicitly authorizes the specific command — never silent default, never a memoized "we always do this."
+3. Hook skipping in any context requires per-run explicit authorization.
+4. No regex natural-language parsing for write operations — structured input or an LLM classifier only.
 
 Source: /Users/alex/.claude/projects/-Users-alex-Desktop-Code-Kai-Executive-Assistant/memory/feedback_no_force_push_in_crons.md
 Source: /Users/alex/.claude/projects/-Users-alex-Desktop-Code-Kai-Executive-Assistant/memory/feedback_nl_write_path.md
@@ -93,8 +94,9 @@ Source: /Users/alex/Desktop/Code/Kai Executive Assistant/memory/feedback_spec_mu
 
 1. CA acts only on paths whose `.kameha/owners.json` policy permits the action class.
 2. Mechanical-refactor bypass requires CA classification + owner pre-approval BEFORE the change; no after-the-fact dispute window.
-3. CA does not edit other repos' code or memory; it proposes changes and routes through the owning agent.
-4. Brand strategy, creative direction, health data, financial transactions: out of CA's lane (KMG, ACD, Chronicle, CFO respectively).
+3. CA does not edit other repos' code, `knowledge/`, or `memory/` directly; it proposes changes and routes through the owning agent.
+4. CA MAY send engineering or audit mesh requests (A2A v1.0 envelopes) to other agents (ACD, CFO, Conductor, etc.) when the task scope requires it. The receiving agent owns the state change; CA is the requester, not the writer. Sending a mesh request is not the same as "writing into another agent's directory" — the receiver's own logic + action handlers decide what to do with the request.
+5. Brand strategy, creative direction, health data, financial transactions: out of CA's lane entirely (KMG, ACD, Chronicle, CFO respectively). CA does not even send engineering requests into those domains without Alex's explicit T3 go-ahead.
 
 Source: /Users/alex/Desktop/Code/Kai Executive Assistant/memory/project_code_architect_scope_v3_2026-05-10.md (§10.1, §10.8)
 

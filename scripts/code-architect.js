@@ -7,10 +7,36 @@
  */
 
 const path = require('path');
+const fs = require('fs');
 const { spawnSync } = require('child_process');
 const pkg = require('../package.json');
 
+// Invocation boundary (CLAUDE.md hard boundary #10): refuse to run from a
+// cwd outside CA's own repo. Prevents Claude Code from loading another
+// agent's auto-memory dir when CA is invoked from elsewhere.
+//
+// The check uses the script's own path resolved to its package root, then
+// compares it to process.cwd(). Skipped for --help/--version so a
+// `code-architect --help` from anywhere still works as a doc query.
+const REPO_ROOT = path.resolve(__dirname, '..');
+
 const args = process.argv.slice(2);
+const isDocOnlyInvocation =
+  args.length === 0 ||
+  args[0] === '--help' || args[0] === '-h' ||
+  args[0] === '--version' || args[0] === '-v';
+
+if (!isDocOnlyInvocation) {
+  const cwdReal = fs.realpathSync(process.cwd());
+  const repoReal = fs.realpathSync(REPO_ROOT);
+  if (cwdReal !== repoReal && !cwdReal.startsWith(repoReal + path.sep)) {
+    console.error(`code-architect: refusing to run from ${cwdReal}`);
+    console.error(`  CA must be invoked from inside its own repo: ${repoReal}`);
+    console.error(`  This prevents loading another agent's auto-memory directory.`);
+    console.error(`  See CLAUDE.md hard boundary #10.`);
+    process.exit(77); // EX_NOPERM
+  }
+}
 
 function usage() {
   console.log(`code-architect ${pkg.version}

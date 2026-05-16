@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "distilled_at": "2026-05-11T23:58:00Z",
+  "distilled_by": "alex",
+  "methodology_path": "/Users/alex/Desktop/Code/Code Architect/methodology.md",
+  "algorithm": "sha256",
+  "sources": [
+    {
+      "path": "/Users/alex/Desktop/Code/Kai Executive Assistant/CLAUDE.md",
+      "sha256": "737c29b266841df808c78c1b7d01adfd6f76485aaa205c7e6cef776a6399f710",
+      "cited_in_sections": ["I"]
+    },
+    {
+      "path": "/Users/alex/.claude/projects/-Users-alex-Desktop-Code-Kai-Executive-Assistant/memory/feedback_implementation_rigor.md",
+      "sha256": "61de8367f8d9fcc36f48ffd79b8d048456d0a071cb4c8126d12815035d007322",
+      "cited_in_sections": ["II", "IV"]
+    },
+    {
+      "path": "/Users/alex/.claude/projects/-Users-alex-Desktop-Code-Kai-Executive-Assistant/memory/feedback_test_safety_nets_by_triggering.md",
+      "sha256": "bd3c2bdaa55329130507285a284e1be3423b617adfcc70d78f64216c78a32ddb",
+      "cited_in_sections": ["II"]
+    },
+    {
+      "path": "/Users/alex/Desktop/Code/Kai Executive Assistant/memory/sender-migration-spec-2026-05-08.md",
+      "sha256": "3e14e67048766b8c88304c8107d78353b9497777971e0dfe3ee12ceca573fb47",
+      "cited_in_sections": ["III"]
+    },
+    {
+      "path": "/Users/alex/.claude/projects/-Users-alex-Desktop-Code-Kai-Executive-Assistant/memory/feedback_action_whitelist_insufficient.md",
+      "sha256": "315166e763b0ab338d6b93bb040becf43ed97447d617088108aea8b0af1c5883",
+      "cited_in_sections": ["III"]
+    },
+    {
+      "path": "/Users/alex/Desktop/Code/Kai Executive Assistant/memory/feedback_spec_must_match_live_enforcement.md",
+      "sha256": "d4b5520d832883ec9032709eeca6c5b5f88efe282f2dca0a9b445cae1cb80bff",
+      "cited_in_sections": ["III", "IX"]
+    },
+    {
+      "path": "/Users/alex/.claude/projects/-Users-alex-Desktop-Code-Kai-Executive-Assistant/memory/feedback_mac_mini_identity_separation.md",
+      "sha256": "6ae8af22c4599ba491f6e29c27767d55909379ac46d070dab3b7e06acd82a541",
+      "cited_in_sections": ["V"]
+    },
+    {
+      "path": "/Users/alex/.claude/projects/-Users-alex-Desktop-Code-Kai-Executive-Assistant/memory/feedback_node_v24.md",
+      "sha256": "ee909eac3e9584c2bdf33941241916e3a53cd771ebb3a088662f531dcc7fb0f0",
+      "cited_in_sections": ["V"]
+    },
+    {
+      "path": "/Users/alex/Desktop/Code/Kai Executive Assistant/memory/project_code_architect_scope_v3_2026-05-10.md",
+      "sha256": "e2997891d42a405f152a42797ff88928c0f4bea051191e94395d0043b2607253",
+      "cited_in_sections": ["VI", "X", "XI"]
+    },
+    {
+      "path": "/Users/alex/.claude/projects/-Users-alex-Desktop-Code-Kai-Executive-Assistant/memory/feedback_no_force_push_in_crons.md",
+      "sha256": "f354c9eba8b66f00603be8f3e25799b40fbdfd4577156583ab84471424c3a6ce",
+      "cited_in_sections": ["VII"]
+    },
+    {
+      "path": "/Users/alex/.claude/projects/-Users-alex-Desktop-Code-Kai-Executive-Assistant/memory/feedback_nl_write_path.md",
+      "sha256": "795ca22a95f0fcb8f220e652428882afdb8da2c9aac3b60e2e310d329b79b5d7",
+      "cited_in_sections": ["VII"]
+    },
+    {
+      "path": "/Users/alex/.claude/projects/-Users-alex-Desktop-Code-Kai-Executive-Assistant/memory/feedback_design_discipline.md",
+      "sha256": "c105a9f5aa391f767cf4a274f4f2ad231e2e7466f932d12aaf794f113204c585",
+      "cited_in_sections": ["VIII"]
+    },
+    {
+      "path": "/Users/alex/.claude/projects/-Users-alex-Desktop-Code-Kai-Executive-Assistant/memory/feedback_da_standard.md",
+      "sha256": "f4e70df9dfd0d22ffd51c59880e9abc53492f213bf4c969fddd4782b0c59d1ef",
+      "cited_in_sections": ["VIII"]
+    },
+    {
+      "path": "/Users/alex/.claude/projects/-Users-alex-Desktop-Code-Kai-Executive-Assistant/memory/feedback_verify_before_recommending.md",
+      "sha256": "26cdfb31fc8e183c5305e141759e33e42a1738d92f4350f915c6863887f3297e",
+      "cited_in_sections": ["IX"]
+    }
+  ]
+}

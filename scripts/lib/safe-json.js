@@ -123,15 +123,26 @@ function safeWriteJSON(filePath, data, opts = {}) {
  * Protocol:
  *   1. Write owner token ({pid, time, nonce}) to a unique tmp file
  *   2. link(tmp, lockPath) — atomic; fails EEXIST if lock is held
- *   3. On EEXIST, check staleness via filesystem mtime; if stale, reclaim once
+ *   3. On EEXIST, in non-strict mode check staleness via filesystem mtime
+ *      and reclaim once if `ageMs > staleMs`. In strict mode never reclaim;
+ *      the caller is expected to require `--force-clean` for stale locks.
  *   4. Verify lockPath contents match our token after link (defense in depth)
  *
  * Boolean return; the owner token is stashed in _activeLocks so releaseLock
  * can verify ownership and avoid the "late release deletes newer owner's lock"
  * bug.
+ *
+ * Strict mode (`opts.strict === true`) is the right setting for the CA run
+ * ledger at `.kameha/run.lock`: a held lock represents an in-flight run and
+ * must NOT be silently reclaimed — manual `--force-clean` is required so the
+ * operator decides whether the previous run is truly dead. Per CLAUDE.md
+ * hard boundary #6 + scope doc §10.5. Non-strict (default) preserves the
+ * Kai-side write-lock behavior for state-file transactions, where a crashed
+ * writer would otherwise lock the file forever.
  */
-function acquireLock(lockPath, staleMs = 5 * 60 * 1000) {
-  return _acquireLockWithRetry(lockPath, staleMs, true);
+function acquireLock(lockPath, staleMs = 5 * 60 * 1000, opts = {}) {
+  const allowStaleReclaim = !opts.strict;
+  return _acquireLockWithRetry(lockPath, staleMs, allowStaleReclaim);
 }
 
 function _acquireLockWithRetry(lockPath, staleMs, allowStaleReclaim) {

@@ -5,7 +5,7 @@
  * Phase 1 W3 scope:
  *   - Cap enforcement (methodology lines, active card count, word budgets,
  *     permanent count + rationale)
- *   - Source-file integrity (SHA-256 drift detection vs ~/.code-architect/source-hashes.json)
+ *   - Source-file integrity (SHA-256 drift detection vs <repo>/memory/source-hashes.json)
  *
  * Deferred (Phase 2+):
  *   - Graph-walk relevance ranking
@@ -30,13 +30,15 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const os = require('os');
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
 const DEFAULT_PATHS = {
   methodologyPath: path.join(REPO_ROOT, 'methodology.md'),
   activeDir: path.join(REPO_ROOT, 'memory', 'active'),
-  hashesPath: path.join(os.homedir(), '.code-architect', 'source-hashes.json'),
+  // Distill-time baseline lives in the repo (committed). Runtime state
+  // (heartbeats, run-ledger) lives at ~/.code-architect/ — host-local,
+  // not committed. See CLAUDE.md "Tech Stack" + "Key Rules".
+  hashesPath: path.join(REPO_ROOT, 'memory', 'source-hashes.json'),
 };
 
 const DEFAULT_CAPS = {
@@ -63,21 +65,44 @@ function countWords(text) {
 
 /**
  * Minimal YAML frontmatter parser — covers the subset CA cards use.
- * Supports top-level scalars, nested metadata.* scalars, inline arrays.
+ * Supports top-level scalars, nested metadata.* scalars, inline arrays,
+ * and nested list values under metadata keys.
  *
- * @returns {{ frontmatter: object|null, body: string }}
+ * Strict mode (default ON) surfaces unsupported YAML features as
+ * `parseErrors` entries on the return value, rather than silently
+ * mis-interpreting them. Callers should treat non-empty parseErrors
+ * as a violation. Unsupported: block scalars (|, >), anchors (&),
+ * aliases (*), type tags (!!), flow-style maps ({k: v}).
+ *
+ * @param {string} raw   File contents
+ * @param {object} [opts] { strict: boolean } — default strict: true
+ * @returns {{ frontmatter: object|null, body: string, parseErrors: string[] }}
  */
-function parseFrontmatter(raw) {
-  if (!raw.startsWith('---')) return { frontmatter: null, body: raw };
+function parseFrontmatter(raw, opts = {}) {
+  const strict = opts.strict !== false;
+
+  if (!raw.startsWith('---')) return { frontmatter: null, body: raw, parseErrors: [] };
   const end = raw.indexOf('\n---', 3);
-  if (end === -1) return { frontmatter: null, body: raw };
+  if (end === -1) return { frontmatter: null, body: raw, parseErrors: [] };
 
   const fmBlock = raw.slice(3, end).trim();
   const bodyStart = raw.indexOf('\n', end + 4);
   const body = bodyStart === -1 ? '' : raw.slice(bodyStart + 1);
 
+  const UNSUPPORTED = [
+    { rx: /^>[+-]?\s*$/, name: 'folded block scalar (>)' },
+    { rx: /^\|[+-]?\s*$/, name: 'literal block scalar (|)' },
+    { rx: /^&[A-Za-z0-9_-]+/, name: 'anchor (&)' },
+    { rx: /^\*[A-Za-z0-9_-]+/, name: 'alias (*)' },
+    { rx: /^!!/, name: 'type tag (!!)' },
+    { rx: /^\{[^}]*:[^}]*\}$/, name: 'flow-style map ({...})' },
+  ];
+
   const fm = { metadata: {} };
-  let currentKey = null;
+  const parseErrors = [];
+  let currentKey = null;       // top-level key with nested children
+  let currentSubKey = null;    // metadata sub-key awaiting list children
+
   for (const rawLine of fmBlock.split('\n')) {
     const line = rawLine.replace(/\t/g, '  ');
     if (!line.trim() || line.trim().startsWith('#')) continue;
@@ -86,36 +111,63 @@ function parseFrontmatter(raw) {
 
     if (indent === 0) {
       const m = stripped.match(/^([a-z_][a-z0-9_]*)\s*:\s*(.*)$/i);
-      if (!m) continue;
+      if (!m) {
+        if (strict) parseErrors.push(`unrecognized top-level line: ${stripped.slice(0, 60)}`);
+        continue;
+      }
       const [, key, val] = m;
       if (val === '' || val === '{}') {
         if (key !== 'metadata') fm[key] = {};
         currentKey = key;
+        currentSubKey = null;
       } else {
+        if (strict) {
+          for (const { rx, name } of UNSUPPORTED) {
+            if (rx.test(val.trim())) parseErrors.push(`unsupported YAML '${name}' at top-level key '${key}'`);
+          }
+        }
         fm[key] = parseScalar(val);
         currentKey = null;
+        currentSubKey = null;
       }
-    } else if (indent >= 2 && currentKey === 'metadata') {
+    } else if (indent >= 2 && indent < 4 && currentKey === 'metadata') {
       const m = stripped.match(/^([a-z_][a-z0-9_]*)\s*:\s*(.*)$/i);
-      if (m) {
-        const [, k, v] = m;
-        if (v === '' || v === '[]') fm.metadata[k] = v === '[]' ? [] : '';
-        else fm.metadata[k] = parseScalar(v);
+      if (!m) {
+        if (strict) parseErrors.push(`unrecognized metadata line: ${stripped.slice(0, 60)}`);
+        continue;
       }
-    } else if (indent >= 4 && currentKey === 'metadata') {
-      // Nested list item like:
-      //   source_files:
-      //     - /abs/path
+      const [, k, v] = m;
+      if (v === '') {
+        // Empty value → either nested list or empty scalar. Stage as []
+        // and let subsequent indent>=4 list items fill it. If none arrive,
+        // it remains [] (semantically equivalent to empty list).
+        fm.metadata[k] = [];
+        currentSubKey = k;
+      } else if (v === '[]') {
+        fm.metadata[k] = [];
+        currentSubKey = null;
+      } else {
+        if (strict) {
+          for (const { rx, name } of UNSUPPORTED) {
+            if (rx.test(v.trim())) parseErrors.push(`unsupported YAML '${name}' at metadata.${k}`);
+          }
+        }
+        fm.metadata[k] = parseScalar(v);
+        currentSubKey = null;
+      }
+    } else if (indent >= 4 && currentSubKey && currentKey === 'metadata') {
       const m = stripped.match(/^-\s*(.*)$/);
       if (m) {
-        // Find the most recent metadata key with an array value (or empty)
-        // and append. Simple heuristic: last assigned empty-array key.
-        const lastKey = Object.keys(fm.metadata).reverse().find(k => Array.isArray(fm.metadata[k]));
-        if (lastKey) fm.metadata[lastKey].push(parseScalar(m[1]));
+        if (!Array.isArray(fm.metadata[currentSubKey])) fm.metadata[currentSubKey] = [];
+        fm.metadata[currentSubKey].push(parseScalar(m[1]));
+      } else if (strict) {
+        parseErrors.push(`expected list item under metadata.${currentSubKey}, got: ${stripped.slice(0, 60)}`);
       }
+    } else if (strict && indent > 0) {
+      parseErrors.push(`unhandled indented line at indent ${indent}: ${stripped.slice(0, 60)}`);
     }
   }
-  return { frontmatter: fm, body };
+  return { frontmatter: fm, body, parseErrors };
 }
 
 function parseScalar(val) {
@@ -159,7 +211,10 @@ function checkActiveCards({
   if (!fs.existsSync(activeDir)) {
     return { count: null, permanentCount: null, violations: [], configErrors: [`memory/active/ not found at ${activeDir}`] };
   }
-  const cards = fs.readdirSync(activeDir).filter(f => f.endsWith('.md'));
+  const cards = fs.readdirSync(activeDir).filter(f => {
+    const lower = f.toLowerCase();
+    return lower.endsWith('.md') || lower.endsWith('.markdown');
+  });
   const violations = [];
   if (cards.length > capCards) {
     violations.push(`memory/active/ has ${cards.length} cards (cap: ${capCards}). Archive one before adding more.`);
@@ -170,10 +225,13 @@ function checkActiveCards({
     const full = path.join(activeDir, file);
     const raw = readTextSafe(full);
     if (raw === null) continue;
-    const { frontmatter, body } = parseFrontmatter(raw);
+    const { frontmatter, body, parseErrors } = parseFrontmatter(raw);
     if (!frontmatter) {
       violations.push(`${file}: missing or malformed YAML frontmatter`);
       continue;
+    }
+    if (parseErrors && parseErrors.length > 0) {
+      for (const err of parseErrors) violations.push(`${file}: ${err}`);
     }
     const type = frontmatter.metadata?.type;
     if (!type || !(type in capWords)) {

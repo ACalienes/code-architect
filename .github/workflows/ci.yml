@@ -19,13 +19,31 @@ jobs:
       # No npm install — zero deps for now. If/when we add deps, switch to:
       #   - run: npm ci
       #   with: actions/cache@v4 keyed on package-lock.json
+      #
+      # The guard below enforces the zero-deps invariant: CI fails if
+      # package.json grows a dependencies/devDependencies entry without
+      # the corresponding npm-ci wiring being added at the same time.
+      - name: Enforce zero-dependency invariant
+        run: |
+          node -e "
+          const p = require('./package.json');
+          const dep = Object.keys(p.dependencies || {});
+          const dev = Object.keys(p.devDependencies || {});
+          if (dep.length > 0 || dev.length > 0) {
+            console.error('[ci] zero-dep invariant broken — package.json has:');
+            if (dep.length) console.error('  dependencies:', dep.join(', '));
+            if (dev.length) console.error('  devDependencies:', dev.join(', '));
+            console.error('Either remove the deps or update .github/workflows/ci.yml to run npm ci.');
+            process.exit(1);
+          }
+          "
 
       - name: Run tests
         run: node --test test/*.test.js
 
       # Source-integrity check (SHA-256 drift detection) is skipped in CI
-      # because ~/.code-architect/source-hashes.json is local-only state
-      # (laptop where methodology.md was distilled). Re-distill happens
-      # there; CI enforces caps only.
+      # because memory/source-hashes.json cites laptop-absolute paths
+      # (auto-memory + Kai-repo memory) that don't resolve on the GH runner.
+      # Re-distill happens on the laptop; CI enforces caps only.
       - name: memory-doctor (caps only)
         run: node scripts/lib/memory-doctor.js --skip-integrity

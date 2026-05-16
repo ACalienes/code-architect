@@ -6,7 +6,9 @@
   "tier": 1,
   "description": "Engineering capacity for the Kameha mesh. Plans, implements, and audits cross-agent changes under a methodology spine + run ledger. Single-shot CLI; no long-running daemon.",
   "owner": "alex",
-  "criticality": "high",
+  "criticality": "medium",
+  "availability_model": "cli-single-shot",
+  "blocking_for": ["phase3_mesh_reconciliation"],
   "runtime": {
     "type": "cli-single-shot",
     "entry": "scripts/code-architect.js",
@@ -28,7 +30,9 @@
     ],
     "actions_supported": [],
     "a2a_version": "1.0",
-    "always_keyed": true
+    "always_keyed": true,
+    "reply_model": "fire-and-forget",
+    "reply_mechanism": "local_run_ledger_correlation_id"
   },
   "claude_code_session": {
     "auto_memory_dir": "/Users/alex/.claude/projects/-Users-alex-Desktop-Code-Code-Architect/memory",

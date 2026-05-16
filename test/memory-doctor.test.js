@@ -317,6 +317,50 @@ test('checkSourceIntegrity: malformed JSON reports configError', () => {
   } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
 });
 
+test('checkSourceIntegrity: missing sources array reports configError', () => {
+  const tmp = mkTmp();
+  try {
+    const hashesPath = path.join(tmp, 'hashes.json');
+    fs.writeFileSync(hashesPath, JSON.stringify({ schema_version: 1 })); // no sources
+    const r = checkSourceIntegrity({ hashesPath });
+    assert.equal(r.configErrors.length, 1);
+    assert.match(r.configErrors[0], /missing 'sources' array/);
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+});
+
+test('checkSourceIntegrity: malformed hash entry reports configError', () => {
+  const tmp = mkTmp();
+  try {
+    const hashesPath = path.join(tmp, 'hashes.json');
+    fs.writeFileSync(hashesPath, JSON.stringify({
+      sources: [
+        { path: '/some/path' },           // missing sha256
+        { sha256: 'abc' },                 // missing path
+      ],
+    }));
+    const r = checkSourceIntegrity({ hashesPath });
+    assert.equal(r.configErrors.length, 2);
+    assert.ok(r.configErrors.every(e => /missing path or sha256/.test(e)));
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+});
+
+test('checkSourceIntegrity: unreadable source path reports drift kind=unreadable', () => {
+  const tmp = mkTmp();
+  try {
+    // Use a directory as the source path → fs.readFileSync throws EISDIR.
+    const dirAsSource = path.join(tmp, 'a-dir');
+    fs.mkdirSync(dirAsSource);
+    const hashesPath = path.join(tmp, 'hashes.json');
+    fs.writeFileSync(hashesPath, JSON.stringify({
+      sources: [{ path: dirAsSource, sha256: 'abc' }],
+    }));
+    const r = checkSourceIntegrity({ hashesPath });
+    assert.equal(r.drift.length, 1);
+    assert.equal(r.drift[0].kind, 'unreadable');
+    assert.ok(r.drift[0].detail, 'expected error detail string');
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+});
+
 // ============================================================================
 // exitCodeFor + runAll
 // ============================================================================
@@ -362,6 +406,117 @@ test('parseFrontmatter: no frontmatter returns null', () => {
   assert.equal(frontmatter, null);
 });
 
+test('parseFrontmatter: nested list under metadata key parses as array (D1 regression)', () => {
+  const raw = [
+    '---',
+    'name: card',
+    'metadata:',
+    '  type: pattern',
+    '  source_files:',
+    '    - /abs/path/one.md',
+    '    - /abs/path/two.md',
+    '  created: 2026-05-14',
+    '---',
+    'body',
+    '',
+  ].join('\n');
+  const { frontmatter, parseErrors } = parseFrontmatter(raw);
+  assert.deepEqual(frontmatter.metadata.source_files, ['/abs/path/one.md', '/abs/path/two.md']);
+  assert.equal(frontmatter.metadata.created, '2026-05-14');
+  assert.deepEqual(parseErrors, []);
+});
+
+test('parseFrontmatter: strict mode flags unsupported block scalar', () => {
+  const raw = [
+    '---',
+    'name: card',
+    'description: |',
+    '  multi-line',
+    '  block scalar',
+    '---',
+    'body',
+    '',
+  ].join('\n');
+  const { parseErrors } = parseFrontmatter(raw);
+  assert.ok(parseErrors.some(e => /literal block scalar/.test(e)),
+    `expected block-scalar parseError, got: ${JSON.stringify(parseErrors)}`);
+});
+
+test('parseFrontmatter: strict mode flags flow-style map', () => {
+  const raw = [
+    '---',
+    'name: card',
+    'metadata:',
+    '  inline: {k: v}',
+    '---',
+    'body',
+    '',
+  ].join('\n');
+  const { parseErrors } = parseFrontmatter(raw);
+  assert.ok(parseErrors.some(e => /flow-style map/.test(e)),
+    `expected flow-style parseError, got: ${JSON.stringify(parseErrors)}`);
+});
+
+test('parseFrontmatter: strict mode flags anchor reference', () => {
+  const raw = [
+    '---',
+    'name: card',
+    'description: &anchor1',
+    '---',
+    'body',
+    '',
+  ].join('\n');
+  const { parseErrors } = parseFrontmatter(raw);
+  assert.ok(parseErrors.some(e => /anchor/.test(e)),
+    `expected anchor parseError, got: ${JSON.stringify(parseErrors)}`);
+});
+
+test('checkActiveCards: parseErrors surface as violations', () => {
+  const tmp = mkTmp();
+  try {
+    const active = path.join(tmp, 'active');
+    fs.mkdirSync(active);
+    const raw = [
+      '---',
+      'name: bad',
+      'description: |',
+      '  block scalar not supported',
+      'metadata:',
+      '  type: pattern',
+      '---',
+      'body',
+      '',
+    ].join('\n');
+    fs.writeFileSync(path.join(active, 'bad.md'), raw);
+    const r = checkActiveCards({ activeDir: active });
+    assert.ok(r.violations.some(v => /bad\.md.*block scalar/.test(v)),
+      `expected block-scalar violation, got: ${JSON.stringify(r.violations)}`);
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+});
+
+test('checkActiveCards: case-insensitive .md/.MD/.markdown extensions (D2)', () => {
+  const tmp = mkTmp();
+  try {
+    const active = path.join(tmp, 'active');
+    fs.mkdirSync(active);
+    const fm = [
+      '---',
+      'name: x',
+      'metadata:',
+      '  type: pattern',
+      '---',
+      'body',
+      '',
+    ].join('\n');
+    fs.writeFileSync(path.join(active, 'a.md'), fm);
+    fs.writeFileSync(path.join(active, 'b.MD'), fm);
+    fs.writeFileSync(path.join(active, 'c.markdown'), fm);
+    fs.writeFileSync(path.join(active, 'd.txt'), fm); // should be ignored
+    const r = checkActiveCards({ activeDir: active });
+    assert.equal(r.count, 3);
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+});
+
 test('countWords: handles whitespace correctly', () => {
   assert.equal(countWords('one two three'), 3);
   assert.equal(countWords('  one\n  two  \nthree '), 3);
@@ -395,7 +550,61 @@ test('CLI: memory doctor --skip-integrity on this repo exits 0', () => {
   assert.equal(r.status, 0, `stderr: ${r.stderr.toString()}`);
 });
 
+test('CLI: cwd preflight refuses invocation from outside repo (B3)', () => {
+  const tmp = mkTmp();
+  try {
+    // Spawn from a tmp dir; CA should refuse with exit 77.
+    const r = spawnSync(process.execPath, [CLI_PATH, 'memory', 'doctor'], { cwd: tmp });
+    assert.equal(r.status, 77, `expected exit 77 (EX_NOPERM), got ${r.status}; stderr: ${r.stderr.toString()}`);
+    assert.match(r.stderr.toString(), /refusing to run from/);
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+});
+
+test('CLI: cwd preflight allows --help from any cwd (doc-only)', () => {
+  const tmp = mkTmp();
+  try {
+    const r = spawnSync(process.execPath, [CLI_PATH, '--help'], { cwd: tmp });
+    assert.equal(r.status, 0, `stderr: ${r.stderr.toString()}`);
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+});
+
 test('memory-doctor.js direct invocation with --skip-integrity exits 0', () => {
   const r = spawnSync(process.execPath, [DOCTOR_PATH, '--skip-integrity']);
   assert.equal(r.status, 0, `stderr: ${r.stderr.toString()}`);
+});
+
+// ============================================================================
+// safe-json.js acquireLock strict mode (run-ledger contract)
+// ============================================================================
+
+const { acquireLock, releaseLock } = require('../scripts/lib/safe-json');
+
+test('acquireLock strict mode does NOT reclaim a stale lock (run-ledger contract)', () => {
+  const tmp = mkTmp();
+  try {
+    const lockPath = path.join(tmp, 'run.lock');
+    // Plant a "stale" lock by writing the file directly and back-dating mtime.
+    fs.writeFileSync(lockPath, JSON.stringify({ pid: 99999, time: 0, nonce: 'stale' }));
+    const past = (Date.now() - 60 * 60 * 1000) / 1000; // 1 hour ago
+    fs.utimesSync(lockPath, past, past);
+
+    const acquired = acquireLock(lockPath, 5 * 60 * 1000, { strict: true });
+    assert.equal(acquired, false, 'strict mode must NOT reclaim a stale lock');
+    // Lock file should still be there for --force-clean to handle.
+    assert.equal(fs.existsSync(lockPath), true);
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+});
+
+test('acquireLock non-strict mode DOES reclaim a stale lock (state-file contract)', () => {
+  const tmp = mkTmp();
+  try {
+    const lockPath = path.join(tmp, 'state.lock');
+    fs.writeFileSync(lockPath, JSON.stringify({ pid: 99999, time: 0, nonce: 'stale' }));
+    const past = (Date.now() - 60 * 60 * 1000) / 1000;
+    fs.utimesSync(lockPath, past, past);
+
+    const acquired = acquireLock(lockPath, 5 * 60 * 1000); // default: non-strict
+    assert.equal(acquired, true, 'non-strict mode should reclaim stale lock');
+    releaseLock(lockPath);
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
 });
