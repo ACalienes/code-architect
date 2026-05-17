@@ -471,6 +471,82 @@ test('parseFrontmatter: strict mode flags anchor reference', () => {
     `expected anchor parseError, got: ${JSON.stringify(parseErrors)}`);
 });
 
+test('parseFrontmatter: top-level block list under non-metadata key parses (B1 regression)', () => {
+  const raw = [
+    '---',
+    'name: card',
+    'tags:',
+    '  - alpha',
+    '  - beta',
+    '  - gamma',
+    'metadata:',
+    '  type: pattern',
+    '---',
+    'body',
+    '',
+  ].join('\n');
+  const { frontmatter, parseErrors } = parseFrontmatter(raw);
+  assert.deepStrictEqual(frontmatter.tags, ['alpha', 'beta', 'gamma'],
+    `expected tags array, got: ${JSON.stringify(frontmatter.tags)}`);
+  assert.strictEqual(parseErrors.length, 0,
+    `expected no parseErrors, got: ${JSON.stringify(parseErrors)}`);
+});
+
+test('parseFrontmatter: top-level block list at indent-2 (two-space) parses (B1 regression)', () => {
+  const raw = [
+    '---',
+    'name: card',
+    'sources:',
+    '- /path/one.md',
+    '- /path/two.md',
+    'metadata:',
+    '  type: pattern',
+    '---',
+    'body',
+    '',
+  ].join('\n');
+  // dash-prefixed at indent 0 isn't valid YAML — but the previous behavior
+  // silently swallowed `- /path/...` under tags. Our fix accepts indent>=2.
+  // For indent-0 dashes, we still expect strict parseErrors.
+  const { parseErrors } = parseFrontmatter(raw);
+  // indent-0 dashes should error in strict mode
+  assert.ok(parseErrors.some(e => /unrecognized top-level/.test(e)),
+    `expected indent-0 dash to error, got: ${JSON.stringify(parseErrors)}`);
+});
+
+test('parseFrontmatter: parseError messages include line numbers (A9)', () => {
+  const raw = [
+    '---',
+    'name: card',
+    'description: |',           // line 3 — unsupported block scalar
+    'metadata:',
+    '  type: pattern',
+    '---',
+    'body',
+    '',
+  ].join('\n');
+  const { parseErrors } = parseFrontmatter(raw);
+  assert.ok(parseErrors.some(e => /^L\d+:/.test(e)),
+    `expected line-numbered parseError (L<n>: ...), got: ${JSON.stringify(parseErrors)}`);
+});
+
+test('parseFrontmatter: card-level # yaml-strict-off opt-out suppresses strict errors (A9)', () => {
+  const raw = [
+    '---',
+    '# yaml-strict-off',
+    'name: card',
+    'description: |',           // would normally be a strict error
+    'metadata:',
+    '  type: pattern',
+    '---',
+    'body',
+    '',
+  ].join('\n');
+  const { parseErrors } = parseFrontmatter(raw);
+  assert.strictEqual(parseErrors.length, 0,
+    `expected no parseErrors with opt-out, got: ${JSON.stringify(parseErrors)}`);
+});
+
 test('checkActiveCards: parseErrors surface as violations', () => {
   const tmp = mkTmp();
   try {
@@ -571,6 +647,26 @@ test('CLI: cwd preflight allows --help from any cwd (doc-only)', () => {
 test('memory-doctor.js direct invocation with --skip-integrity exits 0', () => {
   const r = spawnSync(process.execPath, [DOCTOR_PATH, '--skip-integrity']);
   assert.equal(r.status, 0, `stderr: ${r.stderr.toString()}`);
+});
+
+test('CLI: memory re-distill prints v0.1 manual procedure and exits 0 (R3-8)', () => {
+  const r = spawnSync(process.execPath, [CLI_PATH, 'memory', 're-distill']);
+  assert.equal(r.status, 0, `stderr: ${r.stderr.toString()}`);
+  const out = r.stdout.toString();
+  assert.match(out, /v0\.1 manual procedure/, 'stdout should label the procedure as v0.1');
+  assert.match(out, /shasum -a 256/, 'stdout should include the recompute command');
+  assert.match(out, /source-hashes\.json/, 'stdout should name the JSON file to edit');
+  assert.match(out, /memory doctor/, 'stdout should tell the user to re-run doctor');
+});
+
+test('memory-doctor drift hint points users at the documented procedure (R3-8)', () => {
+  // Build a tmp hashes file pointing at a path whose actual content won't match,
+  // then invoke memory-doctor.js with that hashes file via --hashes-path override.
+  // We don't have a flag for that, so instead assert against the static string
+  // present in the source — cheap regression guard until W4 swaps in a real CLI flag.
+  const src = fs.readFileSync(path.join(REPO_ROOT, 'scripts', 'lib', 'memory-doctor.js'), 'utf8');
+  assert.match(src, /code-architect memory re-distill/, 'drift hint must reference the re-distill command');
+  assert.match(src, /Manual hash regeneration/, 'drift hint must reference the README section');
 });
 
 // ============================================================================

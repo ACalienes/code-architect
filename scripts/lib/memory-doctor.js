@@ -89,6 +89,15 @@ function parseFrontmatter(raw, opts = {}) {
   const bodyStart = raw.indexOf('\n', end + 4);
   const body = bodyStart === -1 ? '' : raw.slice(bodyStart + 1);
 
+  // A9 (R2): Card-level opt-out for strict-mode YAML checks. A card whose
+  // frontmatter STARTS with `# yaml-strict-off` (as a comment) disables
+  // strict validation for itself. Useful for the rare card that intentionally
+  // uses an unsupported YAML feature (e.g. an embedded block scalar) and
+  // doesn't want noise. The opt-out is per-card, not per-process.
+  let effectiveStrict = strict;
+  const firstNonEmpty = fmBlock.split('\n').find((l) => l.trim() !== '');
+  if (firstNonEmpty && firstNonEmpty.trim() === '# yaml-strict-off') effectiveStrict = false;
+
   const UNSUPPORTED = [
     { rx: /^>[+-]?\s*$/, name: 'folded block scalar (>)' },
     { rx: /^\|[+-]?\s*$/, name: 'literal block scalar (|)' },
@@ -102,8 +111,10 @@ function parseFrontmatter(raw, opts = {}) {
   const parseErrors = [];
   let currentKey = null;       // top-level key with nested children
   let currentSubKey = null;    // metadata sub-key awaiting list children
+  let lineNum = 0;             // A9 (R2): line numbers in parseError messages
 
   for (const rawLine of fmBlock.split('\n')) {
+    lineNum++;
     const line = rawLine.replace(/\t/g, '  ');
     if (!line.trim() || line.trim().startsWith('#')) continue;
     const indent = line.length - line.trimStart().length;
@@ -112,7 +123,7 @@ function parseFrontmatter(raw, opts = {}) {
     if (indent === 0) {
       const m = stripped.match(/^([a-z_][a-z0-9_]*)\s*:\s*(.*)$/i);
       if (!m) {
-        if (strict) parseErrors.push(`unrecognized top-level line: ${stripped.slice(0, 60)}`);
+        if (effectiveStrict) parseErrors.push(`L${lineNum}: unrecognized top-level line: ${stripped.slice(0, 60)}`);
         continue;
       }
       const [, key, val] = m;
@@ -121,9 +132,9 @@ function parseFrontmatter(raw, opts = {}) {
         currentKey = key;
         currentSubKey = null;
       } else {
-        if (strict) {
+        if (effectiveStrict) {
           for (const { rx, name } of UNSUPPORTED) {
-            if (rx.test(val.trim())) parseErrors.push(`unsupported YAML '${name}' at top-level key '${key}'`);
+            if (rx.test(val.trim())) parseErrors.push(`L${lineNum}: unsupported YAML '${name}' at top-level key '${key}'`);
           }
         }
         fm[key] = parseScalar(val);
@@ -133,7 +144,7 @@ function parseFrontmatter(raw, opts = {}) {
     } else if (indent >= 2 && indent < 4 && currentKey === 'metadata') {
       const m = stripped.match(/^([a-z_][a-z0-9_]*)\s*:\s*(.*)$/i);
       if (!m) {
-        if (strict) parseErrors.push(`unrecognized metadata line: ${stripped.slice(0, 60)}`);
+        if (effectiveStrict) parseErrors.push(`L${lineNum}: unrecognized metadata line: ${stripped.slice(0, 60)}`);
         continue;
       }
       const [, k, v] = m;
@@ -147,9 +158,9 @@ function parseFrontmatter(raw, opts = {}) {
         fm.metadata[k] = [];
         currentSubKey = null;
       } else {
-        if (strict) {
+        if (effectiveStrict) {
           for (const { rx, name } of UNSUPPORTED) {
-            if (rx.test(v.trim())) parseErrors.push(`unsupported YAML '${name}' at metadata.${k}`);
+            if (rx.test(v.trim())) parseErrors.push(`L${lineNum}: unsupported YAML '${name}' at metadata.${k}`);
           }
         }
         fm.metadata[k] = parseScalar(v);
@@ -160,11 +171,24 @@ function parseFrontmatter(raw, opts = {}) {
       if (m) {
         if (!Array.isArray(fm.metadata[currentSubKey])) fm.metadata[currentSubKey] = [];
         fm.metadata[currentSubKey].push(parseScalar(m[1]));
-      } else if (strict) {
-        parseErrors.push(`expected list item under metadata.${currentSubKey}, got: ${stripped.slice(0, 60)}`);
+      } else if (effectiveStrict) {
+        parseErrors.push(`L${lineNum}: expected list item under metadata.${currentSubKey}, got: ${stripped.slice(0, 60)}`);
       }
-    } else if (strict && indent > 0) {
-      parseErrors.push(`unhandled indented line at indent ${indent}: ${stripped.slice(0, 60)}`);
+    } else if (indent >= 2 && currentKey !== null && currentKey !== 'metadata') {
+      // B1 (R2): top-level block list under a non-metadata key.
+      // The previous parser only recognized block lists when currentKey was
+      // 'metadata'; `tags:\n- a\n- b` and `tags:\n  - a\n  - b` both produced
+      // parse errors. Now: any indent>=2 dash-prefixed line under an empty-value
+      // top-level key promotes that key from {} to [] and pushes the item.
+      const listMatch = stripped.match(/^-\s*(.*)$/);
+      if (listMatch) {
+        if (!Array.isArray(fm[currentKey])) fm[currentKey] = [];
+        fm[currentKey].push(parseScalar(listMatch[1]));
+      } else if (effectiveStrict) {
+        parseErrors.push(`L${lineNum}: expected list item under top-level '${currentKey}', got: ${stripped.slice(0, 60)}`);
+      }
+    } else if (effectiveStrict && indent > 0) {
+      parseErrors.push(`L${lineNum}: unhandled indented line at indent ${indent}: ${stripped.slice(0, 60)}`);
     }
   }
   return { frontmatter: fm, body, parseErrors };
@@ -356,7 +380,7 @@ function main() {
         if (d.kind === 'changed') err(`  - changed: ${d.path}\n      expected ${d.expected.slice(0, 12)}…\n      actual   ${d.actual.slice(0, 12)}…`);
         else err(`  - ${d.kind}: ${d.path}${d.detail ? ' (' + d.detail + ')' : ''}`);
       }
-      err('  Re-distill methodology.md against current sources, then re-run memory-doctor.');
+      err('  Run `code-architect memory re-distill` for the v0.1 manual procedure (or see README §Manual hash regeneration).');
     }
     if (findings.config_errors.length > 0) {
       err('[memory-doctor] CONFIG ERRORS:');
