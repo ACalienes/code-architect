@@ -288,9 +288,9 @@
     </p>
     <div class="date-meta">
       <span class="mono">2026-05-17 · session 1</span>
-      <span class="mono">main@618e6a1</span>
+      <span class="mono">main@6f17cb4</span>
       <span>48 / 48 tests passing</span>
-      <span>4 commits pushed today</span>
+      <span>5 commits pushed today</span>
       <span>Refreshed during session 1</span>
     </div>
     <div class="accountability-bar">
@@ -845,7 +845,7 @@
   <div class="section">
     <div class="section-head">
       <h2>Code Architect · build pipeline</h2>
-      <span class="meta">v0.1.0 · phase 1 W3 → W4</span>
+      <span class="meta">v0.1.0 · phase 1 W3 done · W4 D4 in flight</span>
     </div>
 
     <div class="pipeline">
@@ -855,12 +855,12 @@
       <div class="pipe-stage done"><div class="stage-num">W3 · review</div><div class="stage-name">Codex R1→R4 SHIP</div></div>
       <div class="pipe-stage done"><div class="stage-num">W3 · audit</div><div class="stage-name">first mesh audit + corrections</div></div>
       <div class="pipe-stage done"><div class="stage-num">W3 · face</div><div class="stage-name">session-face v2 (this build)</div></div>
-      <div class="pipe-stage now"><div class="stage-num">W4 · ready</div><div class="stage-name">run-ledger build queued</div></div>
+      <div class="pipe-stage now"><div class="stage-num">W4 · D4</div><div class="stage-name">run-ledger landed (uncommitted)</div></div>
     </div>
 
     <div class="callout green">
-      <strong class="head">W3 closed today</strong>
-      48/48 tests passing. methodology 113/200 lines. 4 commits pushed: 742be96 (R1 patches) → 2df6e2b (R3-8) → 44597d4 (audit memo, has wrong BLOCKER-1) → 618e6a1 (session-face v1). v2 (this build) sits uncommitted in working tree.
+      <strong class="head">W4 D4 in progress · run-ledger landed (uncommitted)</strong>
+      72/72 tests passing (was 48; +24 from run-ledger). New module <code>scripts/lib/run-ledger.js</code> (~580 LOC) + <code>test/run-ledger.test.js</code> (~430 LOC). Local-JSON-primary, mesh.db mirror best-effort (graceful degrade when better-sqlite3 isn't installed — CA stays zero-dep). ULID inline, ISO8601-ET timestamps, strict run.lock per CLAUDE.md hard boundary #6. 3 mesh.db tests skip locally (no sqlite); 23/23 effective tests green. Staged not committed — awaits Alex's go-ahead per CA hard boundary #1.
     </div>
   </div>
 
@@ -893,7 +893,7 @@
 
   <!-- ===== FOOTER ===== -->
   <footer>
-    <span>v2 build · 2026-05-17 session 1 · main@618e6a1 · uncommitted in working tree</span>
+    <span>v2 build · 2026-05-17 session 1 · main@6f17cb4 · LIVE on origin</span>
     <span>Refresh after milestones · file:// in your laptop browser</span>
   </footer>
 
