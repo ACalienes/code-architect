@@ -284,14 +284,14 @@
     <div class="eyebrow">Code Architect · Kameha System Map · Live</div>
     <h1 class="title">Where the system stands</h1>
     <p class="subtitle">
-      Real-time view of the 12-agent Kameha mesh, the 32-project production floor (conductor.db), 16 client engagements, and 4 concurrent Claude Code sessions running right now. CA's own W3 closed today; W4 (run-ledger) is next. Three agent registries disagree about which agents exist; details below.
+      Real-time view of the 12-agent Kameha mesh, the 32-project production floor (conductor.db), 16 client engagements, and 4 concurrent Claude Code sessions running right now. CA's own W3 closed; W4 (run-ledger) is in flight. <strong style="color:var(--text);">Session 2 update:</strong> ACD escalation received + committed (Nami v2 send also failed — two-layer contract gap, verbs <em>and</em> payload schemas), and Kai's <code>.kameha/owners.json</code> bootstrap is drafted in <code>test-fixtures/</code> awaiting your review.
     </p>
     <div class="date-meta">
-      <span class="mono">2026-05-17 · session 1</span>
-      <span class="mono">main@6157720</span>
-      <span>72 / 72 tests passing (run-ledger surfaced)</span>
-      <span>8 commits pushed today · session 1 wrapped</span>
-      <span>Refreshed during session 1</span>
+      <span class="mono">2026-05-18 · session 2 active</span>
+      <span class="mono">main@89375fd</span>
+      <span>72 / 72 tests passing</span>
+      <span>1 commit pushed (ACD escalation) · 2 files staged (owners.json draft + handoff)</span>
+      <span>Refreshed during session 2</span>
     </div>
     <div class="accountability-bar">
       <strong style="color: var(--accent);">v2 build</strong> — first real system-as-visual-organism pass after Alex flagged that v1 was a status page, not a map. v1 preserved at <code>state-of-things-2026-05-17-v1.html</code>. Honest disclosures throughout — anything I can't directly observe from this laptop is called out in the "Blind Spots" section at the bottom, not hidden.
@@ -365,15 +365,26 @@
       </div>
 
       <div class="decision-row">
-        <div class="ico">🔓</div>
+        <div class="ico">📝</div>
         <div>
-          <div class="head">Authorize <code>.kameha/owners.json</code> bootstrap for Kai's repo?</div>
+          <div class="head">Review Kai <code>.kameha/owners.json</code> draft + apply in Kai's repo</div>
           <div class="body">
-            HB#2 fails closed on every cross-repo write until <code>.kameha/owners.json</code> exists in target repos. This blocks every fix on the audit punchlist (registry drift, conductor.json filing, framer/acd in agents.json). I'd draft the file in CA's repo as <code>test-fixtures/kai-owners.json</code> for your review, you copy + commit.
-            <div class="hint"><strong>Time:</strong> ~30 min draft + review · <strong>If you wait:</strong> CA stays read-only against the fleet indefinitely.</div>
+            <strong style="color:var(--green);">Draft is ready.</strong> 24 patterns + fallback; default-deny posture; 6 narrow auto-merge lanes (<code>scripts/lib/</code>, <code>scripts/lib/__tests__/</code>, <code>scripts/bot/utils/</code>, <code>scripts/eval/</code>, <code>tests/</code>, <code>package-lock.json</code>), 6 owner-only lanes for Kai's runtime state, 11 explicit critical-path human-review lanes (mesh / hooks / routes / middleware / deploy configs / CI / <code>.kameha/</code>), 1 bootstrap-only lane on <code>owners.json</code> itself. CA-internal DA passed (caught + fixed an SQLite-sidecar gap on <code>mesh.db</code>). Draft at <code>test-fixtures/kai-owners.json</code>; handoff with apply steps at <code>docs/kai-owners-bootstrap-2026-05-18.md</code>.
+            <div class="hint"><strong>Next:</strong> review the draft, then copy to <code>~/Desktop/Code/Kai Executive Assistant/.kameha/owners.json</code> + commit in Kai's repo. <strong>Unblocks:</strong> every cross-repo write CA might want to make against Kai (registry-drift fixes, schema_version commits, route_permissions seeding).</div>
           </div>
         </div>
-        <div class="pill-col"><span class="pill orange">GATE</span></div>
+        <div class="pill-col"><span class="pill yellow">REVIEW</span></div>
+      </div>
+
+      <div class="decision-row" style="opacity: 0.55;">
+        <div class="ico">✅</div>
+        <div>
+          <div class="head" style="color: var(--muted);">ACD escalation — Nami v2 send also failed — <span style="color: var(--green);">RECEIVED + COMMITTED</span> · <code>89375fd</code></div>
+          <div class="body" style="color: var(--dim); font-size: 12px;">
+            ACD dropped an update to <code>docs/acd-nami-action-contract-mismatch-2026-05-17.md</code> at 08:28 ET today (filesystem-drop pattern, provenance verified via ACD activity log, session <code>573d851c</code>). The v2 resend with the corrected action verb <code>social_deliverable_ready</code> <strong>also failed</strong> after 3 attempts with a different error: <code>"Transform social_deliverable rejected payload"</code>. Escalates Finding 1 from "action-vocabulary mismatch" to a two-layer contract gap: verbs <em>and</em> payload schemas are both undocumented. Strengthened recommendation: publish JSON Schemas per action under <code>/agents/&lt;id&gt;/capabilities</code> with optional pre-validation at <code>POST /messages</code> to eliminate the silent-failure surface. Stays W5/W6 scope (downstream of W4); engineering target is now better-specified.
+          </div>
+        </div>
+        <div class="pill-col"><span class="pill green">CLOSED</span></div>
       </div>
 
       <div class="decision-row">
@@ -915,7 +926,7 @@
 
   <!-- ===== FOOTER ===== -->
   <footer>
-    <span>v2 build · 2026-05-17 session 1 wrapped · main@6157720 · snapshot at state-of-things-2026-05-17.html</span>
+    <span>v2 build · 2026-05-18 session 2 active · main@89375fd · session 1 snapshot at state-of-things-2026-05-17.html</span>
     <span>Refresh after milestones · file:// in your laptop browser</span>
   </footer>
 

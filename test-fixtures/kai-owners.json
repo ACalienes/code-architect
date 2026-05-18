@@ -1,0 +1,183 @@
+{
+  "schema_version": 1,
+  "repo": "kai",
+  "owner_registry": "~/.kameha/agent-owners.json",
+  "paths": [
+    {
+      "pattern": ".kameha/owners.json",
+      "owner": "alex",
+      "policy": "bootstrap_only",
+      "bypass_eligible": false,
+      "notes": "This file itself. Only writable by `code-architect owners bootstrap` or `owners migrate`; never a general edit target."
+    },
+    {
+      "pattern": ".kameha/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Config dir for CA-managed lockfiles + contracts. Run.lock is handled atomically by safe-json; humans review anything else."
+    },
+    {
+      "pattern": "mesh.db*",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Mesh-API runtime DB plus SQLite sidecars (-wal, -shm, -journal). Kai writes via the mesh-API daemon; CA must never touch any of these files directly — touching a sidecar corrupts the DB just as surely as touching the DB."
+    },
+    {
+      "pattern": "scripts/lib/__tests__/**",
+      "owner": "alex",
+      "policy": "auto_merge_after:ca_internal_da",
+      "bypass_eligible": true,
+      "notes": "Library-test code. Mechanical refactors common; DA-gated."
+    },
+    {
+      "pattern": "scripts/lib/**",
+      "owner": "alex",
+      "policy": "auto_merge_after:ca_internal_da",
+      "bypass_eligible": true,
+      "notes": "Shared library code (safe-json, todayET helpers, etc). The CA pattern explicitly targets this lane for cross-fleet helper portability."
+    },
+    {
+      "pattern": "scripts/bot/utils/**",
+      "owner": "alex",
+      "policy": "auto_merge_after:ca_internal_da",
+      "bypass_eligible": true,
+      "notes": "Telegram-bot utility code (formatters, etc). Low blast radius; DA-gated."
+    },
+    {
+      "pattern": "scripts/eval/**",
+      "owner": "alex",
+      "policy": "auto_merge_after:ca_internal_da",
+      "bypass_eligible": true,
+      "notes": "Evaluation harness. Refactor-friendly; DA-gated."
+    },
+    {
+      "pattern": "scripts/hooks/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Claude Code hooks. Behavior-critical; humans review."
+    },
+    {
+      "pattern": "scripts/mesh/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Mesh-API source. Contract surface; never bypass-eligible."
+    },
+    {
+      "pattern": "scripts/middleware/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Request middleware. Auth/validation layer; humans review."
+    },
+    {
+      "pattern": "scripts/routes/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "HTTP route handlers. Contract surface; humans review."
+    },
+    {
+      "pattern": "scripts/bot/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Telegram bot commands/callbacks/features/crons/verify. User-facing behavior; humans review. (Utils carved out above.)"
+    },
+    {
+      "pattern": "scripts/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Catch-all for daemons (cfo-agent.js, conductor-agent.js, etc), maintenance scripts, tools. Default to human review until a sub-lane is carved out explicitly."
+    },
+    {
+      "pattern": "tests/**",
+      "owner": "alex",
+      "policy": "auto_merge_after:ca_internal_da",
+      "bypass_eligible": true,
+      "notes": "Top-level test tree (incl. tests/e2e). Mechanical refactors common; DA-gated."
+    },
+    {
+      "pattern": "knowledge/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Kai's knowledge base (incl. agent manifests). Kai writes; CA never. CA may read for graph-walk."
+    },
+    {
+      "pattern": "memory/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Kai's runtime memory. Kai's own; CA never writes."
+    },
+    {
+      "pattern": "logs/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Kai's activity logs. Kai writes; CA never."
+    },
+    {
+      "pattern": "data/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Kai's data dir. Owned by Kai's runtime."
+    },
+    {
+      "pattern": "tmp/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Kai's scratch dir. Owned by Kai's runtime."
+    },
+    {
+      "pattern": "ecosystem.config.js",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "PM2 process config — deploy-pipeline territory. CLAUDE.md T3 + DA-mandatory."
+    },
+    {
+      "pattern": "Dockerfile",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Container build. Deploy-pipeline; humans review."
+    },
+    {
+      "pattern": ".github/workflows/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "CI/CD workflows. Deploy-pipeline; CLAUDE.md T3 + DA-mandatory."
+    },
+    {
+      "pattern": "package-lock.json",
+      "owner": "alex",
+      "policy": "auto_merge_after:ca_internal_da",
+      "bypass_eligible": true,
+      "notes": "Lockfile churn from `npm install` is mechanical; DA-gated."
+    },
+    {
+      "pattern": "package.json",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Dependencies + npm scripts. Humans review additions/removals."
+    }
+  ],
+  "fallback": {
+    "owner": "alex",
+    "policy": "human_review_required",
+    "bypass_eligible": false,
+    "notes": "Default-deny posture: anything not matched above (root docs/state .md files, dashboard/, explainers/, templates/, imessage/, skills/, src/, tools/, docs/, etc) requires human review."
+  },
+  "generated_at": "2026-05-18T08:55:00-04:00",
+  "generated_by": "code-architect@0.1.0 hand-drafted bootstrap (CA session 2, claude-opus-4-7)"
+}
