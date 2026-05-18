@@ -100,9 +100,33 @@ print(r)  # {'status': 'delivered', ...} — sender thinks it succeeded
 ## What ACD did as workaround
 
 1. Inspected `/inbox/nami` after Alex's "did they get it?" question, found the failed status.
-2. Re-sent with `action=social_deliverable_ready` (the closest match from Nami's supported set). Message-id `dag-holiday-calendar-2026-2027-cleared-v2`, now `status: delivered` awaiting Nami's poll.
+2. Re-sent with `action=social_deliverable_ready` (the closest match from Nami's supported set). Message-id `dag-holiday-calendar-2026-2027-cleared-v2`.
 3. Saved feedback memory `feedback-verify-message-status-not-just-delivered` for future ACD sessions — poll inbox after every send.
-4. None of the three other recipients (Framer, Enso, Kai) had this issue; Framer + Enso confirmed `status: completed`. So the action vocabulary mismatch is Nami-specific (likely because she's the newest agent on the mesh and her handler set is narrower).
+4. None of the three other recipients (Framer, Enso, Kai) had this issue; Framer + Enso confirmed `status: completed`. So the contract mismatch is Nami-specific.
+
+### Update 2026-05-18 03:53Z — v2 also failed
+
+The re-send with the corrected action verb still failed, with a different error:
+
+```
+msg_id: dag-holiday-calendar-2026-2027-cleared-v2
+action:  social_deliverable_ready
+status:  failed (3 attempts)
+error:   "Transform social_deliverable rejected payload"
+```
+
+So Nami's `social_deliverable_ready` handler **accepts the action verb** but **rejects the payload schema**. ACD has no visibility into the expected payload structure for `social_deliverable_ready` without reading Nami's handler source (out of ACD's lane).
+
+**This escalates Finding 1.** It's not just an action-vocabulary mismatch — it's a two-layer contract gap:
+
+1. Action verbs are undocumented across agents (Finding 1 original).
+2. Payload schemas per action are also undocumented and gated by an internal transform step (`Transform social_deliverable rejected payload` is the only sender-visible signal).
+
+A sender that knows the right verb still has no way to construct a passing payload short of reverse-engineering the handler.
+
+### Strengthened recommendation
+
+Finding 1B should be **stronger than option B alone**: publish per-agent **action verbs + payload schema (JSON Schema preferred)** in `/agents/<id>/capabilities`. The mesh-api can optionally pre-validate payloads against schema on `POST /messages` and reject at send time with a structured error instead of queueing for silent-rejection on the recipient's poll. The "validate on send" path is the only way to eliminate the silent-failure surface entirely — Finding 2's `send_and_verify()` helper would still work but only as a post-hoc check.
 
 ---
 
