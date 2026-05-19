@@ -3,3 +3,11 @@ node_modules/
 *.log
 .kameha/run.lock
 .kameha/run.lock.tmp
+
+# Playwright MCP cache (per-session, regenerated)
+.playwright-mcp/
+
+# Session-screenshot artifacts at repo root (Playwright captures of session-face HTML)
+/session-face-*.png
+/session2-*.png
+/session3-*.png
