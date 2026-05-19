@@ -1,0 +1,162 @@
+{
+  "schema_version": 1,
+  "repo": "nami",
+  "owner_registry": "~/.kameha/agent-owners.json",
+  "paths": [
+    {
+      "pattern": ".kameha/owners.json",
+      "owner": "alex",
+      "policy": "bootstrap_only",
+      "bypass_eligible": false,
+      "notes": "This file itself. Only writable by `code-architect owners bootstrap` or `owners migrate`; never a general edit target."
+    },
+    {
+      "pattern": ".kameha/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Config dir for CA-managed lockfiles + contracts. Run.lock is handled atomically by safe-json; humans review anything else."
+    },
+    {
+      "pattern": "nami-platform/nami.db*",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Nami runtime SQLite plus -wal/-shm sidecars. Gitignored anyway, but explicit policy prevents accidental writes through any tooling. Touching sidecars corrupts the DB."
+    },
+    {
+      "pattern": "nami-platform/uploads/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "User uploads. Gitignored; runtime only."
+    },
+    {
+      "pattern": "nami-platform/tests/**",
+      "owner": "alex",
+      "policy": "auto_merge_after:ca_internal_da",
+      "bypass_eligible": true,
+      "notes": "pytest tree (test_bridge.py, test_bridge_intents.py, etc). Mechanical refactors common; DA-gated."
+    },
+    {
+      "pattern": "nami-platform/routers/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "FastAPI router code (bridge.py, api.py, auth.py, client.py, dashboard.py, inbox.py, monitoring.py, publish.py, review.py). API contract surface; never bypass-eligible."
+    },
+    {
+      "pattern": "nami-platform/services/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Business-logic services. Humans review."
+    },
+    {
+      "pattern": "nami-platform/scripts/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "One-shot scripts (seed_*, backfill_*, check_*). Often dangerous (DB writes, calendar resets); humans review."
+    },
+    {
+      "pattern": "nami-platform/templates/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Jinja templates for client-facing UI. Humans review."
+    },
+    {
+      "pattern": "nami-platform/static/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Static web assets served to clients. Humans review."
+    },
+    {
+      "pattern": "nami-platform/assets/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Bundled application assets. Humans review."
+    },
+    {
+      "pattern": "nami-platform/main.py",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "FastAPI app entry, router mounts, lifecycle. Humans review every change."
+    },
+    {
+      "pattern": "nami-platform/config.py",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "App settings + env var bindings. Humans review."
+    },
+    {
+      "pattern": "nami-platform/database.py",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "DB schema + connection management. Humans review schema changes."
+    },
+    {
+      "pattern": "nami-platform/requirements.txt",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Python deps. Humans review additions/removals."
+    },
+    {
+      "pattern": "nami-starter/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Template/scaffold project. Not production. Nami's domain; CA never writes."
+    },
+    {
+      "pattern": "memory/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Nami's runtime memory. Gitignored; per-developer ephemeral state."
+    },
+    {
+      "pattern": "tools/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "External dev tooling. Gitignored; not part of production app."
+    },
+    {
+      "pattern": "render.yaml",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Render.com deploy config. Deploy-pipeline; CLAUDE.md T3 + DA-mandatory."
+    },
+    {
+      "pattern": "litestream.yml",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Litestream SQLite-replication config. Backup-pipeline; humans review."
+    },
+    {
+      "pattern": ".github/workflows/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "CI/CD workflows. Deploy-pipeline; CLAUDE.md T3 + DA-mandatory. Defensive entry — no .github/workflows exists today."
+    }
+  ],
+  "fallback": {
+    "owner": "alex",
+    "policy": "human_review_required",
+    "bypass_eligible": false,
+    "notes": "Default-deny posture: anything not matched above (top-level CLAUDE.md/nami-audit.txt/build_facebook_cover.py/loose PNGs, docs/, nami-platform/docs/) requires human review."
+  },
+  "generated_at": "2026-05-18T20:40:00-04:00",
+  "generated_by": "code-architect@0.1.0 hand-drafted bootstrap (CA session 2, claude-opus-4-7)"
+}

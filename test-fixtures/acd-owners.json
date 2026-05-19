@@ -1,0 +1,225 @@
+{
+  "schema_version": 1,
+  "repo": "acd",
+  "owner_registry": "~/.kameha/agent-owners.json",
+  "paths": [
+    {
+      "pattern": ".kameha/owners.json",
+      "owner": "alex",
+      "policy": "bootstrap_only",
+      "bypass_eligible": false,
+      "notes": "This file itself. Only writable by `code-architect owners bootstrap` or `owners migrate`; never a general edit target."
+    },
+    {
+      "pattern": ".kameha/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Config dir for CA-managed lockfiles + contracts. Run.lock is handled atomically by safe-json; humans review anything else."
+    },
+    {
+      "pattern": ".claude/hooks/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Claude Code PostToolUse/PreToolUse hooks (post_tool_audit.py writes to logs/acd-activity.jsonl; pre_tool_validate.py gates bash). Behavior-critical for the audit trail; humans review every change."
+    },
+    {
+      "pattern": ".claude/settings.json",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Hook wiring. Editing this can silently disable the activity-log audit trail; humans review."
+    },
+    {
+      "pattern": ".claude/skills/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "ACD's own skill packs (pre-production, project-tracking, post-production, delivery, creative-direction, reporting, shutdown). Agent-authored creative workflow; CA never writes."
+    },
+    {
+      "pattern": ".claude/agents/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "ACD sub-agent definitions (brief-generator, kai-liaison). Agent-owned; CA never writes."
+    },
+    {
+      "pattern": ".claude/references/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "ACD's reference docs (ecosystem.md, platform-specs.md, project-templates.md, production-protocol.md). Agent-owned content; CA never writes."
+    },
+    {
+      "pattern": ".claude/projects/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Claude Code per-project state (untracked; appears in current dirty status). Agent-owned ephemeral state."
+    },
+    {
+      "pattern": "logs/acd-activity.jsonl",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Append-only PostToolUse audit log written by .claude/hooks/post_tool_audit.py. CA must never touch — drift here breaks the audit trail."
+    },
+    {
+      "pattern": "logs/mesh-outbox.jsonl",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "ACD mesh-send queue/journal. Written by daemon + mesh_client.py; CA must never touch."
+    },
+    {
+      "pattern": "logs/briefs/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Generated creative-brief artifacts. ACD runtime output; CA never writes. Gitignored anyway."
+    },
+    {
+      "pattern": "logs/pending-comms/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Queued client-facing comms awaiting Alex review. PII-adjacent; CA never writes."
+    },
+    {
+      "pattern": "logs/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "ACD runtime logs (rclone, activity, mesh outbox). Gitignored per .gitignore (logs/*.jsonl, logs/briefs/*). CA never writes."
+    },
+    {
+      "pattern": "memory/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "ACD's session memory (session-YYYY-MM-DD.md). Agent's own; CA never writes."
+    },
+    {
+      "pattern": "knowledge/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "ACD's creative-direction knowledge base (clients/, creative-direction/, crew/, equipment/, shot-lists/, production-history.md, creative-tools-research*). Brand/creative authority; CA reads for graph-walk but never writes."
+    },
+    {
+      "pattern": "tests/**",
+      "owner": "alex",
+      "policy": "auto_merge_after:ca_internal_da",
+      "bypass_eligible": true,
+      "notes": "Python test tree (test_mesh_client_a2a.py + future). Mechanical refactors common; DA-gated."
+    },
+    {
+      "pattern": "scripts/lib/db.py",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Conductor.db access layer. ACD owns creative_briefs/revision_cycles/deliverables/production_days/creative_references tables (shared DB with Kai). Schema/query changes have cross-agent blast radius; humans review."
+    },
+    {
+      "pattern": "scripts/lib/mesh_client.py",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "A2A v1.0 mesh-send surface (message_id == metadata.idempotency_key, correlation_id, expires_at). Contract-sensitive — this file was just patched in 1435d9b. Humans review."
+    },
+    {
+      "pattern": "scripts/lib/__pycache__/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Python bytecode cache. Runtime-generated; CA never writes. Gitignored."
+    },
+    {
+      "pattern": "scripts/lib/**",
+      "owner": "alex",
+      "policy": "auto_merge_after:ca_internal_da",
+      "bypass_eligible": true,
+      "notes": "Shared library code (asset_expander, brand_system, creative_audit, gear_checker, production_strategy). db.py + mesh_client.py carved out above as contract-sensitive. Remainder is mechanical-refactor friendly; DA-gated."
+    },
+    {
+      "pattern": "scripts/dashboard/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Flask dashboard (app.py). User/client-facing UI; humans review."
+    },
+    {
+      "pattern": "scripts/calc/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Deterministic creative calculators (setup_calculator.py + future). Per CLAUDE.md architect-builder split, ACD relies on these for reproducible specs — accuracy is load-bearing; humans review."
+    },
+    {
+      "pattern": "scripts/vision/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Vision/CV scripts (currently empty; placeholder per requirements.txt opencv comment). When populated, will touch image analysis — humans review."
+    },
+    {
+      "pattern": "scripts/daemon.py",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "ACD long-running daemon (PM2 entry per ecosystem.config.js, port 3342). Mesh I/O + lifecycle critical; humans review every change."
+    },
+    {
+      "pattern": "scripts/__pycache__/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Python bytecode cache. Runtime-generated; CA never writes. Gitignored."
+    },
+    {
+      "pattern": "scripts/deploy.sh",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Mac-Mini deploy script (rsync to kai@100.64.114.13:/Users/kai/acd). Deploy-pipeline; CLAUDE.md T3 + DA-mandatory."
+    },
+    {
+      "pattern": "scripts/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Catch-all for top-level scripts and any unknown subdirs. Default to human review until a sub-lane is carved out explicitly."
+    },
+    {
+      "pattern": "ecosystem.config.js",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "PM2 process config (acd-daemon, /Users/kai/acd, conductor.db wiring, port 3342). Deploy-pipeline territory; CLAUDE.md T3 + DA-mandatory."
+    },
+    {
+      "pattern": ".github/workflows/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "CI/CD workflows (deploy.yml: Tailscale + SSH to Mac Mini on push). Deploy-pipeline; CLAUDE.md T3 + DA-mandatory."
+    },
+    {
+      "pattern": "requirements.txt",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Python deps (flask, requests, anthropic). Humans review additions/removals."
+    }
+  ],
+  "fallback": {
+    "owner": "alex",
+    "policy": "human_review_required",
+    "bypass_eligible": false,
+    "notes": "Default-deny posture: anything not matched above (CLAUDE.md, top-level docs, .gitignore, ad-hoc files) requires human review."
+  },
+  "generated_at": "2026-05-18T21:00:00-04:00",
+  "generated_by": "code-architect@0.1.0 hand-drafted bootstrap (CA session 2 agent-team, claude-opus-4-7)"
+}

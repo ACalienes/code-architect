@@ -1,0 +1,162 @@
+{
+  "schema_version": 1,
+  "repo": "cfo",
+  "owner_registry": "~/.kameha/agent-owners.json",
+  "paths": [
+    {
+      "pattern": ".kameha/owners.json",
+      "owner": "alex",
+      "policy": "bootstrap_only",
+      "bypass_eligible": false,
+      "notes": "This file itself. Only writable by `code-architect owners bootstrap` or `owners migrate`; never a general edit target."
+    },
+    {
+      "pattern": ".kameha/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Config dir for CA-managed lockfiles + contracts. Run.lock is handled atomically by safe-json; humans review anything else."
+    },
+    {
+      "pattern": "docs/shared/outbox-cfo.json",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "CFO's mesh outbox state. Written by CFO's daemon; CA must never touch."
+    },
+    {
+      "pattern": "docs/shared/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Shared mesh state (outbox, inbox, etc). Owned by CFO's runtime; CA never writes."
+    },
+    {
+      "pattern": "scripts/tests/**",
+      "owner": "alex",
+      "policy": "auto_merge_after:ca_internal_da",
+      "bypass_eligible": true,
+      "notes": "In-tree Python tests for scripts. Mechanical refactors common; DA-gated."
+    },
+    {
+      "pattern": "tests/**",
+      "owner": "alex",
+      "policy": "auto_merge_after:ca_internal_da",
+      "bypass_eligible": true,
+      "notes": "Top-level test tree. Mechanical refactors common; DA-gated."
+    },
+    {
+      "pattern": "scripts/lib/**",
+      "owner": "alex",
+      "policy": "auto_merge_after:ca_internal_da",
+      "bypass_eligible": true,
+      "notes": "Shared library code (qb_auth, helpers, parsers). Low blast radius; DA-gated."
+    },
+    {
+      "pattern": "package-lock.json",
+      "owner": "alex",
+      "policy": "auto_merge_after:ca_internal_da",
+      "bypass_eligible": true,
+      "notes": "Lockfile churn from `npm install` is mechanical; DA-gated. (CFO is primarily Python; node is for tooling only.)"
+    },
+    {
+      "pattern": "logs/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "CFO's runtime logs (activity, heartbeat, alerts, snapshot, nudges history). CFO writes; CA never. The high-churn cfo-activity.json should be gitignored separately — that's a .gitignore task, not an owners.json policy."
+    },
+    {
+      "pattern": "data/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "CFO's financial data dir (snapshots, ledgers, invoice drafts). Owned by CFO's runtime; CA never writes."
+    },
+    {
+      "pattern": "knowledge/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "CFO's financial-strategy knowledge base (tax KB, vendor classifications, etc). CFO writes; CA may read for graph-walk."
+    },
+    {
+      "pattern": "receipts/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Receipt images and metadata. PII + financial; owner only. Gitignored anyway per CFO's .gitignore."
+    },
+    {
+      "pattern": "scripts/alerts/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Alerts pipeline (financial_monitor.py, send_alerts.py). Triggers financial decisions; humans review."
+    },
+    {
+      "pattern": "scripts/calc/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Financial calcs (burn rate, tax threshold monitor, tax setaside, entity comparison). Accuracy is load-bearing; humans review."
+    },
+    {
+      "pattern": "scripts/dashboard/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Flask dashboard (app.py, templates/, static/). User-facing; humans review."
+    },
+    {
+      "pattern": "scripts/nudges/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Client-outreach nudges. Sends to clients; humans review every change."
+    },
+    {
+      "pattern": "scripts/launchd/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "launchd plist + scheduling. Deploy-pipeline territory; humans review."
+    },
+    {
+      "pattern": "scripts/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Catch-all for top-level scripts (daily_snapshot.py, qb_*, etc) and any unknown subdirs. Default to human review until a sub-lane is carved out explicitly."
+    },
+    {
+      "pattern": ".github/workflows/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "CI/CD workflows. Deploy-pipeline; CLAUDE.md T3 + DA-mandatory. Defensive entry — no .github/workflows exists today."
+    },
+    {
+      "pattern": "package.json",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Node tooling deps + scripts. Humans review additions/removals."
+    },
+    {
+      "pattern": "requirements.txt",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Python deps. Humans review additions/removals."
+    }
+  ],
+  "fallback": {
+    "owner": "alex",
+    "policy": "human_review_required",
+    "bypass_eligible": false,
+    "notes": "Default-deny posture: anything not matched above (top-level .md docs, CLAUDE.md/LANGUAGE.md/SETUP-GUIDE.md/MASTER-BUILDOUT-PROMPT.md, .gitignore, ad-hoc files in docs/) requires human review."
+  },
+  "generated_at": "2026-05-18T19:50:00-04:00",
+  "generated_by": "code-architect@0.1.0 hand-drafted bootstrap (CA session 2, claude-opus-4-7)"
+}

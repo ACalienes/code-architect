@@ -1,0 +1,330 @@
+{
+  "schema_version": 1,
+  "repo": "lead-engine",
+  "owner_registry": "~/.kameha/agent-owners.json",
+  "paths": [
+    {
+      "pattern": ".kameha/owners.json",
+      "owner": "alex",
+      "policy": "bootstrap_only",
+      "bypass_eligible": false,
+      "notes": "This file itself. Only writable by `code-architect owners bootstrap` or `owners migrate`; never a general edit target."
+    },
+    {
+      "pattern": ".kameha/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Config dir for CA-managed lockfiles + contracts. Run.lock is handled atomically by safe-json; humans review anything else. (No .kameha/ dir exists today — defensive entry.)"
+    },
+    {
+      "pattern": "dashboard.db*",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Dashboard runtime SQLite + -wal/-shm sidecars at repo root. Gitignored. Lead Engine writes via dashboard backend; CA must never touch — sidecar writes corrupt the DB."
+    },
+    {
+      "pattern": "reports/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Archer/classify batch reports — prospect outreach drafts. Contains prospect PII (names, companies, contact context). Gitignored. Runtime only; CA never writes."
+    },
+    {
+      "pattern": "logs/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Runtime logs (claude_usage.csv, delegation_processed.json, indeed_dedup_log.json, *_last_fetch.json). Gitignored. Lead Engine's daemons write; CA never."
+    },
+    {
+      "pattern": "tests/live_*.csv",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Live smoke-test CSVs with real prospect data (live_smoke_cynthia.csv, live_smoke_gina.csv, live_batch_*.csv). Gitignored per .gitignore. Prospect PII; never CA-writable."
+    },
+    {
+      "pattern": ".env",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Live credentials (Claude API, HubSpot, Instantly, Gmail, Eventbrite, Yelp, etc). Gitignored. Never CA-writable."
+    },
+    {
+      "pattern": ".env.example",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Example env file (committed). Schema for required env vars; humans review additions/removals."
+    },
+    {
+      "pattern": "knowledge/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Lead-engine knowledge base (legal exposure + brand vocabulary, etc). Owned by the lead-engine agent; CA may read for graph-walk but never writes. Currently untracked (1 file)."
+    },
+    {
+      "pattern": "tests/**",
+      "owner": "alex",
+      "policy": "auto_merge_after:ca_internal_da",
+      "bypass_eligible": true,
+      "notes": "Top-level pytest tree (test_archer_tracks.py, test_batch_report.py, test_competitive_monitor.py, sample fixtures). Mechanical refactors common; DA-gated. The tests/live_*.csv carve-out above takes precedence for the PII fixtures."
+    },
+    {
+      "pattern": "dashboard/tests/**",
+      "owner": "alex",
+      "policy": "auto_merge_after:ca_internal_da",
+      "bypass_eligible": true,
+      "notes": "Dashboard pytest tree. Mechanical refactors common; DA-gated."
+    },
+    {
+      "pattern": "shared/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Shared library code (hubspot_client.py, claude_retry.py, instantly_client.py, kai_notifications.py, delegation.py, inbox_processor.py, signal_common.py, research-intel.md). API-client surface + cross-module helpers. Conservative: humans review until specific sub-lanes are carved out (CA tends to whitelist scripts/lib/** but Lead Engine's shared/ also wires HubSpot/Instantly client calls — too load-bearing for auto-merge)."
+    },
+    {
+      "pattern": "prompts/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "36 externalized Claude prompt templates (archer_*, scout_*, closer_*). Drives client-facing copy generation; brand voice + ICP rubric encoded here. Humans review every change."
+    },
+    {
+      "pattern": "scout/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Scout module (csv_parser, enrichment, scoring, hubspot_push, batch_report, warm_intro, radar_signal_integration). Touches HubSpot writes + ICP scoring; humans review."
+    },
+    {
+      "pattern": "archer/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Archer module (outreach_generator, contact_classifier, referral_ask, video_brief). Generates client-facing outreach; humans review."
+    },
+    {
+      "pattern": "closer/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Closer module (discovery_prep, negotiation, objection_preemption, onboarding_templates, proposal_followup, proposal_gen). Client-facing deal support; humans review."
+    },
+    {
+      "pattern": "radar/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Radar monitoring modules (8 modules: competitive_monitor, event_scanner, linkedin_signal_monitor, lost_deal_reactivation, partnership_spotter, referral_timer, seasonal_triggers, warm_reengagement). Humans review."
+    },
+    {
+      "pattern": "seo/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "SEO content generation (gbp_posts, landing_page, review_responses). Client-facing copy; humans review."
+    },
+    {
+      "pattern": "events/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Eventbrite signal intake (api_reader, signal_processor, batch_report). External-API ingestion; humans review."
+    },
+    {
+      "pattern": "instagram/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Instagram Graph signal intake. External-API ingestion; humans review."
+    },
+    {
+      "pattern": "indeed/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Indeed signal intake via Gmail (gmail_reader, email_parser, relevance_filter, dedup, pay_normalizer, intake_formatter, batch_report). Email-content parsing; humans review."
+    },
+    {
+      "pattern": "linkedin_jobs/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "LinkedIn jobs signal intake via Gmail. Humans review."
+    },
+    {
+      "pattern": "fb_ads/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Meta Ad Library signal intake (ad_library_reader, signal_processor, batch_report). External-API ingestion; humans review."
+    },
+    {
+      "pattern": "yelp/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Yelp Fusion signal intake. External-API ingestion; humans review."
+    },
+    {
+      "pattern": "google_alerts/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Google Alerts signal intake via Gmail. Humans review."
+    },
+    {
+      "pattern": "local_news/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Local news RSS signal intake. Humans review."
+    },
+    {
+      "pattern": "permits/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Permits signal intake via Socrata. External-API ingestion; humans review."
+    },
+    {
+      "pattern": "dashboard/frontend/node_modules/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "npm install artifacts for Next.js dashboard. Gitignored. CA never writes."
+    },
+    {
+      "pattern": "dashboard/frontend/.next/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Next.js build output. Gitignored. CA never writes."
+    },
+    {
+      "pattern": "dashboard/frontend/package-lock.json",
+      "owner": "alex",
+      "policy": "auto_merge_after:ca_internal_da",
+      "bypass_eligible": true,
+      "notes": "Next.js dashboard lockfile. Churn from `npm install` is mechanical; DA-gated."
+    },
+    {
+      "pattern": "dashboard/frontend/package.json",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Next.js dashboard deps + npm scripts. Humans review additions/removals."
+    },
+    {
+      "pattern": "dashboard/frontend/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Next.js TypeScript dashboard UI (src/, public/, configs). User-facing; humans review."
+    },
+    {
+      "pattern": "dashboard/backend/routers/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "FastAPI routers. API contract surface; never bypass-eligible."
+    },
+    {
+      "pattern": "dashboard/backend/adapters/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Module-to-dashboard adapters (archer_adapter, scout_adapter, closer_adapter, radar_adapter, classify_adapter, indeed_adapter, seo_adapter, signals_adapter). Wires modules into dashboard jobs; humans review."
+    },
+    {
+      "pattern": "dashboard/backend/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "FastAPI dashboard backend (main.py, auth.py, config.py, database.py, models.py, scheduler.py, websocket.py, job_runner.py, delegation_scheduler.py, plugin.py). User-facing; humans review."
+    },
+    {
+      "pattern": "dashboard/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Catch-all for dashboard tree (frontend + backend sub-lanes already carved above). Humans review."
+    },
+    {
+      "pattern": "scripts/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Top-level scripts/ (hubspot_evolve.py, hubspot_setup.py). One-shot HubSpot CRM pipeline migrations — mutates external CRM state, very dangerous. Humans review every change."
+    },
+    {
+      "pattern": "docs/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Reference docs (ICP_SCORING_RUBRIC, BRAND_VOICE_AND_PORTFOLIO, PROPOSAL_FRAMEWORK, SYSTEM_ARCHITECTURE, HUBSPOT_CONFIGURATION, GO_LIVE_PLAYBOOK, BUILD_STATUS, FEEDBACK_LOG, etc). Brand-strategic + product-architecture content. Humans review."
+    },
+    {
+      "pattern": "config/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Radar config (radar_config.yaml). Drives monitoring behavior; humans review."
+    },
+    {
+      "pattern": "run_*.py",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Top-level orchestration entrypoints (run_scout, run_archer, run_classify, run_closer, run_dashboard, run_radar, run_seo, run_events, run_yelp, run_indeed, run_linkedin_jobs, run_local_news, run_permits, run_instagram, run_fb_ads, run_google_alerts, run_enrich_existing, run_score_existing). CLI surface; humans review."
+    },
+    {
+      "pattern": "kameha_audit_export.sh",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Audit export shell script at repo root. Humans review."
+    },
+    {
+      "pattern": "start_dashboard.sh",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Dashboard launch script. Deploy-pipeline-adjacent; humans review."
+    },
+    {
+      "pattern": "requirements.txt",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Python deps for core pipeline. Humans review additions/removals."
+    },
+    {
+      "pattern": "requirements-dashboard.txt",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Python deps for dashboard backend. Humans review additions/removals."
+    },
+    {
+      "pattern": ".github/workflows/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "CI/CD workflows. Deploy-pipeline; CLAUDE.md T3 + DA-mandatory. Defensive entry — no .github/workflows exists today."
+    }
+  ],
+  "fallback": {
+    "owner": "alex",
+    "policy": "human_review_required",
+    "bypass_eligible": false,
+    "notes": "Default-deny posture: anything not matched above (CLAUDE.md, LANGUAGE.md, top-level skills/, ad-hoc files) requires human review. Lead Engine has no general-purpose library lane like scripts/lib/ — shared/ is too API-client-heavy to auto-merge."
+  },
+  "generated_at": "2026-05-18T21:00:00-04:00",
+  "generated_by": "code-architect@0.1.0 hand-drafted bootstrap (CA session 2 agent-team, claude-opus-4-7)"
+}

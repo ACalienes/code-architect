@@ -1,0 +1,372 @@
+{
+  "schema_version": 1,
+  "repo": "framer",
+  "owner_registry": "~/.kameha/agent-owners.json",
+  "paths": [
+    {
+      "pattern": ".kameha/owners.json",
+      "owner": "alex",
+      "policy": "bootstrap_only",
+      "bypass_eligible": false,
+      "notes": "This file itself. Only writable by `code-architect owners bootstrap` or `owners migrate`; never a general edit target."
+    },
+    {
+      "pattern": ".kameha/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Config dir for CA-managed lockfiles + contracts. Run.lock is handled atomically by safe-json; humans review anything else."
+    },
+    {
+      "pattern": "scripts/lib/__init__.py",
+      "owner": "alex",
+      "policy": "auto_merge_after:ca_internal_da",
+      "bypass_eligible": true,
+      "notes": "Package marker for scripts/lib. Mechanical; DA-gated."
+    },
+    {
+      "pattern": "scripts/lib/db.py",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Conductor.db connection + parameterized-query helpers. Schema-adjacent; humans review every change."
+    },
+    {
+      "pattern": "scripts/lib/mesh_client.py",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Mesh-API client (send/ack/capabilities). Contract surface; never bypass-eligible. (Framer carousel send drift incident on 2026-05-10 originated here.)"
+    },
+    {
+      "pattern": "scripts/lib/carousel_staging.py",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Carousel staging pipeline shared with daemon. Touches outputs path semantics + downstream send payloads; humans review."
+    },
+    {
+      "pattern": "scripts/lib/**",
+      "owner": "alex",
+      "policy": "auto_merge_after:ca_internal_da",
+      "bypass_eligible": true,
+      "notes": "Fallback for future helper modules under scripts/lib (formatters, parsers). Sensitive files (db.py, mesh_client.py, carousel_staging.py) are carved out above."
+    },
+    {
+      "pattern": "scripts/daemon.py",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "PM2 entrypoint + action dispatch (the `handlers` whitelist + scheduler + Flask API surface). Every change is behavior-critical; humans review. Note: daemon DOES whitelist actions (lines 122-167) — the intake doc claim that Framer accepts arbitrary action types is inaccurate; `creative_brief` lands because ACD includes it within a payload that another whitelisted handler unwraps, OR via an alias not yet inspected. Investigate before any handler refactor."
+    },
+    {
+      "pattern": "scripts/verify-bench.sh",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Pre-push hook helper enforcing BENCHMARK.md re-run on render-path changes. Bypass-eligible refactor would undermine the gate; humans review."
+    },
+    {
+      "pattern": "scripts/__init__.py",
+      "owner": "alex",
+      "policy": "auto_merge_after:ca_internal_da",
+      "bypass_eligible": true,
+      "notes": "Package marker. Mechanical; DA-gated."
+    },
+    {
+      "pattern": "scripts/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Catch-all for top-level scripts (build_*, ad-hoc DAG builders). Many are one-shot pipelines that call AI APIs (cost-bearing); humans review. Sub-lanes can be carved out later."
+    },
+    {
+      "pattern": "domains/photo/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Photo production pipeline (culler, color_grader, retoucher, raw_loader, derivative_generator, batch_exporter). Touches PIL memory budget (300M cap) + source-file invariant (HB#2: never modify originals); humans review."
+    },
+    {
+      "pattern": "domains/graphics/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Graphic design (card_composer, layout_engine, template_library, text_renderer). Brand-rendering surface; humans review."
+    },
+    {
+      "pattern": "domains/aigen/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "AI generation clients (Gemini, Midjourney, Veo/Kling/Runway video) + cost_tracker + FOCAL prompts + model_router. Every change touches API spend (HB#3: $25/mo cap) or external API contracts; humans review."
+    },
+    {
+      "pattern": "domains/__init__.py",
+      "owner": "alex",
+      "policy": "auto_merge_after:ca_internal_da",
+      "bypass_eligible": true,
+      "notes": "Package marker. Mechanical; DA-gated."
+    },
+    {
+      "pattern": "services/carousel-renderer/templates/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Jinja templates rendered into client-facing carousels. The pre-commit hook (no-unsafe-jinja) blocks `| safe` and `autoescape false` here; CA must not introduce either. Brand-kit JSON also lives here. Humans review every change."
+    },
+    {
+      "pattern": "services/carousel-renderer/schemas/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Pydantic schemas for the wide-canvas / render request contract. Contract surface (sender/receiver agreement with ACD/Kai); humans review."
+    },
+    {
+      "pattern": "services/carousel-renderer/app.py",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Flask app entry for framer-carousel PM2 service (port 3345). API surface + lifecycle/signal handling (kill_timeout=30s, DRAIN_TIMEOUT_S=25s). Humans review."
+    },
+    {
+      "pattern": "services/carousel-renderer/lifecycle.py",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Process lifecycle / drain semantics. Crash-restart loop guard (max_restarts=3 / min_uptime=60s) depends on correct draining; humans review."
+    },
+    {
+      "pattern": "services/carousel-renderer/render_carousel.py",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Core render path. BENCHMARK.md gate (verify-bench.sh) fires on changes here; humans review."
+    },
+    {
+      "pattern": "services/carousel-renderer/asset_resolver.py",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Asset URL/path resolution incl. the `file://` allowlist guard referenced from daemon (asset-policy attack surface). Humans review."
+    },
+    {
+      "pattern": "services/carousel-renderer/canonical.py",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Canonicalization rules for render inputs. Determinism-load-bearing for golden tests; humans review."
+    },
+    {
+      "pattern": "services/carousel-renderer/atomic.py",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Atomic file-write helpers for renderer outputs. Concurrency-safety primitive; humans review."
+    },
+    {
+      "pattern": "services/carousel-renderer/startup_check.py",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Boot-time invariant checks. Humans review (silencing one of these is how outages get shipped)."
+    },
+    {
+      "pattern": "services/carousel-renderer/bench.py",
+      "owner": "alex",
+      "policy": "auto_merge_after:ca_internal_da",
+      "bypass_eligible": true,
+      "notes": "Benchmark harness. Mechanical refactors common; DA-gated. BENCHMARK.md must still be regenerated on any render-path change (see verify-bench.sh)."
+    },
+    {
+      "pattern": "services/carousel-renderer/color_utils.py",
+      "owner": "alex",
+      "policy": "auto_merge_after:ca_internal_da",
+      "bypass_eligible": true,
+      "notes": "Color helper utilities. Low blast radius; DA-gated."
+    },
+    {
+      "pattern": "services/carousel-renderer/wave_utils.py",
+      "owner": "alex",
+      "policy": "auto_merge_after:ca_internal_da",
+      "bypass_eligible": true,
+      "notes": "Decorative wave utility helpers. Low blast radius; DA-gated."
+    },
+    {
+      "pattern": "services/carousel-renderer/setup.sh",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Service setup script (creates venv, installs deps, installs pre-commit hooks). Bootstrapping behavior; humans review."
+    },
+    {
+      "pattern": "services/carousel-renderer/requirements.txt",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Renderer Python deps. Humans review additions/removals."
+    },
+    {
+      "pattern": "services/carousel-renderer/requirements-dev.txt",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Renderer dev/test deps. Humans review additions/removals."
+    },
+    {
+      "pattern": "services/carousel-renderer/assets/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Bundled fonts (Inter family, Reross_Quadratic) + brand logos. Licensing-sensitive; humans review additions/removals."
+    },
+    {
+      "pattern": "services/carousel-renderer/tests/golden/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Golden baseline images + fixtures (baseline-wide.png, nintendo-8.json, PILOT_BASELINE.md). Regenerating a golden silently hides regressions; humans review every change."
+    },
+    {
+      "pattern": "services/carousel-renderer/tests/**",
+      "owner": "alex",
+      "policy": "auto_merge_after:ca_internal_da",
+      "bypass_eligible": true,
+      "notes": "Renderer pytest tree (test_asset_policy, test_golden, test_hardening, test_lifecycle, conftest). Mechanical refactors common; DA-gated. Golden fixtures carved out above."
+    },
+    {
+      "pattern": "services/carousel-renderer/BENCHMARK.md",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Benchmark report regenerated by the require-bench pre-push hook. Hand-edits would defeat the gate; humans review."
+    },
+    {
+      "pattern": "services/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Catch-all for future sub-services. Default-deny until a sub-lane is carved out."
+    },
+    {
+      "pattern": "tests/**",
+      "owner": "alex",
+      "policy": "auto_merge_after:ca_internal_da",
+      "bypass_eligible": true,
+      "notes": "Top-level pytest tree (test_asset_indexer, test_carousel_layout, test_carousel_planner, test_llm_client, test_mesh_client, conftest). Mechanical refactors common; DA-gated."
+    },
+    {
+      "pattern": "evals/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Eval harness + carousel-briefs/*.json fixtures (Kameha brand positioning, Malaga listing, Nintendo ecosystem). Briefs encode brand-strategic intent; humans review. (Untracked in main as of HEAD 2a60a1b; defensive policy.)"
+    },
+    {
+      "pattern": "prompts/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Prompt source (carousel-planner-system.md). Prompt-engineering surface; humans review every change. (Untracked in main as of HEAD 2a60a1b; defensive policy.)"
+    },
+    {
+      "pattern": "knowledge/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Framer's domain knowledge (FOCAL framework, color-science, platform-specs, identity, rules, carousel best practices + skill research + workorder). Owned by Framer / KMG-via-ACD; CA never writes. CA may read for graph-walk."
+    },
+    {
+      "pattern": "outputs/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "All client deliverables (outputs/{client}/{project}/{date}/). Owned by Framer's runtime; CA never writes. Gitignored anyway."
+    },
+    {
+      "pattern": "logs/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Framer runtime logs incl. mesh-outbox.jsonl (filesystem backup for mesh sends when bus unreachable). Owned by daemon; CA never writes. Gitignored anyway."
+    },
+    {
+      "pattern": "assets/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Top-level font assets (jetbrains-mono, outfit, plus-jakarta-sans, space-grotesk, wix-madefor-display, wix-madefor-text). Untracked in main; treated as runtime asset cache. Distinct from services/carousel-renderer/assets which IS tracked and reviewed."
+    },
+    {
+      "pattern": "venv/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Python virtualenv. Gitignored; runtime only. CA never touches."
+    },
+    {
+      "pattern": ".playwright-mcp/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Playwright MCP local state. Untracked in tree today; gitignore opportunity flagged separately in CA session 1 triage. CA never writes."
+    },
+    {
+      "pattern": ".claude/skills/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Framer's Claude Code skills (ai-generation, graphic-design, photo-production). Owned by the agent's session; CA never writes."
+    },
+    {
+      "pattern": ".claude/agents/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Framer's Claude Code sub-agent definitions (kai-liaison.md). Owned by the agent's session; CA never writes."
+    },
+    {
+      "pattern": ".claude/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Catch-all for any other Claude Code config (settings.json, etc). Per-agent session state; CA never writes."
+    },
+    {
+      "pattern": "ecosystem.config.js",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "PM2 process config (framer + framer-carousel apps, ports 3343 + 3345, drain timeouts, restart guards). Deploy-pipeline territory; CLAUDE.md T3 + DA-mandatory."
+    },
+    {
+      "pattern": ".github/workflows/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "CI/CD workflows (deploy.yml). Deploy-pipeline; CLAUDE.md T3 + DA-mandatory."
+    },
+    {
+      "pattern": ".pre-commit-config.yaml",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Pre-commit + pre-push hooks (no-unsafe-jinja for templates, require-bench for render-path changes). Loosening either gate would defeat invariants; humans review."
+    },
+    {
+      "pattern": "requirements.txt",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Top-level Python deps. Humans review additions/removals."
+    }
+  ],
+  "fallback": {
+    "owner": "alex",
+    "policy": "human_review_required",
+    "bypass_eligible": false,
+    "notes": "Default-deny posture: anything not matched above (CLAUDE.md, loose top-level .jpeg samples like T1-native.jpeg / typography-review-native.jpeg, knowledge/codex-review-*.md untracked drafts, ad-hoc files) requires human review."
+  },
+  "generated_at": "2026-05-18T21:00:00-04:00",
+  "generated_by": "code-architect@0.1.0 hand-drafted bootstrap (CA session 2 agent-team, claude-opus-4-7)"
+}

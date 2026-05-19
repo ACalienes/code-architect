@@ -1,0 +1,183 @@
+{
+  "schema_version": 1,
+  "repo": "offer-architect",
+  "owner_registry": "~/.kameha/agent-owners.json",
+  "paths": [
+    {
+      "pattern": ".kameha/owners.json",
+      "owner": "alex",
+      "policy": "bootstrap_only",
+      "bypass_eligible": false,
+      "notes": "This file itself. Only writable by `code-architect owners bootstrap` or `owners migrate`; never a general edit target."
+    },
+    {
+      "pattern": ".kameha/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Config dir for CA-managed lockfiles + contracts. Run.lock is handled atomically by safe-json; humans review anything else."
+    },
+    {
+      "pattern": "docs/clients/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Per-client engagement dossiers (proposals, SOWs, services agreements, follow-up email drafts, scope-reset emails, pricing decisions). Each subdir contains client PII: contact names, contract terms, dollar figures, rate-card decisions. OA owns the client folder lifecycle and writes these as part of its pricing/negotiation workflow. CA must never touch — both to keep client financials out of CA's context window and because creative/economic ownership belongs to OA + Alex, not the engineering agent."
+    },
+    {
+      "pattern": "docs/shared/inbox-pitch.json",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "OA's mesh inbox for pitch/brief work orders from KMG/Kai. Runtime state; OA's poller writes. CA must never touch."
+    },
+    {
+      "pattern": "docs/shared/outbox-pitch.json",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "OA's mesh outbox for outbound pitch/brief sends. Runtime state; OA writes. CA must never touch."
+    },
+    {
+      "pattern": "docs/shared/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Shared mesh state plus cross-agent review drops (e.g., oa-review-*.md from OA-as-reviewer). Owned by OA's runtime + filesystem-drop mailman pattern; CA never writes."
+    },
+    {
+      "pattern": "docs/AVAILABLE-APIS.md",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Daemon-mode API inventory (Brave Search, 10 Google Cloud APIs). Tied to credentials + cost ceilings; humans review."
+    },
+    {
+      "pattern": "docs/PRICING-AND-DECISION-RULES.md",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Authoritative pricing floors + Go/No-Go decision logic. Load-bearing for every offer OA produces; humans review every change."
+    },
+    {
+      "pattern": "docs/NEGOTIATION-PLAYBOOK.md",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Negotiation strategy playbook. Strategic content; humans review."
+    },
+    {
+      "pattern": "docs/SOW-AND-CONTRACTS.md",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "SOW + contract templates and clauses. Legal/enforceability surface; humans review."
+    },
+    {
+      "pattern": "docs/CAPABILITIES.md",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Agency capabilities statement. Tied to what OA may quote against; humans review."
+    },
+    {
+      "pattern": "docs/CLIENT-HISTORY.md",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Cross-client history ledger. Contains client names + outcomes (won/lost/lessons); OA owns the entries. Treat as PII-adjacent; CA never writes."
+    },
+    {
+      "pattern": "docs/PATTERNS-AND-HISTORY.md",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Pattern library distilled from past engagements. OA writes from its own learning loop; CA never writes."
+    },
+    {
+      "pattern": "docs/EXAMPLES.md",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Worked offer examples. May reference real client figures; humans review additions."
+    },
+    {
+      "pattern": "docs/RESEARCH-METHODOLOGY.md",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Research audit methodology + output schema (used by daemon-mode). Schema changes affect downstream consumers; humans review."
+    },
+    {
+      "pattern": "docs/research-tools-intel.md",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Notes on research tooling. Humans review."
+    },
+    {
+      "pattern": ".claude/skills/offer-design/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Core pricing + offer-evaluation skill (SKILL.md + assets). Behavior-critical for every pricing decision OA emits; humans review."
+    },
+    {
+      "pattern": ".claude/skills/competitive-analysis/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Research + discovery skill (also drives autonomous research audits in daemon mode). Behavior-critical; humans review."
+    },
+    {
+      "pattern": ".claude/skills/shutdown/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Session shutdown skill — preserves OA session state. Humans review behavior changes to OA's memory protocol."
+    },
+    {
+      "pattern": ".claude/skills/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Catch-all for any future skills under .claude/skills/. Default to human review until a sub-lane is carved out explicitly."
+    },
+    {
+      "pattern": ".claude/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Catch-all for .claude/ config (settings.json, hooks, permissions, etc.). Behavior-shaping; humans review."
+    },
+    {
+      "pattern": ".github/workflows/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "CI/CD workflows (deploy.yml present). Deploy-pipeline; CLAUDE.md T3 + DA-mandatory."
+    },
+    {
+      "pattern": ".gitignore",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Gitignore rules — controls what client binaries (PDFs/HTML/full-site dirs) are excluded from version control. Loosening risks leaking client assets; humans review."
+    },
+    {
+      "pattern": "CLAUDE.md",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "OA agent definition: identity, startup protocol, skills wiring, operating modes, hard rules, style. Behavior root; humans review every change."
+    }
+  ],
+  "fallback": {
+    "owner": "alex",
+    "policy": "human_review_required",
+    "bypass_eligible": false,
+    "notes": "Default-deny posture. This repo has no scripts/, tests/, lib/, src/, or any code tree as of bootstrap — it is a docs+skills agent. Any future code additions (poller, daemon, helpers) land here under human review until a sub-lane is carved out explicitly. No auto_merge lanes exist in this bootstrap: there is no library or test code that would benefit from mechanical-refactor bypass yet."
+  },
+  "generated_at": "2026-05-18T21:00:00-04:00",
+  "generated_by": "code-architect@0.1.0 hand-drafted bootstrap (CA session 2 agent-team, claude-opus-4-7)"
+}

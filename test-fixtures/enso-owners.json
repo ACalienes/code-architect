@@ -1,0 +1,456 @@
+{
+  "schema_version": 1,
+  "repo": "enso",
+  "owner_registry": "~/.kameha/agent-owners.json",
+  "paths": [
+    {
+      "pattern": ".kameha/owners.json",
+      "owner": "alex",
+      "policy": "bootstrap_only",
+      "bypass_eligible": false,
+      "notes": "This file itself. Only writable by `code-architect owners bootstrap` or `owners migrate`; never a general edit target."
+    },
+    {
+      "pattern": ".kameha/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Config dir for CA-managed lockfiles + contracts. Run.lock is handled atomically by safe-json; humans review anything else."
+    },
+    {
+      "pattern": "enso-learning-log.json",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Enso's global self-improvement learning log (per CLAUDE.md §3 Self-Improvement Loop). Enso's daemon writes via scripts/pre-task-check.py and log-lesson.py. CA must never touch."
+    },
+    {
+      "pattern": "enso-learning-log.json.lock",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "File-level lock for the learning log. Runtime-only; CA must never touch."
+    },
+    {
+      "pattern": "scripts/lib/mesh_client.py",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Mesh A2A client (currently modified in WC, +35 lines). Contract surface for outbound work-heartbeat and inter-agent sends; never bypass-eligible."
+    },
+    {
+      "pattern": "scripts/lib/nami_dispatch.py",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Outbound Enso→Nami dispatch (untracked). Contract surface for cross-agent payloads; never bypass-eligible. Treat as mesh contract code."
+    },
+    {
+      "pattern": "scripts/lib/production_handlers.py",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "11 ffmpeg production handlers (per recent commit). Drives actual video output; humans review."
+    },
+    {
+      "pattern": "scripts/lib/**",
+      "owner": "alex",
+      "policy": "auto_merge_after:ca_internal_da",
+      "bypass_eligible": true,
+      "notes": "Catch-all for any other helpers under scripts/lib/. Today only the 3 carved-out files exist; this exists so future low-blast-radius helpers can land DA-gated without re-bootstrapping."
+    },
+    {
+      "pattern": "scripts/enso-daemon.py",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Auto-executable daemon entrypoint (per commit 279a14f). Long-running process; behavior-critical; humans review."
+    },
+    {
+      "pattern": "scripts/check-inbox.py",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Pulls delegated work orders from the Kameha ecosystem (per CLAUDE.md §0). Mesh-receive surface; humans review."
+    },
+    {
+      "pattern": "scripts/complete-work-order.py",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Closes work orders back to the mesh with deliverables/cost/lessons. Mesh-send surface; humans review."
+    },
+    {
+      "pattern": "scripts/pre-task-check.py",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Lesson-surfacing + repeat-mistake detector that writes to enso-learning-log.json. Behavior-critical for the self-improvement loop; humans review."
+    },
+    {
+      "pattern": "scripts/log-lesson.py",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Writes to enso-learning-log.json. Touches learning-log shape; humans review."
+    },
+    {
+      "pattern": "scripts/sync-client-data.py",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Project-history sync (cross-client data movement). Humans review."
+    },
+    {
+      "pattern": "scripts/upgrade-learning-log.py",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Schema migrator for the learning log. Migrations are dangerous; humans review."
+    },
+    {
+      "pattern": "scripts/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Catch-all for other top-level scripts (doctor.py, validate-xml.py, new_interview_project.py, broll_frame_quality.py, diff_edits.py, import-project-lessons.py). Default to human review until a sub-lane is carved out explicitly."
+    },
+    {
+      "pattern": "enso_core/cards/themes/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Generated card theme assets. Enso-owned output of the card engine; CA never writes."
+    },
+    {
+      "pattern": "enso_core/models/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Local model weights/caffemodel files (gitignored per .gitignore). Runtime artifacts; CA never writes."
+    },
+    {
+      "pattern": "enso_core/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Core production library (face_track, sync_primitives, beat_sync, editorial_intelligence, process, ffprobe, etc). Load-bearing for every render; humans review."
+    },
+    {
+      "pattern": "enso-vision/models/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "YOLO model weights (gitignored). Runtime artifacts; CA never writes."
+    },
+    {
+      "pattern": "enso-vision/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Vision pipeline (smart_crop, storyboard, filmstrip, analyze_clip). Humans review."
+    },
+    {
+      "pattern": "enso-captions/templates/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Caption-style templates (4 new ones untracked: bold-blue-1word, bold-blue-2word, minimal-shadow, wcd-upper). User-visible style; humans review."
+    },
+    {
+      "pattern": "enso-captions/fonts/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Font binary assets (.ttf/.otf gitignored per .gitignore). Runtime assets; CA never writes."
+    },
+    {
+      "pattern": "enso-captions/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Caption pipeline source (renderer, animations, color_grade, depth_mask, transcribe, silence_removal, sound_design, grouper, preview, run). Produces final user-visible video; humans review."
+    },
+    {
+      "pattern": "enso-clips/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Clip-selection pipeline (content_score, face_detect, multicam, silence_detect, audio_enhance, xml_diff, correction_aggregator). Selection logic drives every edit; humans review."
+    },
+    {
+      "pattern": "enso-podcast/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Podcast workflow entrypoint (run.py, PLAN.md, test/). Humans review."
+    },
+    {
+      "pattern": "enso_podcast/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Podcast-cleaning library (analyze, compress, cut, detect, export, sync, transcribe). Parallel package to enso-podcast/; humans review. NOTE: dual enso-podcast/ + enso_podcast/ naming is pre-existing technical debt — flagged for Alex."
+    },
+    {
+      "pattern": "enso-interview/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Interview workflow entrypoint. Humans review."
+    },
+    {
+      "pattern": "enso_interview/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Interview-analysis library (analyze, learn, suggest, lessons_db, transcribe, generate_config). Parallel package; humans review. Pre-existing dual-naming debt — see enso_podcast/."
+    },
+    {
+      "pattern": "enso-clean/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Cleaning workflow entrypoint. Humans review."
+    },
+    {
+      "pattern": "enso_clean/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Cleaning library (analyze, clean, cli, detect, report). Parallel package; humans review. Pre-existing dual-naming debt."
+    },
+    {
+      "pattern": "enso-broll/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "B-roll placer. Humans review."
+    },
+    {
+      "pattern": "enso-color/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Color workflow. Humans review."
+    },
+    {
+      "pattern": "enso-mogrt/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Motion-graphics templates pipeline. Humans review."
+    },
+    {
+      "pattern": "enso-reframe/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Reframe pipeline. Humans review."
+    },
+    {
+      "pattern": "enso-sfx/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "SFX pipeline. Humans review."
+    },
+    {
+      "pattern": "enso-silence/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Silence-detection pipeline. Humans review."
+    },
+    {
+      "pattern": "enso-produce.py",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Top-level production entrypoint script. Humans review."
+    },
+    {
+      "pattern": "projects/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Per-client project files (combat-night, cynthia-who-am-i, dagdc, direct-builders, dmc-two-docs, dr-pratt-rashmi, judi-mehta, palmetto-bay, shrink-talk, social-miami-award-dinner, williamson-cadillac). Holds client-specific render scripts, lessons.md, audio_selects/, video_selects/, broll/, etc. Enso's per-engagement working tree; .gitignore already excludes the heavy build/clips_*/cards/identification/ subdirs. CA never touches client work."
+    },
+    {
+      "pattern": "workflows/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Workflow rule docs (podcast/rules.md modified +188; animation/, combat/, commercial/, construction/, interview/, listing/, social/editing-rules.md untracked). These encode the editing rules CA may want to revise under review; humans approve every change."
+    },
+    {
+      "pattern": "transcripts/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Whisper transcript artifacts (bryan-park/ untracked at audit time). *transcript*.json is gitignored anyway; runtime artifact. CA never writes."
+    },
+    {
+      "pattern": "knowledge/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Enso's knowledge base (identity.md, rules.md, skill-index.md, technique docs). Enso writes; CA may read for graph-walk."
+    },
+    {
+      "pattern": "memory/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Enso's runtime memory (defensive entry — no memory/ exists today but reserved for future per-session state alignment with other Kameha agents)."
+    },
+    {
+      "pattern": "logs/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Enso's runtime logs (gitignored per .gitignore except learning-audit-report.md). CA never writes."
+    },
+    {
+      "pattern": "outputs/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Generated deliverables tree per CLAUDE.md output organization (outputs/[client]/[project]/[date]/generated|selected|approved|metadata). Per .gitignore outputs/*/ is excluded; runtime artifacts. CA never writes."
+    },
+    {
+      "pattern": "raw/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Raw client footage staging area. raw/*/ is gitignored. CA never writes."
+    },
+    {
+      "pattern": "clients/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Client metadata dir (currently empty). Reserved for client config/state; CA never writes."
+    },
+    {
+      "pattern": "Howard Pratt Edits/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Edited video exports (gitignored per .gitignore). Runtime output; CA never writes."
+    },
+    {
+      "pattern": ".claude/skills/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Enso's Claude Code skills (toolkit-hyperframes/ etc). Enso's own behavior; CA never writes."
+    },
+    {
+      "pattern": ".claude/agents/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Enso's Claude Code subagent definitions. Enso's own; CA never writes."
+    },
+    {
+      "pattern": ".claude/hooks/**",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Enso's Claude Code hook scripts. Enso's own session-hook surface; CA never writes."
+    },
+    {
+      "pattern": ".claude/settings.local.json",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Per-machine local Claude Code settings. CA never writes (also typically gitignored or per-machine)."
+    },
+    {
+      "pattern": "tests/**",
+      "owner": "alex",
+      "policy": "auto_merge_after:ca_internal_da",
+      "bypass_eligible": true,
+      "notes": "Top-level pytest tree (test_cli_smoke, test_core, test_hardening, test_imports, test_nami_dispatch, test_phase3, test_sync_primitives, test_timeline_fixes, conftest). Mechanical refactors common; DA-gated."
+    },
+    {
+      "pattern": "enso-captions/test/**",
+      "owner": "alex",
+      "policy": "auto_merge_after:ca_internal_da",
+      "bypass_eligible": true,
+      "notes": "In-tree caption tests. Mechanical refactors common; DA-gated."
+    },
+    {
+      "pattern": "enso-podcast/test/**",
+      "owner": "alex",
+      "policy": "auto_merge_after:ca_internal_da",
+      "bypass_eligible": true,
+      "notes": "In-tree podcast tests. Mechanical refactors common; DA-gated."
+    },
+    {
+      "pattern": "enso_interview/lessons.json",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Interview-package per-domain lessons store. Runtime self-improvement state; CA never writes."
+    },
+    {
+      "pattern": ".github/workflows/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "CI/CD workflows (ci.yml exists). Deploy-pipeline territory; CLAUDE.md T3 + DA-mandatory."
+    },
+    {
+      "pattern": "pyproject.toml",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Python project metadata + tool config. Humans review."
+    },
+    {
+      "pattern": "requirements.txt",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Python deps. Humans review additions/removals."
+    },
+    {
+      "pattern": ".env",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Secrets file (gitignored). CA never touches credentials per HB#9."
+    },
+    {
+      "pattern": ".env.example",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Env var template shape. Humans review (additions imply new credential surface)."
+    },
+    {
+      "pattern": "Enso_Blueprint_v5_Final.md",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Foundational blueprint doc. Strategic; Enso's own. CA never writes."
+    },
+    {
+      "pattern": "enso-the-editor-audit.md",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Self-audit artifact (currently untracked; chmod 600 in working copy). Enso-authored audit output; CA never writes."
+    }
+  ],
+  "fallback": {
+    "owner": "alex",
+    "policy": "human_review_required",
+    "bypass_eligible": false,
+    "notes": "Default-deny posture: anything not matched above (root README.md, BLOCKERS.md, CLAUDE.md, changelog.md, tool-stack.md, docs/*.md, top-level enso-starter.tar.gz, etc) requires human review."
+  },
+  "generated_at": "2026-05-18T21:00:00-04:00",
+  "generated_by": "code-architect@0.1.0 hand-drafted bootstrap (CA session 2 agent-team, claude-opus-4-7)"
+}
