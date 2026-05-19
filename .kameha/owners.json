@@ -1,0 +1,183 @@
+{
+  "schema_version": 1,
+  "repo": "code-architect",
+  "owner_registry": "~/.kameha/agent-owners.json",
+  "paths": [
+    {
+      "pattern": ".kameha/owners.json",
+      "owner": "alex",
+      "policy": "bootstrap_only",
+      "bypass_eligible": false,
+      "notes": "This file itself. Only writable by `code-architect owners bootstrap` or `owners migrate`; never a general edit target."
+    },
+    {
+      "pattern": ".kameha/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Config dir for CA-managed lockfiles + contracts. Run.lock is handled atomically by safe-json; humans review anything else."
+    },
+    {
+      "pattern": "methodology.md",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "Methodology spine — distilled output, never hand-edited (HB#7). `code-architect memory distill` regenerates; anything else is a hard error."
+    },
+    {
+      "pattern": "memory/source-hashes.json",
+      "owner": "self",
+      "policy": "owner_only",
+      "bypass_eligible": false,
+      "notes": "SHA-256 manifest of methodology source files. Generated at distill time; hand-edits silently break the drift check."
+    },
+    {
+      "pattern": "memory/MEMORY.md",
+      "owner": "alex",
+      "policy": "auto_merge_after:ca_internal_da",
+      "bypass_eligible": true,
+      "notes": "Memory index. CA writes new card entries; DA gate confirms index matches `memory/active/` files."
+    },
+    {
+      "pattern": "memory/active/**",
+      "owner": "alex",
+      "policy": "auto_merge_after:ca_internal_da",
+      "bypass_eligible": true,
+      "notes": "CA pattern + failure-analysis cards. CA-authored at distill time; DA gate verifies frontmatter schema + cap compliance (30 active, ≤100/200 word body)."
+    },
+    {
+      "pattern": "memory/archive/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Pruned cards. Restoration is `code-architect memory restore` (human-driven); direct edits suspicious."
+    },
+    {
+      "pattern": "scripts/code-architect.js",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "CLI entry point. Behavior-critical; CLAUDE.md HB#10 invocation boundary enforced here. Humans review any change."
+    },
+    {
+      "pattern": "scripts/lib/**",
+      "owner": "alex",
+      "policy": "auto_merge_after:ca_internal_da",
+      "bypass_eligible": true,
+      "notes": "Shared library code (safe-json port, todayET helpers, run-ledger). Mechanical refactors common; DA-gated."
+    },
+    {
+      "pattern": "scripts/hooks/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Claude Code hooks (if any). Behavior-critical; humans review."
+    },
+    {
+      "pattern": "scripts/cron/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Scheduled task entry points. Deploy-pipeline territory; CLAUDE.md T3 + DA-mandatory."
+    },
+    {
+      "pattern": "scripts/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "CA's own implementation. Default-restrict; sub-paths above carve out where mechanical refactor is safe."
+    },
+    {
+      "pattern": "test/**",
+      "owner": "alex",
+      "policy": "auto_merge_after:ca_internal_da",
+      "bypass_eligible": true,
+      "notes": "Test code. Refactor-friendly; DA-gated."
+    },
+    {
+      "pattern": "test-fixtures/**",
+      "owner": "alex",
+      "policy": "auto_merge_after:ca_internal_da",
+      "bypass_eligible": true,
+      "notes": "Sample owners.json files used for manifest-validator tests. Mechanical add/update common."
+    },
+    {
+      "pattern": "registry/**",
+      "owner": "alex",
+      "policy": "auto_merge_after:ca_internal_da",
+      "bypass_eligible": true,
+      "notes": "CA's own registry tooling (manifest validators, etc). Mechanical changes common."
+    },
+    {
+      "pattern": "docs/**",
+      "owner": "alex",
+      "policy": "auto_merge_after:ca_internal_da",
+      "bypass_eligible": true,
+      "notes": "Intake docs, design proposals, audit findings, handoffs. CA writes these constantly; DA gate confirms no committed secrets / no overwriting another agent's intake."
+    },
+    {
+      "pattern": "explainers/**",
+      "owner": "alex",
+      "policy": "auto_merge_after:ca_internal_da",
+      "bypass_eligible": true,
+      "notes": "Session-face HTML + state-of-things snapshots. CA refreshes per session per [[project_session_face_html_pattern]]."
+    },
+    {
+      "pattern": ".gitignore",
+      "owner": "alex",
+      "policy": "auto_merge_after:ca_internal_da",
+      "bypass_eligible": true,
+      "notes": "Append-mostly hygiene. CA may add ignore patterns; DA verifies no live tracked files would be untracked (`git ls-files | grep <pattern>` empty)."
+    },
+    {
+      "pattern": "manifest.json",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "CA's mesh manifest. Mesh-contract surface; humans review every change."
+    },
+    {
+      "pattern": "CLAUDE.md",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Operating instructions for the Claude Code invocation. Behavior-critical; humans review."
+    },
+    {
+      "pattern": "README.md",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Public-facing repo overview. Humans review."
+    },
+    {
+      "pattern": "package.json",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "Dependencies + npm scripts. Humans review additions/removals."
+    },
+    {
+      "pattern": "package-lock.json",
+      "owner": "alex",
+      "policy": "auto_merge_after:ca_internal_da",
+      "bypass_eligible": true,
+      "notes": "Lockfile churn from `npm install` is mechanical; DA-gated."
+    },
+    {
+      "pattern": ".github/workflows/**",
+      "owner": "alex",
+      "policy": "human_review_required",
+      "bypass_eligible": false,
+      "notes": "CI/CD workflows (none yet — placeholder). Deploy-pipeline; CLAUDE.md T3 + DA-mandatory."
+    }
+  ],
+  "fallback": {
+    "owner": "alex",
+    "policy": "human_review_required",
+    "bypass_eligible": false,
+    "notes": "Default-deny posture: anything not matched above requires human review."
+  },
+  "generated_at": "2026-05-19T05:30:00Z",
+  "generated_by": "code-architect@0.1.0 hand-drafted bootstrap (CA session 3 overnight, claude-opus-4-7)"
+}
