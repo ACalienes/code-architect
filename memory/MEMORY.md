@@ -34,7 +34,7 @@ metadata:
 
 ## Patterns
 
-(none yet — first cards land when CA does its first real implementation task)
+- [pattern-distill-verify-paths](active/pattern_distill_verify_paths.md) — verify every cited absolute path with `fs.existsSync` BEFORE computing SHA-256 at distill time; phantom citations surface as `MISSING`, not silent skip.
 
 ## Failure analyses
 
