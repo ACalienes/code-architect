@@ -8,6 +8,51 @@ This is the **running aggregate** of all overnight findings. Subagent intakes fe
 
 ---
 
+## 🔬 Re-verification pass (post-aggregate, 2026-05-19 ~10:30 ET)
+
+Per [[feedback_re_verify_agent_authored_claims]], subagent claims about other agents need direct code-read verification before they earn the P0 tag. Pass results:
+
+| Subagent claim | Verdict | Notes |
+|---|---|---|
+| A6 P0-6 PDE silently completes `build_update` | ✅ **CONFIRMED** | A6 cited wrong absolute path (claimed root `pde-daemon.js:683-700`; actual is `scripts/pde-daemon.js:676-700`). Dispatch ONLY matches `build_addendum` (line 684); else branch is `PATCH status=completed` (line 698). Capabilities declares `['build_addendum', 'build_update']` (line 233) — declared but unimplemented. |
+| A6 P0-7 LE has no mesh-receive daemon | ✅ **CONFIRMED** | LE entry point is `dashboard/backend/main.py` FastAPI app mounting HTTP routers (jobs, approvals, pipeline, scout, archer, closer, radar, seo, indeed). No `daemon.py`. No mesh-inbox polling code anywhere in the repo. `run_*.py` scripts are scheduled-task runners, not mesh consumers. |
+| A4+A7 P0-1 nami→framer + acd→conductor `route_blocked` | ⚠️ **REFINED** | Rejections are real (5× nami→framer + 1× acd→conductor in last 48h). But the actual error semantics are different from what "route_blocked" implies in a tier-1 routing system. See P0-1 update below. |
+
+### P0-1 refinement — these are REPLY-PATH rejections, not request-path
+
+Pulled the full message record for one rejection:
+
+```json
+{
+  "message_id": "efcf726b-...",
+  "from_agent": "nami",
+  "to_agent": "framer",
+  "action": "schedule_post_response",
+  "message_type": "response",
+  "chain_depth": 1,
+  "correlation_id": "wo_framer_dag_thanksgiving_2026_v1",
+  "payload": { "result": { "status": "draft_created", "post_id": "...", "dashboard_url": "...", "asset_count": 1 } },
+  "status": "rejected"
+}
+```
+
+This is nami **replying** to a framer-initiated work order. `message_type: "response"`, `chain_depth: 1`, `correlation_id` set, payload is status confirmation. Forward path `framer → nami` exists (tier=1, 24 approved). Reverse path `nami → framer` does **NOT** exist in the `/routes` table at all.
+
+**This means:** the system is rejecting nami's status-replies because no reverse route was registered. Either (a) the routing system should auto-register reverse routes for correlation_id replies, or (b) nami shouldn't be sending separate response messages — replies should use a different mechanism (e.g., poll status endpoint, or correlation_id should bypass route check).
+
+**Same pattern for `acd → conductor` creative_brief:** acd attempting forward send, no acd→conductor route exists (only `conductor → kai` and `kai → conductor`). So acd's send is silently dropped.
+
+**Fix direction is a design call, not a mechanical patch.** Options:
+1. Add reverse routes (`nami → framer`, `acd → conductor`) with appropriate tier.
+2. Change mesh-api to treat `message_type: "response"` with valid `correlation_id` as auto-routed regardless of `/routes` entry.
+3. Change agents (nami, acd) to not send these messages — use a different completion-notification mechanism.
+
+Each option has trade-offs. **Out of CA's lane to decide unilaterally.** Surface to Alex with this analysis.
+
+---
+
+---
+
 ## 🚨 P0 — act in the morning
 
 ### P0-1. Mesh routes MISSING — two senders silently fail (A4 + A7 corroborate)
