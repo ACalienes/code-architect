@@ -296,41 +296,49 @@
       <span>Read-only 7-agent system audit · 5 CA commits (gitignore · MEMORY.md index · owners.json bootstrap · audit deliverables · wrap)</span>
     </div>
     <div class="accountability-bar">
-      <strong style="color: var(--accent);">Session 3 overnight delivered:</strong> Earlier today (pre-bed) — 5 ships across Framer/Nami/Kai (Framer creative_brief handler · Nami review_reminder fix · Kai project_meta forwarding · Nami schedule_content acts-on-review-request + tests). <strong>Overnight:</strong> 7-agent parallel audit fleet (A1 runtime, A2 repo hygiene, A3 automation inventory, A4 mesh-api deep probe, A5 memory hygiene, A6 mesh contract consistency, A7 failure pattern scan — all read-only, all writing to <code>docs/intake-audit-A*-2026-05-19.md</code>). 4 CA commits: <code>9babe4f</code> gitignore · <code>6333bac</code> MEMORY.md index · <code>0964563</code> CA-self owners.json bootstrap · <code>a86e71f</code> audit deliverables bundle. Plus design proposal (action-vocabulary registry) and policy proposal (owners.json gitignore unblock). <strong>P0 punch list ready</strong> at <code>docs/audit-overnight-2026-05-19.md</code>. <strong>Self-retraction memorialized:</strong> session-3 task #14 (LE dead 47 days) was wrong — single-sourced laptop health file. Triangulation in A1+A6 produced corrected picture: LE heartbeats live but has NO mesh-receive daemon. The class of bug we hunted (silent-failure) is fleet-wide, not just Framer.
+      <strong style="color: var(--accent); display:block; margin-bottom:10px; font-size:14px;">What I did tonight — in plain English</strong>
+      <ol style="margin:0 0 0 18px; padding:0; line-height:1.7; color:var(--text-2);">
+        <li><strong style="color:var(--text);">5 commits to CA's repo, all pushed.</strong> Cleaned up .gitignore so screenshots don't pile up. Fixed the memory index pointing at a card that already existed. <strong style="color:var(--green);">Bootstrapped CA's own owners.json</strong> — CA was the 5th of 5 repos that didn't have one. Bundled the night's audit findings as 10 docs. Wrap commit with this face refresh + a new pickup prompt for the next session.</li>
+        <li><strong style="color:var(--text);">Ran 7 audit agents in parallel</strong> — each one focused on a different slice of the system (runtime, hygiene, cron, mesh-api, memory, contracts, failures). Each wrote its findings to <code>docs/intake-audit-A*-2026-05-19.md</code>. The combined punch list lives at <code>docs/audit-overnight-2026-05-19.md</code>.</li>
+        <li><strong style="color:var(--red);">Found 4 P0 problems</strong> nobody had spotted: (a) two mesh routes silently missing (nami→framer + acd→conductor; messages go nowhere but neither side notices); (b) Pitch Deck Engine silently completes a request type with zero work done — same bug class as the Framer one you saw last session; (c) Lead Engine has heartbeats but no mesh-receive code — messages rot until they expire; (d) chronicle's git has been locked since March 28 (a dead PID held a lock file — that's why 27 entries are uncommitted).</li>
+        <li><strong style="color:var(--yellow);">Drafted two proposals for your morning decision</strong>: an action-vocabulary registry (Phase A, ~3-5 days work) that addresses the silent-failure class fleet-wide; and a tiny owners.json policy carve-out so I can sweep gitignore hygiene without per-change approval.</li>
+        <li><strong style="color:var(--orange);">Owned my retraction</strong>: the pre-bed audit said "Lead Engine dead since 2026-04-02" — wrong. I single-sourced the laptop health file (which is structurally blind because daemons don't run on the laptop). Triangulation against the Mini mesh-api + LE's actual code corrected it. The full picture (LE alive on heartbeats, mesh-deaf on receive) is the third revision. The lesson: laptop health files are not load-bearing.</li>
+      </ol>
+      <p style="margin:14px 0 0; font-size:12px; color:var(--muted);">Read the urgent rows below in order. The first one expires at 12:55 UTC today.</p>
     </div>
   </header>
 
-  <!-- ===== STAT TILES (6) ===== -->
+  <!-- ===== STAT TILES (6) — session 3 overnight state ===== -->
   <div class="stat-grid">
     <div class="stat live">
-      <div class="label">Mesh agents · registered</div>
-      <div class="value green">8<span style="font-size:16px;color:var(--muted);font-weight:500;"> / 12</span></div>
-      <div class="note">in mesh.db agents table · 4 ghost-state</div>
-    </div>
-    <div class="stat">
-      <div class="label">Production floor (conductor.db)</div>
-      <div class="value blue">32</div>
-      <div class="note">projects across 7 lifecycle stages</div>
-    </div>
-    <div class="stat live">
-      <div class="label">Live Claude Code sessions</div>
-      <div class="value green">4</div>
-      <div class="note">CA · Kai · Nami · CFO (last 30 min)</div>
-    </div>
-    <div class="stat live">
-      <div class="label">CA authority coverage</div>
-      <div class="value green">9<span style="font-size:16px;color:var(--muted);font-weight:500;"> / 9</span></div>
-      <div class="note">all 9 mesh.sends_to targets bootstrap'd this session</div>
+      <div class="label">Mesh agents · live</div>
+      <div class="value green">11<span style="font-size:16px;color:var(--muted);font-weight:500;"> / 13</span></div>
+      <div class="note">1 stale (chronicle 4d) · 1 inactive (kmg never shipped)</div>
     </div>
     <div class="stat warning">
-      <div class="label">Commit-gap recovery risk</div>
-      <div class="value yellow">1 HIGH</div>
-      <div class="note">Chronicle 7w (CFO 4w unblocked: see plan)</div>
+      <div class="label">P0 issues found tonight</div>
+      <div class="value red" style="color:#f87171;text-shadow:0 0 20px rgba(248,113,113,0.35);">4</div>
+      <div class="note">2 missing routes · PDE silent · LE mesh-deaf</div>
     </div>
     <div class="stat live">
-      <div class="label">Mac Mini visibility</div>
-      <div class="value green" style="font-size:20px;">LIVE</div>
-      <div class="note">mesh-api at <code style="font-size:10px;">100.64.114.13:3341</code> via Tailscale (newly discovered)</div>
+      <div class="label">CA commits overnight</div>
+      <div class="value green">5</div>
+      <div class="note">gitignore · MEMORY index · <strong style="color:var(--text);">CA-self owners</strong> · audit bundle · wrap</div>
+    </div>
+    <div class="stat">
+      <div class="label">CA owners.json coverage</div>
+      <div class="value blue">8<span style="font-size:16px;color:var(--muted);font-weight:500;"> / 12</span></div>
+      <div class="note">CA-self bootstrapped tonight · 4 still missing (Chronicle · Framer? · KMG · PDE)</div>
+    </div>
+    <div class="stat warning">
+      <div class="label">T2 mesh probe TTL</div>
+      <div class="value yellow" style="font-size:22px;">12:55 UTC</div>
+      <div class="note">acd-nami-probe — approve/reject FIRST THING</div>
+    </div>
+    <div class="stat live">
+      <div class="label">Audit subagents (parallel)</div>
+      <div class="value green">7<span style="font-size:16px;color:var(--muted);font-weight:500;"> / 7</span></div>
+      <div class="note">A1 runtime · A2 hygiene · A3 cron · A4 mesh-api · A5 memory · A6 contracts · A7 failures</div>
     </div>
   </div>
 
