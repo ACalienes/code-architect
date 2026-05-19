@@ -83,7 +83,43 @@ Alex sent a second screenshot (`Screenshot 2026-05-19 at 11.37.45 AM.png`) of th
 ## Owners policy + next move
 
 - File: `nami-platform/services/**` → owners.json policy `human_review_required`, **not** bypass-eligible. **CA cannot autonomously commit; can draft.**
-- Awaiting Alex direction: (a) CA drafts the diff in a worktree, (b) wait until Alex sits at the keyboard, (c) different option entirely.
+- ~~Awaiting Alex direction~~ → **Alex picked Option B** at ~12:00 ET 2026-05-19.
+
+## ✅ Draft landed (2026-05-19 12:00 ET)
+
+- **Branch**: `ca-draft/email-allowlist-2026-05-19` in NAMI repo (local-only, NOT pushed)
+- **Commit**: `aebc89a fix(notifications): gate inbound-intent email by INTENT_EMAIL_ALLOWLIST`
+- **Diff**: +26 lines across 2 files
+  - `nami-platform/config.py` (+12): `INTENT_EMAIL_ALLOWLIST = frozenset(...)`, env override `NAMI_INTENT_EMAIL_INTENTS` (default `"revision_complete"`)
+  - `nami-platform/services/notifications.py` (+15, -1): gate the email block in `send_inbound_intent_alert` (line 726) on intent_type membership; else-branch logs INFO when filtering happens
+- **Triangulated against NAMI's latest** before drafting — no conflicts. Latest NAMI HEAD `7aaaf6a` doesn't touch notifications.py; no in-flight fix branch.
+- **Bridge + SMS fan-out UNCHANGED** — operator still hears via iMessage + SMS within ~60s. Only email channel filtered.
+- **Syntax-validated** via `python3 -m py_compile` on both files.
+
+### Alex's morning actions
+
+```bash
+cd "/Users/alex/Desktop/Code/Nami Social Media Coordinator"
+git log -1 --stat ca-draft/email-allowlist-2026-05-19    # review summary
+git show ca-draft/email-allowlist-2026-05-19              # full diff
+
+# If happy: merge + push + redeploy
+git switch main
+git merge ca-draft/email-allowlist-2026-05-19             # fast-forward
+git push origin main
+# Then redeploy NAMI on Render
+
+# If unsure: leave it alone — branch exists locally until you act
+# If abandon: git switch main && git branch -D ca-draft/email-allowlist-2026-05-19
+```
+
+### Re-enabling schedule_content emails later
+
+Set NAMI env var:
+```
+NAMI_INTENT_EMAIL_INTENTS="revision_complete,schedule_content"
+```
+No redeploy needed if Render reads env vars at startup (it does).
 
 ## Stop-gap for right now (Alex action, no code change)
 
