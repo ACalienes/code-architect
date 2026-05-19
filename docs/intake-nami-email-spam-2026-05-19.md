@@ -52,3 +52,48 @@ grep -rln "<SUBSTRING>" /Users/alex/Desktop/Code/Nami\ Social\ Media\ Coordinato
 # Or:
 grep -rln "send_mail\|smtp.*send\|sgMail\|sendgrid\|MAIL_FROM" /Users/alex/Desktop/Code/Nami\ Social\ Media\ Coordinator/nami-platform/ 2>/dev/null | grep -v __pycache__ | grep -v .venv | head -10
 ```
+
+---
+
+## 🎯 DIAGNOSIS LANDED (2026-05-19 ~11:40 ET)
+
+Alex sent a second screenshot (`Screenshot 2026-05-19 at 11.37.45 AM.png`) of the actual email. Subject: `NAMI: 🍱 New content from framer for Direct Builders`. From: `NAMI Platform <alex@kamehamedia.com>` (NAMI's SMTP user IS Alex's gmail — that's why it looks like he's emailing himself).
+
+**Sender code path identified:**
+- File: `/Users/alex/Desktop/Code/Nami Social Media Coordinator/nami-platform/services/notifications.py`
+- Function: `send_inbound_intent_alert` (line 654)
+- Subject template (line 692): `subject = f"NAMI: {label} from {source_agent} for {account_name}"`
+- Label map (line 675): `{"schedule_content": "📥 New content", "revision_complete": "🔁 Revision ready for your eye"}` (🍱 vs 📥 is Gmail emoji rendering quirk — same code)
+- Trigger: every inbound `schedule_content` or `revision_complete` intent from Framer/Enso/Manual fires email + bridge + SMS fan-out (fire-and-forget)
+- Why now: session-3 fixes (Framer creative_brief handler, Nami review_reminder NameError, dual-write sender) unblocked content-arrival flows that previously failed silently. Each arrival now reliably fires this notification.
+
+**Not in my original 5-hypothesis ranking** — it's a 6th: "per-event content-arrival notification works as designed; design over-emails." Different class from P0 silent-failures.
+
+## Fix options
+
+| Option | Change | Pros / Cons |
+|---|---|---|
+| **A** | Hard-code email-only-on-revision_complete inside the existing email block | Simplest 1-line fix; matches the urgency taxonomy already in the code (line 723: `"urgent": intent_type == "revision_complete"`) |
+| **B** | Env-var allowlist `NAMI_INTENT_EMAIL_INTENTS="revision_complete"` (default) | Tunable without redeploy; can add `schedule_content` back later if Alex wants |
+| **C** | Per-account email throttle (max 1/N hours/account) | More work; over-engineered for current spam rate |
+| **D** | Daily digest (batch schedule_content into one summary email per account per day) | Best UX long-term; significant scope; out of scope for tonight |
+
+**Recommendation: Option B.** Env-var gives Alex a no-code dial. Default `revision_complete` only; he can flip it later. Bridge + SMS unaffected (Telegram still gets the alert; iMessage still gets it).
+
+## Owners policy + next move
+
+- File: `nami-platform/services/**` → owners.json policy `human_review_required`, **not** bypass-eligible. **CA cannot autonomously commit; can draft.**
+- Awaiting Alex direction: (a) CA drafts the diff in a worktree, (b) wait until Alex sits at the keyboard, (c) different option entirely.
+
+## Stop-gap for right now (Alex action, no code change)
+
+If the inbox is on fire RIGHT NOW and the fix needs to wait:
+
+```bash
+# Add a Gmail filter:
+#   Matches: from:(alex@kamehamedia.com) subject:("NAMI:" "New content")
+#   Action: Skip Inbox, Apply label "NAMI/auto-archive", Mark as read
+```
+
+This lets the notifications keep firing (other channels still alert) without piling in the inbox. Removable any time once Option A/B lands.
+
