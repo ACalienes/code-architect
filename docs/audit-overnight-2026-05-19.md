@@ -191,15 +191,25 @@ tail -50 ~/Library/Logs/kai-claude-code-sync.log    # path approx — A3 has exa
 
 `/Users/alex/.kameha/health/cfo.json` reports `qb_token_status: "expired"` with 10 pending work orders. CFO is otherwise active. **Fix:** Alex re-auths QB through CFO's OAuth flow. Outside CA's lane.
 
-### P1-7. 5/12 repos still missing `.kameha/owners.json` (A2)
+### P1-7. owners.json coverage — A2's "5 missing" needs branch nuance (re-verified)
 
-Missing: **Chronicle, Code Architect (self), Framer, KMG, Pitch Deck Engine.**
+A2's initial finding: missing in **Chronicle, Code Architect (self), Framer, KMG, Pitch Deck Engine.**
 
-Per HB#2: "When a target repo lacks `owners.json`, fail-closed: refuse cross-repo edits except an explicit owners-bootstrap or migration task pre-approved by Alex." So CA cannot mechanically sweep any of these 5.
+**Re-verification surfaced Framer is a false positive.** Triangulated:
+- Commit `0a4d322 chore(governance): bootstrap .kameha/owners.json` IS on `origin/main` (literal HEAD of main).
+- `.kameha/owners.json` IS present in `origin/main`'s tree (`git ls-tree origin/main .kameha/owners.json` returns the blob).
+- Framer's current laptop checkout is `carousel/phase-2a-planner`, a feature branch that predates `0a4d322` — that's why A2's filesystem ls saw nothing.
+- Mini-side PM2 runs from main, so the running daemon sees the policy. **Framer is owners.json-covered for governance purposes; just not on the laptop's currently-checked-out branch.**
 
-**Fix path:** for each, draft an owners.json from scratch (the session-2 bootstrap pattern produced 7 drafts; replicate for these 5). Each requires Alex go-ahead per the bootstrap rule, but the drafting is mechanical.
+**Real coverage:** 8/12 → 9/12 after Framer correction (with CA-self added this session). Still missing: **Chronicle, KMG, Pitch Deck Engine.**
 
-**CA-self bootstrap is the meta-fix** — CA without its own owners.json means CA can't fail-closed against itself. Drafting tonight under explicit owners-bootstrap exemption.
+Per HB#2: "When a target repo lacks `owners.json`, fail-closed: refuse cross-repo edits except an explicit owners-bootstrap or migration task pre-approved by Alex." So CA cannot mechanically sweep these 3.
+
+**Adjacent finding worth surfacing separately:** owners.json policies can DIFFER between branches in the same repo. Working-tree drift means CA's local read of `.kameha/owners.json` may not match the canonical main-branch policy. Today this only matters when an agent is checked out off-main for active feature work (Framer is). Long-term, consider either (a) always resolve policy against `origin/main`, or (b) require owners.json on all branches (git hook). Out of scope for tonight; flagged for design discussion.
+
+**Fix path for the genuine 3:** draft owners.json from scratch (session-2 bootstrap pattern produced 7 drafts; replicate for these 3). Each requires Alex go-ahead per the bootstrap rule, but drafting is mechanical.
+
+**CA-self bootstrap done tonight** as `0964563` (closes 5→3 missing, after Framer correction).
 
 ### P1-8. Framer 116 untracked files — almost all one-off render scripts (A2)
 
