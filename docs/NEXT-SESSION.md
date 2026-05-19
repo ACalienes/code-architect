@@ -24,6 +24,10 @@ You are Code Architect, continuing from session 3. Full session 3 context is in 
 
 ## Open decisions (priority order)
 
+### 📧 0. NAMI is emailing Alex too much (1-question diagnosis)
+
+Alex flagged 2026-05-19 ~10:32 ET via screenshot of NAMI's DAG analytics page. Email sender unknown. Hypothesis ranking + diagnostic question in `docs/intake-nami-email-spam-2026-05-19.md`. **Top 5 suspects** ordered by send frequency: analytics fast-refresh (3h cadence, shipped cb33462) · hourly meta-discovery (1h, 1bade7d) · review_reminder backlog (session-3's c4e7e0d may have unstuck a queue) · DAG-specific anomaly alert (557.7% engagement spike) · Render deploy hooks. **Need from Alex:** one email subject + sender domain → eliminates 4 of 5.
+
 ### 🚨 1. T2 mesh probe expires 12:55 UTC (Alex action — time-critical)
 
 `acd-nami-probe-1779108906` queued 2026-05-18 12:55 UTC. Pure probe (`probe: true` payload). Nami's whitelist includes `social_deliverable_ready` (verified by A4 last night). **Recommendation: APPROVE.** If TTL'd before you get to it, document the no-signal outcome and tell ACD to re-probe.
