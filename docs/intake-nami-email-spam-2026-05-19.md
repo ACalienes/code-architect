@@ -85,9 +85,13 @@ Alex sent a second screenshot (`Screenshot 2026-05-19 at 11.37.45 AM.png`) of th
 - File: `nami-platform/services/**` → owners.json policy `human_review_required`, **not** bypass-eligible. **CA cannot autonomously commit; can draft.**
 - ~~Awaiting Alex direction~~ → **Alex picked Option B** at ~12:00 ET 2026-05-19.
 
-## ✅ Draft landed (2026-05-19 12:00 ET)
+## 🚢 SHIPPED to `nami main` (2026-05-19 ~12:05 ET)
 
-- **Branch**: `ca-draft/email-allowlist-2026-05-19` in NAMI repo (local-only, NOT pushed)
+Alex green-lit at 12:05 ET. Fast-forwarded `main` to `aebc89a`, pushed to origin. Render auto-deploys from main → live within a few minutes. Draft branch deleted (merged).
+
+## Draft → ship trail (2026-05-19 12:00 → 12:05 ET)
+
+- **Branch**: `ca-draft/email-allowlist-2026-05-19` in NAMI repo (drafted, merged via ff to main, branch deleted)
 - **Commit**: `aebc89a fix(notifications): gate inbound-intent email by INTENT_EMAIL_ALLOWLIST`
 - **Diff**: +26 lines across 2 files
   - `nami-platform/config.py` (+12): `INTENT_EMAIL_ALLOWLIST = frozenset(...)`, env override `NAMI_INTENT_EMAIL_INTENTS` (default `"revision_complete"`)
@@ -96,21 +100,17 @@ Alex sent a second screenshot (`Screenshot 2026-05-19 at 11.37.45 AM.png`) of th
 - **Bridge + SMS fan-out UNCHANGED** — operator still hears via iMessage + SMS within ~60s. Only email channel filtered.
 - **Syntax-validated** via `python3 -m py_compile` on both files.
 
-### Alex's morning actions
+### Verification once Render redeploys
 
 ```bash
-cd "/Users/alex/Desktop/Code/Nami Social Media Coordinator"
-git log -1 --stat ca-draft/email-allowlist-2026-05-19    # review summary
-git show ca-draft/email-allowlist-2026-05-19              # full diff
+# Wait for Render to redeploy (usually 2-5 min)
+# Then send a test schedule_content via Framer or curl:
+#   - Expect: NO email
+#   - Expect: bridge (iMessage) + SMS notifications still fire
+# Logs should show:
+#   "Skipping email for intent_type=schedule_content post=... (not in INTENT_EMAIL_ALLOWLIST=['revision_complete']); bridge + SMS still fan out"
 
-# If happy: merge + push + redeploy
-git switch main
-git merge ca-draft/email-allowlist-2026-05-19             # fast-forward
-git push origin main
-# Then redeploy NAMI on Render
-
-# If unsure: leave it alone — branch exists locally until you act
-# If abandon: git switch main && git branch -D ca-draft/email-allowlist-2026-05-19
+# Revision_complete should still email — confirm by triggering a revision request
 ```
 
 ### Re-enabling schedule_content emails later
