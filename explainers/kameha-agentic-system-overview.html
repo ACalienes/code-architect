@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<!-- Kameha agentic system — visual overview for sharing. Tree-first. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kameha — the agent tree</title>
+<style>
+  :root {
+    --bg: #0a0d12;
+    --bg-2: #0f131a;
+    --card: #141a23;
+    --card-2: #1a212c;
+    --border: #232c3a;
+    --border-bright: #2f3a4a;
+    --text: #e6edf3;
+    --text-2: #b8c5d3;
+    --muted: #7d8a99;
+    --dim: #5a6573;
+    --kai: #4ade80;
+    --kai-glow: rgba(74, 222, 128, 0.45);
+    --creative: #f472b6;
+    --creative-glow: rgba(244, 114, 182, 0.4);
+    --business: #6ea8fe;
+    --business-glow: rgba(110, 168, 254, 0.4);
+    --brand: #c084fc;
+    --brand-glow: rgba(192, 132, 252, 0.4);
+    --ops: #facc15;
+    --ops-glow: rgba(250, 204, 21, 0.4);
+    --health: #5eead4;
+    --health-glow: rgba(94, 234, 212, 0.4);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "SF Pro Display", "SF Pro Text", BlinkMacSystemFont, "Segoe UI", sans-serif;
+    line-height: 1.6;
+    font-feature-settings: "ss01", "ss02", "cv11";
+    min-height: 100vh;
+  }
+  body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(ellipse 1200px 700px at 50% -10%, rgba(74, 222, 128, 0.08), transparent 60%),
+      radial-gradient(ellipse 900px 500px at 15% 30%, rgba(244, 114, 182, 0.05), transparent 50%),
+      radial-gradient(ellipse 900px 500px at 85% 30%, rgba(110, 168, 254, 0.05), transparent 50%),
+      radial-gradient(ellipse 800px 400px at 50% 90%, rgba(94, 234, 212, 0.04), transparent 50%);
+  }
+  .container { position: relative; max-width: 1240px; margin: 0 auto; padding: 48px 32px 80px; z-index: 1; }
+
+  /* HERO — minimal */
+  .hero { text-align: center; margin-bottom: 48px; }
+  .eyebrow {
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 3px;
+    color: var(--kai); margin-bottom: 18px;
+    display: inline-flex; align-items: center; gap: 12px;
+  }
+  .eyebrow::before, .eyebrow::after {
+    content: ""; width: 32px; height: 1px;
+    background: var(--kai); box-shadow: 0 0 8px var(--kai-glow);
+  }
+  h1.title {
+    font-size: 54px; font-weight: 700; letter-spacing: -1.8px; line-height: 1.04; margin-bottom: 14px;
+    background: linear-gradient(180deg, #ffffff 0%, #b8c5d3 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .lede { font-size: 17px; color: var(--text-2); max-width: 720px; margin: 0 auto; line-height: 1.6; }
+
+  /* THE TREE */
+  .tree-wrap {
+    background: linear-gradient(180deg, var(--card) 0%, var(--bg-2) 100%);
+    border: 1px solid var(--border); border-radius: 18px;
+    padding: 40px 32px 24px;
+    margin-bottom: 48px;
+    position: relative;
+    overflow: hidden;
+  }
+  .tree-wrap::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border-bright), transparent);
+  }
+  svg.tree { width: 100%; height: auto; display: block; }
+
+  /* tree nodes */
+  svg.tree .root-glow {
+    fill: var(--kai); opacity: 0.15;
+    filter: blur(20px);
+  }
+  svg.tree .node-root {
+    fill: rgba(74, 222, 128, 0.18);
+    stroke: var(--kai);
+    stroke-width: 2.5;
+  }
+  svg.tree .node-branch {
+    fill: var(--card-2);
+    stroke-width: 1.5;
+    rx: 8;
+  }
+  svg.tree .node-branch.creative { stroke: var(--creative); fill: rgba(244,114,182,0.06); }
+  svg.tree .node-branch.business { stroke: var(--business); fill: rgba(110,168,254,0.06); }
+  svg.tree .node-branch.brand    { stroke: var(--brand);    fill: rgba(192,132,252,0.06); }
+  svg.tree .node-branch.ops      { stroke: var(--ops);      fill: rgba(250,204,21,0.06); }
+  svg.tree .node-branch.health   { stroke: var(--health);   fill: rgba(94,234,212,0.06); }
+
+  svg.tree .node-agent {
+    fill: var(--card);
+    stroke-width: 1.4;
+    rx: 10;
+  }
+  svg.tree .node-agent.creative { stroke: var(--creative); }
+  svg.tree .node-agent.business { stroke: var(--business); }
+  svg.tree .node-agent.brand    { stroke: var(--brand); }
+  svg.tree .node-agent.ops      { stroke: var(--ops); }
+  svg.tree .node-agent.health   { stroke: var(--health); }
+
+  svg.tree .label-root {
+    font-family: -apple-system, "SF Pro Display", sans-serif;
+    font-weight: 700; font-size: 26px; fill: var(--text);
+    letter-spacing: -0.5px;
+  }
+  svg.tree .label-root-sub {
+    font-family: "JetBrains Mono", "SF Mono", monospace;
+    font-size: 11px; fill: var(--kai); letter-spacing: 1px;
+    text-transform: uppercase; font-weight: 600;
+  }
+  svg.tree .label-branch {
+    font-family: "JetBrains Mono", "SF Mono", monospace;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 1.5px; text-transform: uppercase;
+  }
+  svg.tree .label-branch.creative { fill: var(--creative); }
+  svg.tree .label-branch.business { fill: var(--business); }
+  svg.tree .label-branch.brand    { fill: var(--brand); }
+  svg.tree .label-branch.ops      { fill: var(--ops); }
+  svg.tree .label-branch.health   { fill: var(--health); }
+
+  svg.tree .label-agent {
+    font-family: -apple-system, sans-serif;
+    font-size: 14px; font-weight: 700; fill: var(--text);
+    letter-spacing: -0.2px;
+  }
+  svg.tree .label-agent-role {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px; fill: var(--muted);
+  }
+
+  svg.tree .icon {
+    font-family: -apple-system, sans-serif;
+    font-size: 18px; fill: var(--text-2);
+  }
+
+  /* edges */
+  svg.tree .edge-trunk {
+    stroke: var(--kai); stroke-width: 2; fill: none; opacity: 0.4;
+  }
+  svg.tree .edge-branch {
+    stroke-width: 1.5; fill: none; opacity: 0.5;
+  }
+  svg.tree .edge-branch.creative { stroke: var(--creative); }
+  svg.tree .edge-branch.business { stroke: var(--business); }
+  svg.tree .edge-branch.brand    { stroke: var(--brand); }
+  svg.tree .edge-branch.ops      { stroke: var(--ops); }
+  svg.tree .edge-branch.health   { stroke: var(--health); }
+
+  /* root pulse */
+  @keyframes pulse-glow {
+    0%, 100% { opacity: 0.12; transform: scale(1); }
+    50% { opacity: 0.22; transform: scale(1.04); }
+  }
+  svg.tree .root-glow { animation: pulse-glow 3s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
+
+  /* AGENT DETAIL CARDS — color-banded by branch */
+  .branch-section { margin-bottom: 40px; }
+  .branch-header {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin-bottom: 16px; padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .branch-header .branch-name {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 12px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase;
+  }
+  .branch-header .branch-name.creative { color: var(--creative); }
+  .branch-header .branch-name.business { color: var(--business); }
+  .branch-header .branch-name.foundations { color: var(--text-2); }
+  .branch-header .branch-sub { font-size: 12px; color: var(--muted); }
+
+  .agents-row {
+    display: grid;
+    gap: 14px;
+  }
+  .agents-row.cols-4 { grid-template-columns: repeat(4, 1fr); }
+  .agents-row.cols-3 { grid-template-columns: repeat(3, 1fr); }
+  @media (max-width: 900px) {
+    .agents-row.cols-4, .agents-row.cols-3 { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 580px) {
+    .agents-row.cols-4, .agents-row.cols-3 { grid-template-columns: 1fr; }
+  }
+
+  .agent-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--border-bright);
+    border-radius: 10px;
+    padding: 18px 20px;
+    transition: transform 0.15s, border-color 0.15s, background 0.15s;
+  }
+  .agent-card.creative { border-left-color: var(--creative); }
+  .agent-card.business { border-left-color: var(--business); }
+  .agent-card.brand    { border-left-color: var(--brand); }
+  .agent-card.ops      { border-left-color: var(--ops); }
+  .agent-card.health   { border-left-color: var(--health); }
+  .agent-card:hover {
+    transform: translateY(-3px);
+    background: linear-gradient(180deg, var(--card-2) 0%, var(--card) 100%);
+  }
+
+  .agent-card .icon-row {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+  }
+  .agent-card .icon {
+    width: 36px; height: 36px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .agent-card.creative .icon { background: rgba(244,114,182,0.1); color: var(--creative); }
+  .agent-card.business .icon { background: rgba(110,168,254,0.1); color: var(--business); }
+  .agent-card.brand    .icon { background: rgba(192,132,252,0.1); color: var(--brand); }
+  .agent-card.ops      .icon { background: rgba(250,204,21,0.1);  color: var(--ops); }
+  .agent-card.health   .icon { background: rgba(94,234,212,0.1);  color: var(--health); }
+
+  .agent-card .name {
+    font-size: 16px; font-weight: 700; letter-spacing: -0.3px;
+  }
+  .agent-card .role {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 1px; margin-top: 2px;
+  }
+  .agent-card .desc {
+    font-size: 12.5px; color: var(--text-2); line-height: 1.55;
+  }
+
+  /* KAI CARD — special hero card */
+  .kai-card {
+    background: linear-gradient(135deg, rgba(74,222,128,0.08) 0%, var(--card) 50%, var(--bg-2) 100%);
+    border: 1px solid rgba(74,222,128,0.35);
+    border-radius: 14px;
+    padding: 24px 28px;
+    margin-bottom: 40px;
+    display: grid; grid-template-columns: 60px 1fr; gap: 20px;
+    align-items: center;
+  }
+  .kai-card .icon-big {
+    width: 60px; height: 60px;
+    background: rgba(74,222,128,0.15);
+    border: 2px solid var(--kai);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px;
+    color: var(--kai);
+    box-shadow: 0 0 24px var(--kai-glow);
+  }
+  .kai-card h3 {
+    font-size: 20px; font-weight: 700; margin-bottom: 4px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .kai-card h3 .role-pill {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px; font-weight: 700;
+    padding: 4px 10px;
+    background: rgba(74,222,128,0.12);
+    color: var(--kai);
+    border: 1px solid rgba(74,222,128,0.4);
+    border-radius: 6px;
+    letter-spacing: 1px; text-transform: uppercase;
+  }
+  .kai-card p { font-size: 13.5px; color: var(--text-2); line-height: 1.6; }
+
+  /* MESSAGE BUS - compact viz */
+  .bus-section {
+    background: linear-gradient(180deg, var(--card) 0%, var(--bg-2) 100%);
+    border: 1px solid var(--border); border-radius: 14px;
+    padding: 24px 28px;
+    margin-bottom: 40px;
+  }
+  .bus-section h3 {
+    font-size: 16px; font-weight: 600; margin-bottom: 8px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .bus-section h3::before {
+    content: ""; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--kai); box-shadow: 0 0 8px var(--kai-glow);
+  }
+  .bus-section p { font-size: 13.5px; color: var(--text-2); line-height: 1.6; max-width: 760px; }
+
+  /* PRINCIPLES — compact strip */
+  .principles {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+  }
+  @media (max-width: 880px) { .principles { grid-template-columns: 1fr; } }
+  .principle-mini {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+  }
+  .principle-mini .num {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 18px; font-weight: 700; color: var(--kai);
+    margin-bottom: 8px;
+  }
+  .principle-mini h4 { font-size: 13.5px; font-weight: 700; margin-bottom: 6px; }
+  .principle-mini p { font-size: 12.5px; color: var(--muted); line-height: 1.55; }
+
+  footer {
+    margin-top: 56px; padding-top: 24px; border-top: 1px solid var(--border);
+    text-align: center; font-size: 11px; color: var(--muted); font-family: "JetBrains Mono", monospace;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- HERO -->
+  <header class="hero">
+    <div class="eyebrow">Kameha · The Agent Tree</div>
+    <h1 class="title">Twelve specialized agents.<br>One human operator.<br>One canonical hub.</h1>
+    <p class="lede">
+      Each agent owns a function. They communicate through a shared message bus. One human runs the studio
+      by setting intent — the agents handle persistence, follow-through, and the work between.
+    </p>
+  </header>
+
+  <!-- THE TREE — the centerpiece -->
+  <div class="tree-wrap">
+    <svg class="tree" viewBox="0 0 1200 760" xmlns="http://www.w3.org/2000/svg">
+
+      <!-- Root glow -->
+      <circle class="root-glow" cx="600" cy="100" r="60"/>
+
+      <!-- KAI ROOT -->
+      <circle class="node-root" cx="600" cy="100" r="48"/>
+      <text class="label-root" x="600" y="105" text-anchor="middle">Kai</text>
+      <text class="label-root-sub" x="600" y="170" text-anchor="middle">Hub Agent · Operator's Voice</text>
+
+      <!-- TRUNK lines from Kai down to branch labels -->
+      <!-- Trunk to Creative (left) -->
+      <path class="edge-trunk" d="M 580 145 Q 480 220 320 260"/>
+      <!-- Trunk to Business (right) -->
+      <path class="edge-trunk" d="M 620 145 Q 720 220 880 260"/>
+      <!-- Trunk to center bottom (Foundations) -->
+      <path class="edge-trunk" d="M 600 148 L 600 240"/>
+
+      <!-- BRANCH LABELS -->
+      <!-- Creative branch label -->
+      <rect class="node-branch creative" x="220" y="244" width="200" height="36" rx="8"/>
+      <text class="label-branch creative" x="320" y="266" text-anchor="middle">CREATIVE PRODUCTION</text>
+
+      <!-- Business branch label -->
+      <rect class="node-branch business" x="780" y="244" width="200" height="36" rx="8"/>
+      <text class="label-branch business" x="880" y="266" text-anchor="middle">BUSINESS OPERATIONS</text>
+
+      <!-- Foundations branch label -->
+      <rect class="node-branch ops" x="500" y="244" width="200" height="36" rx="8"/>
+      <text class="label-branch ops" x="600" y="266" text-anchor="middle">FOUNDATIONS</text>
+
+      <!-- CREATIVE AGENTS -->
+      <!-- ACD -->
+      <path class="edge-branch creative" d="M 280 280 L 130 360"/>
+      <rect class="node-agent creative" x="50" y="360" width="160" height="80" rx="10"/>
+      <text class="icon" x="68" y="392">✏︎</text>
+      <text class="label-agent" x="100" y="392" >ACD</text>
+      <text class="label-agent-role" x="68" y="410">CREATIVE DIRECTOR</text>
+      <text class="label-agent-role" x="68" y="424" style="fill: var(--text-2); font-size: 10px;">briefs, deliverables,</text>
+      <text class="label-agent-role" x="68" y="436" style="fill: var(--text-2); font-size: 10px;">revision cycles</text>
+
+      <!-- Framer -->
+      <path class="edge-branch creative" d="M 300 280 L 240 460"/>
+      <rect class="node-agent creative" x="50" y="460" width="160" height="80" rx="10"/>
+      <text class="icon" x="68" y="492">⌬</text>
+      <text class="label-agent" x="100" y="492">Framer</text>
+      <text class="label-agent-role" x="68" y="510">VISUAL PRODUCTION</text>
+      <text class="label-agent-role" x="68" y="524" style="fill: var(--text-2); font-size: 10px;">photos, color grade,</text>
+      <text class="label-agent-role" x="68" y="538" style="fill: var(--text-2); font-size: 10px;">graphics, AI imagery</text>
+
+      <!-- Enso -->
+      <path class="edge-branch creative" d="M 320 280 L 240 560"/>
+      <rect class="node-agent creative" x="50" y="560" width="160" height="80" rx="10"/>
+      <text class="icon" x="68" y="592">▶</text>
+      <text class="label-agent" x="100" y="592">Enso</text>
+      <text class="label-agent-role" x="68" y="610">VIDEO EDITOR</text>
+      <text class="label-agent-role" x="68" y="624" style="fill: var(--text-2); font-size: 10px;">trim, grade, export,</text>
+      <text class="label-agent-role" x="68" y="638" style="fill: var(--text-2); font-size: 10px;">multi-aspect reframe</text>
+
+      <!-- NAMI -->
+      <path class="edge-branch creative" d="M 340 280 L 240 660"/>
+      <rect class="node-agent creative" x="50" y="660" width="160" height="80" rx="10"/>
+      <text class="icon" x="68" y="692">✦</text>
+      <text class="label-agent" x="100" y="692">NAMI</text>
+      <text class="label-agent-role" x="68" y="710">SOCIAL COORDINATOR</text>
+      <text class="label-agent-role" x="68" y="724" style="fill: var(--text-2); font-size: 10px;">scheduling, publishing,</text>
+      <text class="label-agent-role" x="68" y="738" style="fill: var(--text-2); font-size: 10px;">platform metrics</text>
+
+      <!-- BUSINESS AGENTS -->
+      <!-- CFO -->
+      <path class="edge-branch business" d="M 920 280 L 1070 360"/>
+      <rect class="node-agent business" x="990" y="360" width="160" height="80" rx="10"/>
+      <text class="icon" x="1008" y="392">$</text>
+      <text class="label-agent" x="1040" y="392">CFO</text>
+      <text class="label-agent-role" x="1008" y="410">FINANCIAL INTEL</text>
+      <text class="label-agent-role" x="1008" y="424" style="fill: var(--text-2); font-size: 10px;">QuickBooks, cash flow,</text>
+      <text class="label-agent-role" x="1008" y="438" style="fill: var(--text-2); font-size: 10px;">pipeline, monitors</text>
+
+      <!-- Offer Architect -->
+      <path class="edge-branch business" d="M 900 280 L 960 460"/>
+      <rect class="node-agent business" x="990" y="460" width="160" height="80" rx="10"/>
+      <text class="icon" x="1008" y="492">◈</text>
+      <text class="label-agent" x="1040" y="492">OA</text>
+      <text class="label-agent-role" x="1008" y="510">OFFER ARCHITECT</text>
+      <text class="label-agent-role" x="1008" y="524" style="fill: var(--text-2); font-size: 10px;">pricing strategy,</text>
+      <text class="label-agent-role" x="1008" y="538" style="fill: var(--text-2); font-size: 10px;">Go / No-Go calls</text>
+
+      <!-- Lead Engine -->
+      <path class="edge-branch business" d="M 880 280 L 960 560"/>
+      <rect class="node-agent business" x="990" y="560" width="160" height="80" rx="10"/>
+      <text class="icon" x="1008" y="592">→</text>
+      <text class="label-agent" x="1040" y="592">LE</text>
+      <text class="label-agent-role" x="1008" y="610">LEAD ENGINE</text>
+      <text class="label-agent-role" x="1008" y="624" style="fill: var(--text-2); font-size: 10px;">scout, archer, closer,</text>
+      <text class="label-agent-role" x="1008" y="638" style="fill: var(--text-2); font-size: 10px;">sales pipeline</text>
+
+      <!-- PDE -->
+      <path class="edge-branch business" d="M 860 280 L 960 660"/>
+      <rect class="node-agent business" x="990" y="660" width="160" height="80" rx="10"/>
+      <text class="icon" x="1008" y="692">▦</text>
+      <text class="label-agent" x="1040" y="692">PDE</text>
+      <text class="label-agent-role" x="1008" y="710">PITCH DECK ENGINE</text>
+      <text class="label-agent-role" x="1008" y="724" style="fill: var(--text-2); font-size: 10px;">proposal authoring,</text>
+      <text class="label-agent-role" x="1008" y="738" style="fill: var(--text-2); font-size: 10px;">branded templates</text>
+
+      <!-- FOUNDATIONS (center column) -->
+      <!-- Conductor -->
+      <path class="edge-branch ops" d="M 580 280 L 520 360"/>
+      <rect class="node-agent ops" x="440" y="360" width="170" height="80" rx="10"/>
+      <text class="icon" x="458" y="392">⌘</text>
+      <text class="label-agent" x="490" y="392">Conductor</text>
+      <text class="label-agent-role" x="458" y="410">OPERATIONS</text>
+      <text class="label-agent-role" x="458" y="424" style="fill: var(--text-2); font-size: 10px;">projects, milestones,</text>
+      <text class="label-agent-role" x="458" y="438" style="fill: var(--text-2); font-size: 10px;">scope &amp; workload</text>
+
+      <!-- KMG -->
+      <path class="edge-branch brand" d="M 600 280 L 600 460"/>
+      <rect class="node-agent brand" x="510" y="460" width="170" height="80" rx="10"/>
+      <text class="icon" x="528" y="492">◆</text>
+      <text class="label-agent" x="560" y="492">KMG</text>
+      <text class="label-agent-role" x="528" y="510">BRAND STRATEGY</text>
+      <text class="label-agent-role" x="528" y="524" style="fill: var(--text-2); font-size: 10px;">brand bible, voice,</text>
+      <text class="label-agent-role" x="528" y="538" style="fill: var(--text-2); font-size: 10px;">ICP, positioning</text>
+
+      <!-- Chronicle -->
+      <path class="edge-branch health" d="M 620 280 L 680 560"/>
+      <rect class="node-agent health" x="580" y="560" width="170" height="80" rx="10"/>
+      <text class="icon" x="598" y="592">♡</text>
+      <text class="label-agent" x="630" y="592">Chronicle</text>
+      <text class="label-agent-role" x="598" y="610">HEALTH INTEL</text>
+      <text class="label-agent-role" x="598" y="624" style="fill: var(--text-2); font-size: 10px;">Whoop, Strava,</text>
+      <text class="label-agent-role" x="598" y="638" style="fill: var(--text-2); font-size: 10px;">recovery, load</text>
+
+    </svg>
+  </div>
+
+  <!-- KAI HERO CARD -->
+  <div class="kai-card">
+    <div class="icon-big">◉</div>
+    <div>
+      <h3>Kai <span class="role-pill">Hub Agent</span></h3>
+      <p>
+        The operator's voice across the mesh. Receives intent from a single human (via Telegram, email, iMessage),
+        routes work to the right specialized agent, composes daily briefings, and surfaces only what needs a human decision.
+        Every other agent is a specialist; Kai is the generalist that knows where everything goes.
+      </p>
+    </div>
+  </div>
+
+  <!-- CREATIVE BRANCH -->
+  <div class="branch-section">
+    <div class="branch-header">
+      <div class="branch-name creative">Creative Production</div>
+      <div class="branch-sub">brief → produce → publish — a real workflow chain</div>
+    </div>
+    <div class="agents-row cols-4">
+      <div class="agent-card creative">
+        <div class="icon-row">
+          <div class="icon">✏︎</div>
+          <div>
+            <div class="name">ACD</div>
+            <div class="role">Creative Director</div>
+          </div>
+        </div>
+        <div class="desc">Authors creative briefs, tracks deliverables through revision cycles, manages stage gates on every active project. The director that the rest of the creative branch executes against.</div>
+      </div>
+      <div class="agent-card creative">
+        <div class="icon-row">
+          <div class="icon">⌬</div>
+          <div>
+            <div class="name">Framer</div>
+            <div class="role">Visual Production</div>
+          </div>
+        </div>
+        <div class="desc">Photo derivatives, culling, color grading, carousel composition, AI-assisted image and video generation. The hands of the visual layer.</div>
+      </div>
+      <div class="agent-card creative">
+        <div class="icon-row">
+          <div class="icon">▶</div>
+          <div>
+            <div class="name">Enso</div>
+            <div class="role">Video Editor</div>
+          </div>
+        </div>
+        <div class="desc">Trim, color grade, export, reframe across aspect ratios. Twelve named editing skills with a learning library that grows with every approved deliverable.</div>
+      </div>
+      <div class="agent-card creative">
+        <div class="icon-row">
+          <div class="icon">✦</div>
+          <div>
+            <div class="name">NAMI</div>
+            <div class="role">Social Coordinator</div>
+          </div>
+        </div>
+        <div class="desc">Receives approved deliverables and handles the platform layer end-to-end — scheduling, publishing, metric sync. The final mile to audience.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BUSINESS BRANCH -->
+  <div class="branch-section">
+    <div class="branch-header">
+      <div class="branch-name business">Business Operations</div>
+      <div class="branch-sub">price → prospect → pitch → track — running the studio's economics</div>
+    </div>
+    <div class="agents-row cols-4">
+      <div class="agent-card business">
+        <div class="icon-row">
+          <div class="icon">$</div>
+          <div>
+            <div class="name">CFO</div>
+            <div class="role">Financial Intelligence</div>
+          </div>
+        </div>
+        <div class="desc">QuickBooks integration with read and write. Cash flow, unbilled work, pipeline value, monthly briefings, tax reminders. Six dedicated financial monitors.</div>
+      </div>
+      <div class="agent-card business">
+        <div class="icon-row">
+          <div class="icon">◈</div>
+          <div>
+            <div class="name">OA</div>
+            <div class="role">Offer Architect</div>
+          </div>
+        </div>
+        <div class="desc">Pricing strategy. Evaluates inbound opportunities, calculates rate floors, runs Win-Without-Pitching checks, generates Go/No-Go recommendations.</div>
+      </div>
+      <div class="agent-card business">
+        <div class="icon-row">
+          <div class="icon">→</div>
+          <div>
+            <div class="name">LE</div>
+            <div class="role">Lead Engine</div>
+          </div>
+        </div>
+        <div class="desc">Sales pipeline. Scout, Archer, and Closer sub-agents handle prospecting, qualification, and follow-through with native CRM integration.</div>
+      </div>
+      <div class="agent-card business">
+        <div class="icon-row">
+          <div class="icon">▦</div>
+          <div>
+            <div class="name">PDE</div>
+            <div class="role">Pitch Deck Engine</div>
+          </div>
+        </div>
+        <div class="desc">React-based proposal authoring with branded templates. Composes client-facing deliverables on demand and tracks which decks have shipped to which prospects.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOUNDATIONS BRANCH -->
+  <div class="branch-section">
+    <div class="branch-header">
+      <div class="branch-name foundations">Foundations</div>
+      <div class="branch-sub">the substrate every other agent depends on — operations, brand, and the operator's own resilience</div>
+    </div>
+    <div class="agents-row cols-3">
+      <div class="agent-card ops">
+        <div class="icon-row">
+          <div class="icon">⌘</div>
+          <div>
+            <div class="name">Conductor</div>
+            <div class="role">Operations</div>
+          </div>
+        </div>
+        <div class="desc">The structured source of truth for "what's currently active." Tracks milestones, scope changes, overdue items, team workload, retainer cycles. Every other agent queries it.</div>
+      </div>
+      <div class="agent-card brand">
+        <div class="icon-row">
+          <div class="icon">◆</div>
+          <div>
+            <div class="name">KMG</div>
+            <div class="role">Brand Strategy</div>
+          </div>
+        </div>
+        <div class="desc">Brand bible, ideal customer profile, voice, positioning, partner economics. The reference layer creative and business agents query for "is this on-brand?"</div>
+      </div>
+      <div class="agent-card health">
+        <div class="icon-row">
+          <div class="icon">♡</div>
+          <div>
+            <div class="name">Chronicle</div>
+            <div class="role">Health Intelligence</div>
+          </div>
+        </div>
+        <div class="desc">Adjacent to the work. Whoop, Strava, recovery patterns, training load. The bet is that a healthy operator matters more than a marginally optimized workflow.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MESSAGE BUS -->
+  <div class="bus-section">
+    <h3>How they talk to each other</h3>
+    <p>
+      Every agent-to-agent message goes through a single canonical message bus. Each route is permissioned —
+      who can talk to whom, at what trust tier, with what auto-deliver vs. approval policy. Messages carry
+      idempotency keys, expiry timestamps, and correlation IDs. Every send is logged, every delivery is
+      acknowledged. The result: agents stop talking to each other directly, and "who said what to whom" becomes
+      auditable.
+    </p>
+  </div>
+
+  <!-- PRINCIPLES — compact -->
+  <div class="principles">
+    <div class="principle-mini">
+      <div class="num">01</div>
+      <h4>Specialization over generalization.</h4>
+      <p>A creative director and a CFO reason differently. Their agents should too.</p>
+    </div>
+    <div class="principle-mini">
+      <div class="num">02</div>
+      <h4>Human on intent, agents on execution.</h4>
+      <p>The operator sets direction. Agents handle persistence, follow-up, and the work in between.</p>
+    </div>
+    <div class="principle-mini">
+      <div class="num">03</div>
+      <h4>Typed contracts, audit-trailed.</h4>
+      <p>Every cross-agent action is a defined verb with a schema. Every message is logged.</p>
+    </div>
+  </div>
+
+  <footer>
+    Kameha · 12 agents · 1 operator · live, evolving system
+  </footer>
+
+</div>
+</body>
+</html>

@@ -1,135 +1,170 @@
-# CA Next Session Pickup (session 4)
+# CA Next Session Pickup (session 5)
 
-**Paste this entire file into a fresh Code Architect Claude Code session** to pick up from session 3 + day 1 follow-on (wrapped 2026-05-19 evening, 15 CA commits today + 7 PDE commits + 1 NAMI ship).
+**Paste this entire file into a fresh Code Architect Claude Code session** to pick up from session 4 (wrapped 2026-05-24, spanned 5 days, 14 files uncommitted).
 
 ---
 
-You are Code Architect, continuing from session 3 + a long day-1 follow-on. Full context is in your auto-memory at `memory/session-2026-05-19.md` (will be appended to with day-1 follow-on notes — read both halves). Standing rules indexed in `MEMORY.md`. This prompt is a drop-in to get oriented and pick up the queue.
+You are Code Architect, continuing from session 4 — the heaviest CA session to date. Full context is in your auto-memory at `memory/session-2026-05-24.md`. Standing rules indexed in `MEMORY.md`. Reference snapshot of Mini architecture in `memory/reference_mac_mini_architecture_ground_truth_2026-05-20.md` (and the source doc at CA repo `docs/architecture-current-state-2026-05-20.md`).
 
-## First 3 moves (do in order, before anything else)
+## First 3 moves (in order, before anything else)
 
-1. **Open `explainers/session-latest.html` in your browser** (file:// works; or `python3 -m http.server 8771` and visit http://localhost:8771/explainers/session-latest.html). The top **5 yellow/orange rows** in "Decisions awaiting you" are day-1's actionable items. The very top of the file's "What today looks like" callout is your plain-English orientation.
+1. **~~OAuth hotfix~~ — CLOSED 2026-05-24 20:08 UTC.** Mini's `~/.kai/credentials.json` + `~/.kai/tokens.json` updated with new 5-scope refresh_token. Laptop `~/.kai/gsuite-env` synced. All three smoke tests passed (calendar 4 events, Gmail 37,555 messages, syncToSheet 283 entries). `consecutiveFailures: 0`. Backups at `~/.kai/*.bak-2026-05-24`. Kai notified to `pm2 start kai-bot`.
 
-2. **Read `docs/audit-overnight-2026-05-19.md`** for the full overnight P0/P1/P2 punch list — many items still pending. Then scan today's NEW intakes:
-   - `docs/intake-nami-email-spam-2026-05-19.md` — diagnosis + Option B + shipped
-   - `docs/intake-kai-workflow-dispatch-2026-05-19.md` + `docs/proposal-workflow-dispatch-deploy-yml-2026-05-19.md` — pending approval
-   - `docs/intake-kai-crew-manifest-design-2026-05-19.md` — deferred to dedicated session
-   - `docs/intake-pde-dental-boutique-recovery-2026-05-19.md` — data-loss incident + Option-1 recovery
+2. **Prompt-cache patch — APPLIED + COMMITTED LOCALLY, NOT PUSHED.** Codex v2 PASSED (`docs/codex-review-2026-05-22-prompt-caching-v2-results.md`). Patch applied to Kai's laptop checkout, committed as **`5a3098e7`** (3 files, 125 insertions). Regression test re-verified in Kai's tree. **Push was halted** on discovery of Kai-repo git corruption (see #2a).
+   - **Pickup:** main HEAD (`5a3098e7`) is verified clean — 5,177 objects walked, zero missing-object errors. Push is SAFE (corruption is off-main, doesn't travel). `cd "~/Desktop/Code/Kai Executive Assistant" && git push origin main`. Then SSH Mini `cd ~/kai && git pull`. Then Kai restarts `kai-bot` (also picks up OAuth fix in same restart — bot is currently STOPPED).
+   - Verify cache_read at turn 3+ in subsequent multi-turn Telegram/dashboard sessions (not turn 1 — write-premium first).
+   - Low-sev Codex nice-to-haves (not blockers): add consecutive-user assertion to README regression test; flag `scripts/lib/enrichment-pipeline.js` as separate tool-loop surface.
 
-3. **Check for filesystem-dropped work since session 3 day-1 wrap.** Run:
+### 🩹 2a. Kai laptop repo — git corruption (off-main, low-stakes)
+
+`git fsck` on `~/Desktop/Code/Kai Executive Assistant` found corruption CONFINED OFF-MAIN: dead branch `refs/heads/mesh-bus-tonight` (invalid sha1), corrupt `refs/stash`, many invalid HEAD reflog entries, 6 truncated/inaccessible promisor packs (partial-clone artifacts, dated May 10–22), 1 missing commit `43e03642` referenced only by off-main commit `95386b7d`. **Main branch verified clean** (full object walk, zero missing). This was the root cause of the recurring stale `index.lock` incidents 5/24.
+
+Optional cleanup (state-changing on Kai — per-step go-ahead): `git branch -D mesh-bus-tonight`, `git stash clear`, `git reflog expire --expire=now --all`, `git repack -ad`, optionally `git fetch` to re-pull promisor objects. ~15 min. Not urgent — main is clean, push is safe without it. Pre-existing condition (~2 weeks old).
+
+### 🌐 2b. CONSOLIDATED mesh-operability design — THE headline item (queued)
+
+Three intakes converged this session (3a DAGDC, 3b CFO, + CA's own audit) on one root cause: **the mesh was built but never fully operated.** Queued for a dedicated session. Draft ONE consolidated decision brief folding all three + the action-vocab registry.
+
+**The decision collapses to two things** (CFO's framing): (1) pick ONE canonical transport, (2) every agent runs a scheduled inbox drainer. #2 is operational discipline. #1 is the architectural fork.
+
+**Three transports in play:** mesh-api `:3341` (rich — tier/audit/routes, but under-operated + buggy reply-path + status-demotion); filesystem `~/.kameha/delegations/` (dumb but durable, drainers exist-but-unscheduled); dashboard relay `:3000`/`:3336` (the accidental third path DAGDC found — eliminate, don't choose).
+
+**CA's lean (to ratify with Kai):** filesystem inbox + scheduled drainers as canonical substrate, with mesh-api's tier/audit logic layered in as a drainer-side validation library (not a separate HTTP hop). Shortest path to "messages stop rotting," durable-by-default for a sleep/wake fleet, kills the dashboard-relay path. Domain boundary: Kai-led/shared-infra; CA designs/audits.
+
+**Live test case for P2:** the CFO↔KMG brand-bible data request (it would've flowed automatically under a working mesh). **Open policy Q:** is TDB a real mesh node or a client repo? DAGDC + TDB both want addresses — possible wave of client repos wanting mesh participation = policy question bigger than agents.json rows.
+
+**Note:** CFO's Phase 0 (schedule its own drainer, drain 10 stuck WOs, refresh its agents.json entry, fix heartbeat field) is CFO's OWN slice — self-executable, no CA action. CA starts at Phase 1 (the cross-agent spec).
+
+3. **Check for filesystem-dropped work since session 4 wrap.** Standard intake check:
    ```bash
-   git log --oneline -1     # confirm HEAD = the session-3 evening wrap commit
-   git status --short        # see anything new
+   cd "/Users/alex/Desktop/Code/Code Architect"
+   git log --oneline -1
+   git status --short
    find . -newer .git/refs/heads/main -type f \
      -not -path "./.git/*" -not -path "./node_modules/*" \
-     -not -path "./.playwright-mcp/*"
+     -not -path "./.playwright-mcp/*" 2>/dev/null
    ```
-   Per `project-filesystem-drop-interim-mailman` + `project-intake-convention-docs-dated-files`: any incoming agent-authored report → save as `docs/intake-<topic>-<date>.md` BEFORE responding.
+   Per `project-intake-convention-docs-dated-files`: any incoming agent-authored report → save as `docs/intake-<topic>-<date>.md` BEFORE responding.
 
 ## Open decisions (priority order)
 
-### ⚙️ 1. Kai workflow_dispatch deploy.yml — drafted, awaiting your go-ahead
+### 🚨 1. OAuth hotfix (see First 3 Moves #1)
 
-Proposal at `docs/proposal-workflow-dispatch-deploy-yml-2026-05-19.md`. 1-line YAML add to each of two repos (Kai + KMG). KMG side blocks on KMG owners.json bootstrap (also drafted as part of the same proposal). DA-passed. Not time-pressured (old Tailscale key valid through 2026-05-22), but cleanest validation path. 8-question approval matrix in the proposal.
+Time-pressured. Has highest user-facing impact (Telegram alerts piling up; bot can't see Gmail/Calendar/Drive/Sheets).
 
-### 🎬 2. Kai crew_manifest design — INTAKE QUEUED for a deep-work session
+### 🚨 2. Prompt-cache patch v2 application (see First 3 Moves #2)
 
-Triggered by Baptist 5/21 shoot 2nd-camera staffing gap (T-2 days catch by Alex). Kai asked CA to design a structured `crew_manifest` contract as the first concrete typed deliverable in the action-vocabulary registry. Intake at `docs/intake-kai-crew-manifest-design-2026-05-19.md` includes the 8-section ask. **This is a substantial design artifact** — needs a fresh dedicated session, not a tail-end of an already-long one. Kai is covering the gap via a feedback memory in the meantime.
+Smallest measurable cost win. Quick once Codex v2 verdict is in.
 
-### 🚨 3. Two mesh routes — refined diagnosis (reply-path, not request-path)
+### 📥 3a. NEW — DAGDC intake: mesh relay endpoint bypasses tier policy + audit
 
-`nami → framer schedule_post_response` (5× rejected/24h) and `acd → conductor creative_brief` (1×) — these are message_type="response" replies that the routing system rejects because no reverse route is registered. Fix is a design call between (a) add reverse routes (b) auto-route correlation_id responses (c) change agent reply mechanism. Full analysis in audit doc P0-1 refinement.
+Filesystem-dropped 2026-05-24 ~16:30 by DAGDC. Doc at `docs/intake-mesh-relay-policy-bypass-2026-05-24.md` (~14 KB, mirrors CA A4/A6 audit format).
 
-### 🚨 4. PDE silent `build_update` — confirmed but ZERO traffic in 7 days
+**Headline finding:** `/api/delegations/receive` (file `Kai Executive Assistant/scripts/routes/ecosystem.js:1299-1350`) is a 30-LOC file-writer that bypasses mesh-api tier policy, audit trail, and route_permissions table. Kai-originated WOs go through `delegation-manager.js:262-360` → mesh-api with full enforcement. Externally-relayed WOs (via `~/.kameha/shared/deliver-to-kai.js`) skip all of it.
 
-Demoted from P0-urgency to backlog. The bug is real (`scripts/pde-daemon.js:684` dispatch only matches `build_addendum`, falls through to PATCH status=completed). But no sender is exercising it. Fix when the action-vocabulary registry lands as part of the systemic answer; per-agent patches are YAGNI for now.
+5 findings + 3 remediation options sketched (A: promote to full mesh participant, B: rename + lock down as shim, C: hybrid) + 4 open questions for Alex + DA-gate analysis included. Severity: architectural/policy, not runtime (Enso gates intake itself; exposure is for non-Enso targets and system-of-record integrity).
 
-### 🚨 5. Lead Engine — no mesh-receive daemon at all
+**Status:** queued. Read in full and plan remediation when above items are closed. Real cross-cutting design call — not a hotfix.
 
-T3 plan-first item. LE has only a FastAPI dashboard. Mesh sends rot in `/inbox/lead-engine` until reconciler-expired. Needs design (FastAPI add-on vs separate process) + DA gate. Defer to a dedicated LE-design session.
+### 📥 3b. NEW — CFO intake: mesh built but never operated (CONVERGES with 3a + arch audit)
 
-### 💡 6. Action-vocabulary registry Phase A — 5 open questions
+Doc at `docs/intake-cfo-mesh-not-operated-2026-05-24.md`. Relayed inline by Alex 2026-05-24. CFO's three findings: (1) `process_inbox.py` drainer exists but was never scheduled in launchd — 10 WOs rotting since March; (2) `agents.json` registry missing KMG/TDB/ACD (last touched Mar 19); (3) dual transport (filesystem `~/.kameha/delegations/` + HTTP :3000/:3336), neither carrying live traffic.
 
-Design at `docs/design-action-vocabulary-registry-2026-05-19.md`. With the crew_manifest intake (#2 above) now queued, the 5 open questions get sharpened against a real cross-agent typed deliverable. Likely better to answer them as part of the crew_manifest session — they become concrete.
+**THE CONVERGENCE:** This is the 3rd independent signal this session of ONE root cause — *the mesh was built and never fully operated*. DAGDC (3a) hit the relay-bypass face of it; CFO hit the dormant-drainer + stale-registry face; CA's own audit (`architecture-current-state-2026-05-20.md`) hit the dual-transport + 22-silent-failures face. **Recommendation: consolidate CFO Phase 1 spec + DAGDC remediation + action-vocab registry into ONE mesh-operability design**, not three efforts. Kai-led / shared-infra per domain boundaries (communication is Kai's; CA designs/audits).
 
-### 🔓 7. Owners.json gitignore-policy proposal
+CFO Phase 0 (schedule its drainer, drain 10 WOs, refresh its registry entry, fix heartbeat field) is CFO's OWN slice — self-executable in CFO's repo, no CA action needed. CA's role starts at Phase 1.
 
-`docs/proposal-owners-policy-gitignore-2026-05-19.md`. 1-min y/n decision. Approving unblocks fleet-wide `.gitignore` hygiene under `auto_merge_after:ca_internal_da`.
+**Open policy Q for Alex:** is TDB a real mesh node or a client-project repo? DAGDC + TDB both want addresses — may be a wave of client repos wanting mesh participation, which is a policy question bigger than adding agents.json rows.
 
-### 🚨 8. Chronicle — git locked since Mar 28 + dead PM2 daemon
+### ⚙️ 3. Workflow_dispatch YAML edit (NEXT-after-OAuth)
 
-A2 found `refs/heads/main.lock` from 2026-03-28 (dead PID) blocking all git ops — that's why 27 /log entries are uncommitted. Fix is mechanical (Alex hands): `rm .git/refs/heads/main.lock` → `git fsck` → commit entries → `ssh kai@10.0.0.79 pm2 restart chronicle`. ~10 min total. Documented in `docs/morning-actions-2026-05-19.md`.
+Proposal at `docs/proposal-workflow-dispatch-deploy-yml-2026-05-19.md`. 1-line YAML add to Kai + KMG repos. **Tailscale `TAILSCALE_AUTHKEY` expired 5/22.** New keys are set on both repos but neither has `workflow_dispatch` trigger → can't manually validate deploy. Auto-deploy unverified until either a real push to main exercises the new key or `workflow_dispatch` lands. CA's draft is ready.
 
-### 🐞 9. mesh-api `status` field never demotes on heartbeat staleness
+### 📋 4. Crew_manifest proposal — Q1-Q8 awaiting Alex's answers
 
-A1 systemic find. Chronicle is simultaneously `status="active"` AND in the `stale_agents` array. Single-source-of-truth silently lies. Kai `scripts/mesh/mesh-api.js` patch — human_review_required.
+Proposal at `docs/proposal-crew-manifest-2026-05-20.md`. Companion HTML at `explainers/proposal-crew-manifest-2026-05-20.html`. 8 decisions inline (Q1-Q8) + 5 strawmen for action-vocab open questions. Codex-reviewed (REVISE → corrections folded: dispatch-order prerequisite, action-scope acknowledgment, transaction guard on delete-insert, outbox fallback for mesh-send failure, Phase 1 auto-merge correction).
 
-### ⚙️ 10. Conductor fuzzy-fallback misroutes (A6 P1 promoted)
+**Critical:** the proposal now has a hard dispatch-order prerequisite — conductor's `processMessage()` must check `CAPABILITY_HANDLERS[action]` exact-match BEFORE the generic `processActionableWorkOrder` call, OR `crew_manifest` will be silently bypassed.
 
-`Kai Executive Assistant/scripts/conductor-agent.js:425-431` substring-matches → wrong handler runs. Single-file fix in Kai (scripts/conductor-agent.js — not under scripts/mesh/, so check policy carve-out).
+### 💡 5. Universal brain — Layer 1 expansion (Architecture B chosen)
 
-### Carry-forward from earlier sessions (still pending Alex)
+After session 4 cost analysis, **direction is committed**: extend conductor.db with new typed tables as the universal brain. crew_manifest is the pilot. Next typed tables to consider once crew_manifest ships: `decision_log` (append-only cross-agent decisions), `client_facts` (typed client constraints). Vector layer (Layer 3) is Phase 4+ per cost-design doc.
 
-- **Memorial Day manual-relay confirmation** — was the hand-relay intentional human-in-loop or accidental gap? Drives priority on retrospective tooling.
+Cost economics are anchored (real numbers, not guesses): fleet API ~$30-100/mo, growing ~50%/mo. Universal brain adds $10-30/mo with smart 3-layer approach, $30-100/mo if done naively.
+
+### 🚨 6. Mesh route reply-path silent failures (22 / 7 days)
+
+Carry-forward from session 3. Live data confirmed in session 4 architecture audit: `nami → framer` (13 rejected/7d), `enso → nami` (5 failed), `acd → nami` (3 failed), `acd → conductor` (1 rejected — exactly the route crew_manifest needs). Design call between (a) add reverse routes, (b) auto-route correlation_id responses, (c) change agent reply mechanism.
+
+### 🐞 7. mesh-api status field demotion bug (NEXT-SESSION #9 carry)
+
+Live-confirmed: Chronicle appears in `stale_agents` AND has `status: "active"` in same JSON. Single-file fix in `~/kai/scripts/mesh/mesh-api.js`. Human-review on the file; CA drafts diff, Alex applies.
+
+### 🚨 8. Lead Engine — no mesh-receive daemon (carry from session 3)
+
+LE has only FastAPI dashboard. Mesh sends rot in `/inbox/lead-engine` until reconciler-expired. T3 plan-first item.
+
+### 💡 9. Action-vocabulary registry Phase A (carry)
+
+Design at `docs/design-action-vocabulary-registry-2026-05-19.md` (not authored this session — was from session 3). 5 open questions. crew_manifest answers some of them concretely. Worth a focused design session after crew_manifest ships.
+
+### Carry-forward from earlier sessions (still pending)
+
+- **Memorial Day manual-relay confirmation** — was intentional or accidental?
 - **OA Malaga 4-file deletion triage** — restore vs commit-as-cleanup vs investigate.
 - **CFO 8-commit plan execution** — plan at `docs/cfo-commit-plan-2026-05-18.md`.
-- **CFO QuickBooks token expired** — re-auth needed; 10 pending WOs queued.
+- **CFO QuickBooks token expired** — re-auth needed.
+- **Chronicle git lock since Mar 28** — A2 finding from overnight audit.
 
 ## Standing rules (in memory — auto-loaded each invocation)
 
-- **Verify staging before commit** ([[feedback-verify-staging-before-commit]]). Surgical `git add <specific-file>` only. Unaccounted-for staged files = STOP.
-- **Triangulate audit sources** ([[feedback-audit-triangulate-sources]]). Static manifests + runtime registry + mesh-api + actual code. All four before classifying.
-- **Re-verify agent-authored claims about other agents** ([[feedback-re-verify-agent-authored-claims]]). Senders are unreliable narrators about receivers. Subagent findings also need re-verification (caught A6's wrong PDE path today).
-- **Silent-failure is a class, not instances** ([[pattern-silent-failure-class-fleetwide]]). PDE, LE, ACD, mesh-route reply-path — all variations. Systemic fix is the action-vocab registry.
-- **Self-retraction discipline** ([[feedback-self-retraction-discipline]]). When triangulation overturns a prior conclusion, name the retraction explicitly. Don't silently correct.
-- **`git reset --hard` destroys staged-but-uncommitted files** ([[feedback-git-reset-hard-destroys-staged]]) — NEW today. NEVER use `--hard` when there's staged content not yet committed. Use `git stash` first, or `--mixed`/`--soft`. Cost dental-boutique-decision today.
-- **Filesystem-drop / intake convention** ([[project-filesystem-drop-interim-mailman]] + [[project-intake-convention-docs-dated-files]]). Save incoming agent reports as `docs/intake-<topic>-<date>.md` BEFORE responding.
-- **Session-face HTML pattern** ([[project-session-face-html-pattern]]). Refresh on material changes; commit + snapshot at session end.
-- **Codex prompts are for Codex** ([[feedback-codex-prompts-are-for-codex]]). "# Codex prompt — ..." headers go to Kai memory, not execute against own state.
+- **Verify staging before commit** ([[feedback-verify-staging-before-commit]]).
+- **Triangulate audit sources** ([[feedback-audit-triangulate-sources]]).
+- **Re-verify agent-authored claims about other agents** ([[feedback-re-verify-agent-authored-claims]]).
+- **Silent-failure is a class** ([[pattern-silent-failure-class-fleetwide]]).
+- **Self-retraction discipline** ([[feedback-self-retraction-discipline]]).
+- **`git reset --hard` destroys staged** ([[feedback-git-reset-hard-destroys-staged]]).
+- **Filesystem-drop / intake convention** ([[project-filesystem-drop-interim-mailman]] + [[project-intake-convention-docs-dated-files]]).
+- **Session-face HTML pattern** ([[project-session-face-html-pattern]]).
+- **Codex prompts are for Codex** ([[feedback-codex-prompts-are-for-codex]]).
+- **Verify scopes against code, not rotation cards** ([[feedback-verify-scopes-against-code]]) — NEW session 4.
+- **Solicit Codex review on substantive work** ([[pattern-solicit-codex-review-on-substantive-work]]) — NEW session 4.
 
-## CA authority coverage (day 1 wrap state)
+## Session 4 deliverables — uncommitted at shutdown
 
-9 of 12 repos bootstrap'd:
+14 files / dirs. Substantial output. Worth getting onto GitHub early in session 5.
 
-| Repo | SHA | Paths | owners.json |
-|---|---|---|---|
-| CFO | `8019706` | 21 | ✅ |
-| Kai | `52dd126e` | 24 | ✅ |
-| Nami | `055b551` | 21 | ✅ |
-| ACD | `bcce5d5` | 30 | ✅ |
-| Framer | `0a4d322` | 51 | ✅ on main; not in laptop's current feature-branch checkout |
-| Enso | `9935ec5` | 63 | ✅ |
-| Offer Architect | `5a32a99` | 24 | ✅ |
-| Lead Engine | `6f525ff` | 45 | ✅ |
-| Code Architect | `0964563` | 24 | ✅ |
-| **Pitch Deck Engine** | **`de8abb2`** | **23** | ✅ **NEW today** |
-| conductor | (inherited via Kai) | — | ✅ |
-| Chronicle | — | — | ❌ MISSING |
-| KMG | — | — | ❌ MISSING (W2 ship still pending; bootstrap drafted in workflow_dispatch proposal) |
-
-**Action:** for next session, KMG bootstrap is the small unblocker for workflow_dispatch shipping. Chronicle is blocked on the git lock removal (Alex hands).
+```
+docs/architecture-current-state-2026-05-20.md
+docs/codex-review-{2026-05-20,2026-05-21,2026-05-22}-*-results.md  (3 files)
+docs/codex-review-prompt-{2026-05-20,2026-05-21,2026-05-22}-*.md   (3 files)
+docs/design-cost-and-universal-brain-2026-05-20.md
+docs/intake-kai-wo-oauth-client-deleted-2026-05-22.md
+docs/patch-prompt-caching-2026-05-20/  (4 files: README, helper, 2 diffs)
+docs/proposal-crew-manifest-2026-05-20.md
+explainers/architecture-current-state-2026-05-20.html
+explainers/kameha-agentic-system-overview.html
+explainers/proposal-crew-manifest-2026-05-20.html
+```
 
 ## Don't forget
 
-- The session-face HTML IS Alex's nervous system. State changes → refresh. End of session → snapshot + commit + new NEXT-SESSION.md.
-- Alex is a non-coder principal. Plain English in body text; commit messages aren't his interface. The HTML is.
-- **HB#1:** never commit/push without explicit per-change go-ahead. Even with broad "execution" authority granted overnight, each commit traces to a stated authorization for its class. **Default: draft-only.**
-- **HB#2:** cross-repo writes governed by target repo's `.kameha/owners.json`. 2 repos still missing — Chronicle + KMG.
-- **HB#3:** never `--no-verify`, `--no-gpg-sign`, `--force-with-lease`, `--force`. Today proved why: the impeccable hook hang triggered a misuse of `--hard` that caused real data loss. The discipline isn't theoretical.
-- **HB#7:** never edit methodology.md without re-distill.
+- **HB#1:** never commit/push without explicit per-change go-ahead.
+- **HB#2:** cross-repo writes governed by target repo's `.kameha/owners.json`. ACD `daemon.py`, all Kai `scripts/bot/**` + `scripts/mesh/**` + `scripts/routes/**` are `human_review_required` — CA drafts, Alex applies.
+- **HB#3:** never `--no-verify`, `--no-gpg-sign`, `--force-with-lease`, `--force`.
 - **HB#10:** invocation boundary — only run from CA's own repo dir.
-- Playwright available (`mcp__playwright__browser_*`). Verify HTML changes before declaring done.
-- Use `Agent` tool with `general-purpose` subagent_type + `run_in_background: true` for long-running independent investigations. 7+ in parallel works (proven session 3 overnight). **Today proved this works for emergency recovery too** — the dental-boutique-decision JSONL extraction agent reconstructed 9 files autonomously.
+- **Mac Mini probe protocol:** SSH is `kai@100.64.114.13`, available and working. Tailscale-internal mesh-api at `http://100.64.114.13:3341` (use `/stats?days=N` for traffic data, NOT `/by-route`).
+- **API key arrangement:** still unknown whether per-agent keys vs shared. Worth surfacing if cost tracking becomes important.
 
 ## At session end (when Alex signals shutdown)
 
-1. Final HTML refresh (footer SHAs, decisions count, "session N wrapped")
-2. Snapshot `session-latest.html` → `state-of-things-YYYY-MM-DD[-suffix].html`
-3. Write `session-YYYY-MM-DD.md` to auto-memory dir (append if same date)
-4. Update auto-memory `MEMORY.md` sessions index
+1. Refresh `explainers/session-latest.html` if material changes happened (session 4 deferred this — the architecture-current-state.html is more authoritative for "system state" than session-latest was)
+2. Snapshot if material refresh happened
+3. Write `session-YYYY-MM-DD.md` to auto-memory dir
+4. Update `MEMORY.md` sessions index
 5. Commit + push (HTML refresh + snapshot + session log + new NEXT-SESSION.md + any intake docs)
-6. **Overwrite this `NEXT-SESSION.md` with next-session pickup for session N+1**
+6. **Overwrite this `NEXT-SESSION.md` with next-session pickup**
 
 ---
 
-Pick the priority and go. Recommended first item: **#1 workflow_dispatch approval** (quick decision, time-aware due to 2026-05-22 old-key expiry) followed by **#2 crew_manifest design** (deep-work session, sharpens the action-vocab registry conversation).
+Pick the priority and go. Recommended first move: **OAuth hotfix completion** (Alex's Playground step → CA SSH-write → smoke tests). Bot's been down 3 days.

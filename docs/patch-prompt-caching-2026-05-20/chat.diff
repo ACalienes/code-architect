@@ -1,0 +1,35 @@
+--- a/scripts/routes/chat.js
++++ b/scripts/routes/chat.js
+@@ -X,Y +X,Y @@
+ // Add this require alongside the other require()s near the top of the file.
++const { addHistoryCachePoint } = require('../lib/prompt-cache');
+
+@@ around line 108, inside the `while (toolRound++ < MAX_TOOL_ROUNDS)` loop @@
+   while (toolRound++ < MAX_TOOL_ROUNDS) {
+     let finalMessage;
+     let roundText = '';
+
++    // Cache conversation history at the last completed assistant message.
++    // Single-marker / idempotent — see prompt-cache.js for invariant explanation.
++    // Applied before BOTH the streaming and non-streaming code paths below.
++    addHistoryCachePoint(messages);
++
+     if (streaming) {
+       // ── Phase 2A: Real Streaming (every round) ──
+       const stream = anthropic.messages.stream({
+         model: selectedModel,
+         max_tokens: maxTokens,
+         system: systemBlocks,
+         tools: selectedTools,
+         messages,
+       }, { timeout: 60000 });
+       ...
+     } else {
+       // Non-streaming: standard create call
+       const response = await anthropic.messages.create({
+         model: selectedModel,
+         max_tokens: maxTokens,
+         system: systemBlocks,
+         tools: selectedTools,
+         messages,
+       ...

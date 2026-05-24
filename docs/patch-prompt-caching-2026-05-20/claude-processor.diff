@@ -1,0 +1,24 @@
+--- a/scripts/bot/claude-processor.js
++++ b/scripts/bot/claude-processor.js
+@@ -X,Y +X,Y @@
+ // Add this require alongside the other require()s near the top of the file.
++const { addHistoryCachePoint } = require('../lib/prompt-cache');
+
+@@ around line 341, the main message-create loop @@
+   while (true) {
++    // Cache the conversation history prefix at the last completed assistant message.
++    // Helper is single-marker / idempotent: it strips any prior message-level
++    // cache_control before placing the new one, so repeated tool-use rounds
++    // do NOT exceed Anthropic's 4-breakpoint cap.
++    addHistoryCachePoint(messages);
+     response = await anthropic.messages.create({
+       model: selectedModel,
+       max_tokens: maxTokensOverride || (['greeting', 'confirmation'].includes(routing.queryType) ? 512
+         : ['calendar', 'status', 'email', 'filing'].includes(routing.queryType) ? 1024
+         : 2048),
+       system: systemBlocks,
+       tools: selectedTools,
+       messages
+     }, { timeout: timeoutOverride || 60000 });
+
+     logApiUsage({ model: selectedModel, queryType: routing.queryType, source: modelOverride ? 'telegram-deep' : 'telegram', usage: response.usage });

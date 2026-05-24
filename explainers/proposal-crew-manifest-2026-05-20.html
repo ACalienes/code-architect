@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<!-- Proposal explainer — crew_manifest. Companion to docs/proposal-crew-manifest-2026-05-20.md -->
+<!-- Visual language inherited from session-latest.html (Kai-derived). -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proposal — crew_manifest · digestible breakdown · 2026-05-20</title>
+<style>
+  :root {
+    --bg: #0a0d12;
+    --bg-2: #0f131a;
+    --card: #141a23;
+    --card-2: #1a212c;
+    --brief-bg: #11161e;
+    --border: #232c3a;
+    --border-bright: #2f3a4a;
+    --text: #e6edf3;
+    --text-2: #b8c5d3;
+    --muted: #7d8a99;
+    --dim: #5a6573;
+    --accent: #6ea8fe;
+    --accent-glow: rgba(110, 168, 254, 0.4);
+    --green: #4ade80;
+    --green-glow: rgba(74, 222, 128, 0.35);
+    --yellow: #facc15;
+    --orange: #fb923c;
+    --red: #f87171;
+    --red-glow: rgba(248, 113, 113, 0.35);
+    --purple: #c084fc;
+    --pink: #f472b6;
+    --teal: #5eead4;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "SF Pro Display", "SF Pro Text", BlinkMacSystemFont, "Segoe UI", sans-serif;
+    line-height: 1.6;
+    font-feature-settings: "ss01", "ss02", "cv11";
+    min-height: 100vh;
+  }
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse 1200px 600px at 20% -10%, rgba(110, 168, 254, 0.06), transparent 50%),
+      radial-gradient(ellipse 800px 400px at 90% 10%, rgba(192, 132, 252, 0.05), transparent 50%),
+      radial-gradient(ellipse 1000px 500px at 50% 120%, rgba(94, 234, 212, 0.04), transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .container { position: relative; max-width: 1180px; margin: 0 auto; padding: 48px 28px 80px; z-index: 1; }
+  code, .mono { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; font-size: 0.92em; }
+
+  /* HERO */
+  .hero { margin-bottom: 36px; }
+  .eyebrow {
+    font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 2px;
+    color: var(--accent); margin-bottom: 16px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .eyebrow::before { content: ""; width: 24px; height: 1px; background: var(--accent); box-shadow: 0 0 8px var(--accent-glow); }
+  h1.title {
+    font-size: 48px; font-weight: 700; letter-spacing: -1.5px; line-height: 1.05; margin-bottom: 14px;
+    background: linear-gradient(180deg, #ffffff 0%, #b8c5d3 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .subtitle { font-size: 17px; color: var(--text-2); max-width: 880px; line-height: 1.6; margin-bottom: 24px; }
+  .meta-row { font-size: 12px; color: var(--muted); display: flex; gap: 20px; flex-wrap: wrap; }
+  .meta-row span::before { content: "·"; color: var(--dim); margin-right: 16px; }
+  .meta-row span:first-child::before { content: ""; margin: 0; }
+
+  /* STAT TILES */
+  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 48px; }
+  @media (max-width: 880px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } }
+  .stat {
+    background: linear-gradient(180deg, var(--card) 0%, var(--bg-2) 100%);
+    border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px;
+    position: relative; overflow: hidden;
+  }
+  .stat::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--border-bright), transparent); }
+  .stat .label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 10px; font-weight: 600; }
+  .stat .value { font-size: 30px; font-weight: 700; letter-spacing: -1px; line-height: 1; margin-bottom: 6px; font-family: "JetBrains Mono", "SF Mono", monospace; }
+  .stat .value.blue { color: var(--accent); text-shadow: 0 0 20px var(--accent-glow); }
+  .stat .value.yellow { color: var(--yellow); }
+  .stat .value.green { color: var(--green); text-shadow: 0 0 16px var(--green-glow); }
+  .stat .value.orange { color: var(--orange); }
+  .stat .note { font-size: 11px; color: var(--muted); }
+
+  /* SECTION */
+  .section { margin-bottom: 56px; }
+  .section-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 22px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+  .section-head h2 { font-size: 22px; font-weight: 600; letter-spacing: -0.5px; }
+  .section-head .meta { font-size: 12px; color: var(--muted); font-family: "JetBrains Mono", monospace; }
+
+  /* PROBLEM CARD */
+  .problem-card {
+    background: linear-gradient(180deg, var(--card) 0%, var(--bg-2) 100%);
+    border: 1px solid var(--border); border-radius: 14px; padding: 28px 32px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 32px;
+  }
+  @media (max-width: 880px) { .problem-card { grid-template-columns: 1fr; gap: 20px; } }
+  .problem-card h3 { font-size: 14px; font-weight: 600; color: var(--text-2); margin-bottom: 12px; letter-spacing: -0.3px; }
+  .problem-card .label-tag {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;
+    color: var(--red); margin-bottom: 8px;
+  }
+  .problem-card .label-tag.green { color: var(--green); }
+  .problem-card p { font-size: 14px; color: var(--text-2); margin-bottom: 12px; }
+  .problem-card .quote { padding-left: 14px; border-left: 2px solid var(--orange); color: var(--muted); font-style: italic; font-size: 13px; }
+
+  /* FLOW DIAGRAM */
+  .flow-wrap {
+    background: linear-gradient(180deg, var(--card) 0%, var(--bg-2) 100%);
+    border: 1px solid var(--border); border-radius: 14px; padding: 24px 22px 18px;
+  }
+  svg.flow { width: 100%; height: auto; display: block; }
+  svg.flow .node-rect { stroke-width: 1.4; }
+  svg.flow .node-rect.existing { fill: var(--card-2); stroke: var(--border-bright); }
+  svg.flow .node-rect.new { fill: rgba(74,222,128,.08); stroke: var(--green); stroke-dasharray: 4 3; }
+  svg.flow .node-rect.modified { fill: rgba(250,204,21,.06); stroke: var(--yellow); }
+  svg.flow .node-label { font-family: "JetBrains Mono", monospace; font-size: 12px; font-weight: 700; fill: var(--text); }
+  svg.flow .node-sub { font-family: "JetBrains Mono", monospace; font-size: 10px; fill: var(--muted); }
+  svg.flow .edge { stroke-width: 1.5; fill: none; }
+  svg.flow .edge.existing { stroke: var(--accent); opacity: 0.5; }
+  svg.flow .edge.new { stroke: var(--green); opacity: 0.8; }
+  svg.flow .edge-label { font-family: "JetBrains Mono", monospace; font-size: 10px; fill: var(--text-2); }
+  .flow-legend { display: flex; gap: 22px; flex-wrap: wrap; margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); }
+  .leg-item { display: flex; align-items: center; gap: 8px; }
+  .leg-box { width: 16px; height: 12px; border-radius: 2px; }
+  .leg-box.existing { background: var(--card-2); border: 1.5px solid var(--border-bright); }
+  .leg-box.new { background: rgba(74,222,128,.12); border: 1.5px dashed var(--green); }
+  .leg-box.modified { background: rgba(250,204,21,.1); border: 1.5px solid var(--yellow); }
+
+  /* DECISION CARDS */
+  .decisions-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+  .decision {
+    background: linear-gradient(180deg, var(--card) 0%, var(--bg-2) 100%);
+    border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+  }
+  .decision summary {
+    list-style: none; cursor: pointer; padding: 18px 22px;
+    display: grid; grid-template-columns: 40px 1fr auto; gap: 16px; align-items: center;
+  }
+  .decision summary::-webkit-details-marker { display: none; }
+  .decision summary::after {
+    content: "▸"; color: var(--muted); font-size: 12px;
+    transition: transform 0.15s; margin-left: 8px;
+  }
+  .decision[open] summary::after { transform: rotate(90deg); }
+  .decision .q-num {
+    font-family: "JetBrains Mono", monospace; font-size: 13px; font-weight: 700;
+    color: var(--accent); background: rgba(110,168,254,.1); border: 1px solid rgba(110,168,254,.3);
+    border-radius: 8px; padding: 6px 0; text-align: center;
+  }
+  .decision .q-title { font-size: 15px; font-weight: 600; color: var(--text); }
+  .decision .q-subtitle { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .decision .rec-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 12px; border-radius: 12px;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+    font-family: "JetBrains Mono", monospace;
+    background: rgba(74,222,128,.12); color: var(--green); border: 1px solid rgba(74,222,128,.3);
+  }
+  .decision .rec-pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green-glow); }
+  .decision .detail-body { padding: 0 22px 22px; border-top: 1px solid var(--border); padding-top: 18px; margin-top: 4px; }
+  .decision .detail-body h4 { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin: 14px 0 8px; font-weight: 600; }
+  .decision .detail-body h4:first-child { margin-top: 0; }
+  .decision .detail-body p { font-size: 13px; color: var(--text-2); margin-bottom: 8px; }
+  .decision .detail-body ul { font-size: 13px; color: var(--text-2); padding-left: 22px; margin-bottom: 8px; }
+  .decision .detail-body li { margin-bottom: 4px; }
+  .decision .detail-body code {
+    background: rgba(125,138,153,.12); color: var(--purple);
+    padding: 1px 6px; border-radius: 3px;
+  }
+  .decision .why-box {
+    background: rgba(110,168,254,.05); border-left: 3px solid var(--accent);
+    padding: 12px 16px; margin: 10px 0; border-radius: 4px;
+    font-size: 13px; color: var(--text-2);
+  }
+  .decision .risk-box {
+    background: rgba(250,204,21,.05); border-left: 3px solid var(--yellow);
+    padding: 12px 16px; margin: 10px 0; border-radius: 4px;
+    font-size: 13px; color: var(--text-2);
+  }
+
+  /* STRAWMAN GRID */
+  .strawman-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+  .strawman {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px 20px;
+  }
+  .strawman .sq-num { font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 700; color: var(--purple); margin-bottom: 6px; letter-spacing: 1px; text-transform: uppercase; }
+  .strawman .sq-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+  .strawman .sq-answer { font-size: 13px; color: var(--text-2); line-height: 1.6; }
+
+  /* TIMELINE */
+  .timeline-wrap {
+    background: linear-gradient(180deg, var(--card) 0%, var(--bg-2) 100%);
+    border: 1px solid var(--border); border-radius: 14px; padding: 28px 24px;
+  }
+  .timeline { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0; position: relative; }
+  @media (max-width: 880px) { .timeline { grid-template-columns: 1fr; gap: 10px; } }
+  .phase {
+    text-align: center; padding: 0 8px; position: relative;
+  }
+  .phase .num {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: var(--card-2); border: 2px solid var(--border-bright);
+    color: var(--text); font-weight: 700; font-family: "JetBrains Mono", monospace; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 14px; position: relative; z-index: 2;
+  }
+  .phase.ca .num { border-color: var(--green); color: var(--green); }
+  .phase.alex .num { border-color: var(--yellow); color: var(--yellow); }
+  .phase.flag .num { border-color: var(--accent); color: var(--accent); }
+  .phase .name { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .phase .who { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 8px; }
+  .phase .desc { font-size: 11px; color: var(--text-2); line-height: 1.5; }
+  .timeline::before {
+    content: ""; position: absolute; top: 19px; left: 10%; right: 10%; height: 2px;
+    background: linear-gradient(90deg, var(--green), var(--yellow), var(--accent));
+    opacity: 0.4; z-index: 1;
+  }
+  @media (max-width: 880px) { .timeline::before { display: none; } }
+  .phase-legend { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); display: flex; gap: 22px; flex-wrap: wrap; }
+
+  /* DA VERDICT */
+  .da-card {
+    background: linear-gradient(180deg, rgba(74,222,128,.06) 0%, var(--bg-2) 100%);
+    border: 1px solid rgba(74,222,128,.3); border-radius: 14px;
+    padding: 24px 28px;
+  }
+  .da-card .verdict-line {
+    display: flex; align-items: center; gap: 14px; margin-bottom: 18px;
+  }
+  .da-card .verdict-pill {
+    font-family: "JetBrains Mono", monospace; font-size: 12px; font-weight: 700;
+    color: var(--green); background: rgba(74,222,128,.15); border: 1px solid rgba(74,222,128,.4);
+    padding: 6px 14px; border-radius: 14px; letter-spacing: 1px; text-transform: uppercase;
+  }
+  .da-card .verdict-line .label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+  .da-card h4 { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin: 16px 0 10px; font-weight: 600; }
+  .da-card h4:first-of-type { margin-top: 0; }
+  .da-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12.5px; }
+  .da-table th, .da-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+  .da-table th { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); font-weight: 600; }
+  .da-table tr:last-child td { border-bottom: none; }
+  .da-table .risk-pill { padding: 2px 8px; border-radius: 8px; font-size: 10px; font-weight: 700; font-family: "JetBrains Mono", monospace; }
+  .da-table .risk-pill.high { background: rgba(248,113,113,.12); color: var(--red); }
+  .da-table .risk-pill.med  { background: rgba(251,146,60,.12); color: var(--orange); }
+  .da-table .risk-pill.low  { background: rgba(74,222,128,.12); color: var(--green); }
+
+  /* PREREQ CALLOUT */
+  .prereq {
+    background: rgba(248,113,113,.08); border: 1px solid rgba(248,113,113,.35);
+    border-radius: 12px; padding: 18px 22px; margin-bottom: 24px;
+  }
+  .prereq .label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--red); font-weight: 700; margin-bottom: 8px; }
+  .prereq h3 { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+  .prereq p { font-size: 13px; color: var(--text-2); }
+
+  /* FILES TABLE */
+  .files-table { width: 100%; border-collapse: separate; border-spacing: 0; background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; font-size: 12.5px; }
+  .files-table th { background: var(--card-2); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); padding: 12px 14px; text-align: left; font-weight: 600; }
+  .files-table td { padding: 11px 14px; border-bottom: 1px solid var(--border); }
+  .files-table tr:last-child td { border-bottom: none; }
+  .files-table .path { font-family: "JetBrains Mono", monospace; color: var(--text); font-size: 11.5px; }
+  .files-table .repo { color: var(--accent); font-family: "JetBrains Mono", monospace; font-size: 11px; }
+  .files-table .new { color: var(--green); font-weight: 700; font-size: 10px; letter-spacing: 1px; }
+  .files-table .edit { color: var(--yellow); font-weight: 700; font-size: 10px; letter-spacing: 1px; }
+  .files-table .ca { color: var(--green); }
+  .files-table .alex { color: var(--orange); }
+
+  /* CTA */
+  .cta-card {
+    background: linear-gradient(180deg, rgba(192,132,252,.06) 0%, var(--bg-2) 100%);
+    border: 1px solid rgba(192,132,252,.3); border-radius: 14px;
+    padding: 28px 32px; text-align: center;
+  }
+  .cta-card h3 { font-size: 20px; font-weight: 600; color: var(--text); margin-bottom: 10px; }
+  .cta-card p { font-size: 14px; color: var(--text-2); max-width: 680px; margin: 0 auto 16px; }
+  .cta-card .file-link {
+    display: inline-block; margin: 6px 0;
+    font-family: "JetBrains Mono", monospace; font-size: 13px;
+    color: var(--purple); background: rgba(192,132,252,.1); border: 1px solid rgba(192,132,252,.3);
+    padding: 8px 16px; border-radius: 8px;
+  }
+
+  /* FOOTER */
+  footer { margin-top: 60px; padding-top: 24px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); font-family: "JetBrains Mono", monospace; text-align: center; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- HERO -->
+  <header class="hero">
+    <div class="eyebrow">Code Architect · Proposal · Sibling deliverable design</div>
+    <h1 class="title">crew_manifest</h1>
+    <p class="subtitle">
+      A new typed record that says <em>who is working what shoot, in what role, confirmed or unfilled.</em>
+      ACD produces it. Conductor stores it. Kai's morning briefing reads it and warns you at T-7, T-3, and T-24h
+      if any role is still open. This is the proposal that turns the Baptist 5/21 catch into a structural fix —
+      and sets the contract pattern for every typed deliverable the mesh will ever produce.
+    </p>
+    <div class="meta-row">
+      <span>2026-05-20</span>
+      <span>3 repos: ACD · Kai · Code Architect</span>
+      <span>13 files affected</span>
+      <span>Draft — staged only</span>
+      <span>Full doc: <code>docs/proposal-crew-manifest-2026-05-20.md</code></span>
+    </div>
+  </header>
+
+  <!-- STAT TILES -->
+  <div class="stat-grid">
+    <div class="stat">
+      <div class="label">Decisions awaiting you</div>
+      <div class="value yellow">8</div>
+      <div class="note">Q1–Q8, recommendations inline</div>
+    </div>
+    <div class="stat">
+      <div class="label">Strawman answers</div>
+      <div class="value blue">5</div>
+      <div class="note">Action-vocab open questions</div>
+    </div>
+    <div class="stat">
+      <div class="label">DA verdict</div>
+      <div class="value green">PASSED</div>
+      <div class="note">1 hard prerequisite</div>
+    </div>
+    <div class="stat">
+      <div class="label">Rollout phases</div>
+      <div class="value orange">5</div>
+      <div class="note">Each independently reversible</div>
+    </div>
+  </div>
+
+  <!-- PROBLEM -->
+  <div class="section">
+    <div class="section-head">
+      <h2>Why this exists</h2>
+      <div class="meta">the Baptist 5/21 framing</div>
+    </div>
+    <div class="problem-card">
+      <div>
+        <div class="label-tag">Current state</div>
+        <h3>Crew info is prose. No machine-readable view of "who's on what shoot."</h3>
+        <p>
+          ACD produces a <code>production_strategy</code> document that <em>mentions</em>
+          who should shoot what — embedded in narrative context, not exposed as structured data.
+          Kai has no way to query "is the Baptist shoot fully staffed?" without reading text.
+        </p>
+        <p class="quote">
+          Sebas's AM-only constraint was logged in scoping. The PM 2nd-camera slot
+          was never converted into action. <strong>Alex personally caught the unstaffed slot at T-2 days.</strong>
+          The system tolerated a passive "logged but unactioned" state from confirmation
+          through almost shoot day.
+        </p>
+      </div>
+      <div>
+        <div class="label-tag green">After this proposal</div>
+        <h3>Every shoot has a typed crew_manifest. Unfilled roles surface in the morning brief at T-7, escalate at T-3, red-alert at T-24h.</h3>
+        <p>
+          ACD composes a <code>crew_manifest</code> as a structured sibling to the strategy doc.
+          Conductor stores it as queryable rows. Kai's existing 5:30 AM briefing runs one SQL query
+          against it and surfaces unfilled roles. T-3 also fires a Telegram push outside the email window.
+        </p>
+        <p class="quote">
+          The Baptist incident class becomes observable. Confirmed shoot with no manifest, or manifest
+          with unfilled roles — both render as briefing alerts. <strong>No more T-2 catches by you.</strong>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- FLOW DIAGRAM -->
+  <div class="section">
+    <div class="section-head">
+      <h2>How it flows</h2>
+      <div class="meta">producer → store → consumer → surface</div>
+    </div>
+    <div class="flow-wrap">
+      <svg class="flow" viewBox="0 0 1100 380" xmlns="http://www.w3.org/2000/svg">
+        <!-- ACD -->
+        <rect class="node-rect modified" x="40" y="140" width="180" height="100" rx="10"/>
+        <text class="node-label" x="130" y="180" text-anchor="middle">ACD</text>
+        <text class="node-sub" x="130" y="200" text-anchor="middle">scripts/daemon.py</text>
+        <text class="node-sub" x="130" y="215" text-anchor="middle">+ crew_manifest.py</text>
+
+        <!-- arrow ACD -> mesh -->
+        <path class="edge new" d="M 220 190 Q 270 190 310 190" marker-end="url(#arrow-new)"/>
+        <text class="edge-label" x="265" y="180" text-anchor="middle">new route</text>
+
+        <!-- mesh -->
+        <rect class="node-rect existing" x="310" y="140" width="180" height="100" rx="10"/>
+        <text class="node-label" x="400" y="180" text-anchor="middle">mesh-api</text>
+        <text class="node-sub" x="400" y="200" text-anchor="middle">port 3341 (Mini)</text>
+        <text class="node-sub" x="400" y="215" text-anchor="middle">acd → conductor</text>
+
+        <!-- arrow mesh -> conductor -->
+        <path class="edge new" d="M 490 190 Q 540 190 580 190" marker-end="url(#arrow-new)"/>
+        <text class="edge-label" x="535" y="180" text-anchor="middle">crew_manifest</text>
+
+        <!-- conductor -->
+        <rect class="node-rect modified" x="580" y="140" width="180" height="100" rx="10"/>
+        <text class="node-label" x="670" y="180" text-anchor="middle">conductor</text>
+        <text class="node-sub" x="670" y="200" text-anchor="middle">port 3344 (Kai-hosted)</text>
+        <text class="node-sub" x="670" y="215" text-anchor="middle">+ handler</text>
+
+        <!-- arrow conductor -> db -->
+        <path class="edge new" d="M 670 240 Q 670 280 670 305" marker-end="url(#arrow-new)"/>
+        <text class="edge-label" x="730" y="275" text-anchor="start">INSERT</text>
+
+        <!-- DB -->
+        <rect class="node-rect new" x="580" y="305" width="180" height="60" rx="10"/>
+        <text class="node-label" x="670" y="333" text-anchor="middle">crew_assignments</text>
+        <text class="node-sub" x="670" y="350" text-anchor="middle">conductor.db (NEW table)</text>
+
+        <!-- arrow db -> briefing -->
+        <path class="edge new" d="M 760 335 Q 820 335 850 285 Q 870 230 870 200" marker-end="url(#arrow-new)"/>
+        <text class="edge-label" x="855" y="280" text-anchor="start">SELECT</text>
+
+        <!-- briefing -->
+        <rect class="node-rect modified" x="850" y="140" width="180" height="100" rx="10"/>
+        <text class="node-label" x="940" y="180" text-anchor="middle">morning briefing</text>
+        <text class="node-sub" x="940" y="200" text-anchor="middle">5:30 AM cron</text>
+        <text class="node-sub" x="940" y="215" text-anchor="middle">+ T-7/T-3/T-24h query</text>
+
+        <!-- arrow briefing -> alex -->
+        <path class="edge new" d="M 940 240 Q 940 290 940 305" marker-end="url(#arrow-new)"/>
+
+        <!-- alex -->
+        <rect class="node-rect new" x="850" y="305" width="180" height="60" rx="10"/>
+        <text class="node-label" x="940" y="333" text-anchor="middle">Alex</text>
+        <text class="node-sub" x="940" y="350" text-anchor="middle">email + Telegram (T-3)</text>
+
+        <!-- top labels -->
+        <text class="node-sub" x="130" y="120" text-anchor="middle" style="font-weight:700;fill:#fb923c">PRODUCER</text>
+        <text class="node-sub" x="400" y="120" text-anchor="middle" style="font-weight:700;fill:#6ea8fe">TRANSPORT</text>
+        <text class="node-sub" x="670" y="120" text-anchor="middle" style="font-weight:700;fill:#fb923c">STORE</text>
+        <text class="node-sub" x="940" y="120" text-anchor="middle" style="font-weight:700;fill:#4ade80">SURFACE</text>
+
+        <!-- arrow marker -->
+        <defs>
+          <marker id="arrow-new" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+            <path d="M0,0 L0,6 L9,3 z" fill="#4ade80"/>
+          </marker>
+        </defs>
+      </svg>
+      <div class="flow-legend">
+        <div class="leg-item"><span class="leg-box new"></span> NEW component or table</div>
+        <div class="leg-item"><span class="leg-box modified"></span> Existing — gets new code path</div>
+        <div class="leg-item"><span class="leg-box existing"></span> Existing — unchanged</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PREREQ -->
+  <div class="prereq">
+    <div class="label">Hard prerequisite</div>
+    <h3>Conductor's fuzzy-fallback bug must be fixed first (or in the same PR)</h3>
+    <p>
+      <code>scripts/conductor-agent.js:422-440</code> uses substring matching to dispatch actions —
+      meaning a future <code>crew_manifest_v2</code> message would silently route to the v1 handler.
+      That's exactly the silent-failure class this proposal is trying to eliminate. The fix is mechanical
+      (one file, ~10 lines), it's already on the NEXT-SESSION queue as item #10, and this proposal
+      depends on it. <strong>If you approve the proposal, the fuzzy-fallback fix is implicit.</strong>
+    </p>
+  </div>
+
+  <!-- DECISIONS -->
+  <div class="section">
+    <div class="section-head">
+      <h2>The 8 decisions</h2>
+      <div class="meta">click any row to expand the why</div>
+    </div>
+    <div class="decisions-grid">
+
+      <details class="decision" open>
+        <summary>
+          <div class="q-num">Q1</div>
+          <div>
+            <div class="q-title">Normalized <code>crew_assignments</code> table, keyed on <code>(project_id, shoot_date)</code></div>
+            <div class="q-subtitle">Defer extracting a proper <code>shoots</code> table until Phase 2 — minimum viable change first.</div>
+          </div>
+          <div class="rec-pill">Recommended yes</div>
+        </summary>
+        <div class="detail-body">
+          <div class="why-box">
+            <strong>Why not a JSON blob?</strong> The whole point of this structure is queryability — "what's unfilled in the next 7 days across all projects" is a one-line SQL query against a normalized table, but a blob-walk against every row of every project's JSON every morning at 5:30 AM.
+          </div>
+          <h4>Why not a proper shoots table first</h4>
+          <p>Conductor today has no shoots table — shoots are JSON arrays inside <code>retainer_cycles.shoot_dates</code>. Extracting that into a first-class table is a substantial migration touching the entire briefing pipeline. Per Karpathy #2 (simplicity first), we ship crew_manifest with a tuple key now and defer the shoots-table extraction to Phase 2.</p>
+          <div class="risk-box">
+            <strong>Tradeoff cost:</strong> if a shoot date is rescheduled, every crew_assignment row for the old date orphans. A migration script handles it with one UPDATE. Document the reschedule procedure.
+          </div>
+        </div>
+      </details>
+
+      <details class="decision">
+        <summary>
+          <div class="q-num">Q2</div>
+          <div>
+            <div class="q-title">Graceful-degrade if ACD can't extract crew from context</div>
+            <div class="q-subtitle">Strategy still emits; manifest is skipped with a warning; T-7 audit catches the missing manifest later.</div>
+          </div>
+          <div class="rec-pill">Recommended yes</div>
+        </summary>
+        <div class="detail-body">
+          <h4>The scenario</h4>
+          <p>Early-stage projects where talent isn't booked, location is TBD, or crew references just aren't in the payload context. ACD's composer can't fabricate a manifest from thin air.</p>
+          <h4>The choice</h4>
+          <p>Block strategy emission until crew can be solved? That breaks every new client where context is sparse. Better: emit strategy, return <code>status: "insufficient_context"</code> on the manifest side, let the T-7 audit catch the missing manifest as a "no manifest at all" alert (§5 of the proposal).</p>
+          <div class="why-box">
+            Coupling strategy to manifest at producer-side is too tight. Make absence observable, not blocking.
+          </div>
+        </div>
+      </details>
+
+      <details class="decision">
+        <summary>
+          <div class="q-num">Q3</div>
+          <div>
+            <div class="q-title">ACD sends <code>crew_manifest</code> directly to conductor (not via Kai)</div>
+            <div class="q-subtitle">Skip the Kai-as-relay hop; conductor owns the storage.</div>
+          </div>
+          <div class="rec-pill">Recommended yes</div>
+        </summary>
+        <div class="detail-body">
+          <h4>Why direct routing</h4>
+          <ul>
+            <li>Conductor owns the DB. Kai-as-relay means two hops where one suffices.</li>
+            <li>Kai's briefing already reads from conductor DB. Adding a forwarding path is dead weight.</li>
+            <li>Matches the existing file-drop pattern direction (<code>~/.kameha/shared/acd-production-briefing.json</code> is also ACD → consumer).</li>
+          </ul>
+          <h4>Mesh route delta</h4>
+          <p>Add to <code>scripts/mesh/mesh-api.js</code> <code>seedRoutePermissions()</code>:</p>
+          <p><code>['acd', 'conductor', 1, 'crew_manifest deliverable. Tier 1 — informational, auto-deliver.']</code></p>
+        </div>
+      </details>
+
+      <details class="decision">
+        <summary>
+          <div class="q-num">Q4</div>
+          <div>
+            <div class="q-title">Conductor's fuzzy-fallback fix is a hard prerequisite</div>
+            <div class="q-subtitle">Lands first or in the same PR. No exceptions.</div>
+          </div>
+          <div class="rec-pill">Recommended yes</div>
+        </summary>
+        <div class="detail-body">
+          <h4>The bug, in plain English</h4>
+          <p>Conductor's dispatch table uses <code>action.includes(capability)</code> — meaning the action name <code>crew_manifest_v2</code> would substring-match <code>crew_manifest</code> and run the v1 handler. That's a silent corruption class — exactly what this proposal is built to eliminate.</p>
+          <div class="risk-box">
+            <strong>If the fix doesn't land alongside crew_manifest:</strong> we deploy a contract that's structurally guaranteed to break the first time we version it. Self-defeating.
+          </div>
+          <h4>Cost of the fix</h4>
+          <p>Single file. ~10 line change. Already triaged on NEXT-SESSION as item #10. Effectively free if bundled.</p>
+        </div>
+      </details>
+
+      <details class="decision">
+        <summary>
+          <div class="q-num">Q5</div>
+          <div>
+            <div class="q-title">Delete-then-insert upsert (whole-document replace per emission)</div>
+            <div class="q-subtitle">When ACD re-emits a manifest, conductor deletes old rows for that shoot and inserts fresh.</div>
+          </div>
+          <div class="rec-pill">Recommended yes</div>
+        </summary>
+        <div class="detail-body">
+          <h4>Why not row-level upsert</h4>
+          <p>Row-level upsert invites ambiguity: if ACD's new manifest doesn't include a role that was in the old one, did ACD intentionally drop it or accidentally forget?</p>
+          <p>Whole-document replace is simpler: <strong>the latest manifest from ACD is the authoritative truth.</strong> Matches how ACD composes — it regenerates from scratch each time, not as a diff.</p>
+          <h4>Implementation</h4>
+          <p><code>DELETE FROM crew_assignments WHERE project_id=X AND shoot_date=Y; INSERT new rows;</code> wrapped in a SQLite transaction.</p>
+        </div>
+      </details>
+
+      <details class="decision">
+        <summary>
+          <div class="q-num">Q6</div>
+          <div>
+            <div class="q-title">Audit-time enforcement of the "no manifest" invariant</div>
+            <div class="q-subtitle">T-7 briefing alert flags confirmed shoots that have no manifest at all — not a hard block at confirm-time.</div>
+          </div>
+          <div class="rec-pill">Recommended yes</div>
+        </summary>
+        <div class="detail-body">
+          <h4>Three options considered</h4>
+          <ul>
+            <li><strong>Block at confirm-time:</strong> conductor refuses to confirm a shoot without a manifest. Hard guarantee, but breaks every existing shoot that has no manifest today.</li>
+            <li><strong>Block at producer-time:</strong> ACD refuses to emit production_strategy without a manifest. False positives for sparse-context projects.</li>
+            <li><strong>Audit-time (chosen):</strong> the morning briefing renders confirmed-shoot-no-manifest as a top-bucket alert. Observable, doesn't break flow.</li>
+          </ul>
+          <div class="why-box">
+            This is the same pattern as the action-vocab design's silent-failure detection — make the absence observable, not the presence required.
+          </div>
+        </div>
+      </details>
+
+      <details class="decision">
+        <summary>
+          <div class="q-num">Q7</div>
+          <div>
+            <div class="q-title">Split the implementation work — CA opens PRs for library/tests/schema; you apply daemon-side edits</div>
+            <div class="q-subtitle">Owners.json policies dictate the split. No mechanical bypass on contract-touching files.</div>
+          </div>
+          <div class="rec-pill">Recommended yes</div>
+        </summary>
+        <div class="detail-body">
+          <h4>What CA can author (DA-gated, auto-merge)</h4>
+          <ul>
+            <li>ACD: <code>scripts/lib/crew_manifest.py</code>, tests, example JSON</li>
+            <li>Kai: schema JSON, tests (pending subdir owners verification)</li>
+          </ul>
+          <h4>What requires your hands (human_review_required)</h4>
+          <ul>
+            <li>ACD: <code>scripts/daemon.py</code> sibling-emission branch (~5 lines)</li>
+            <li>Kai: <code>scripts/conductor-agent.js</code> capability handler + fuzzy-fallback fix</li>
+            <li>Kai: <code>scripts/lib/conductor-db.js</code> table migration</li>
+            <li>Kai: <code>scripts/lib/morning-briefing.js</code> query + render</li>
+            <li>Kai: <code>scripts/mesh/mesh-api.js</code> route entry</li>
+          </ul>
+          <p>CA will draft each as a suggested diff. You apply directly. Matches HB#1 (per-change go-ahead) and the existing owners.json policy.</p>
+        </div>
+      </details>
+
+      <details class="decision">
+        <summary>
+          <div class="q-num">Q8</div>
+          <div>
+            <div class="q-title">5-phase rollout with a feature flag on ACD's emission</div>
+            <div class="q-subtitle">Each phase is independently reversible. See timeline below.</div>
+          </div>
+          <div class="rec-pill">Recommended yes</div>
+        </summary>
+        <div class="detail-body">
+          <p>The flag (<code>ACD_EMIT_CREW_MANIFEST=true</code>) means we can deploy all the plumbing, verify it inert, then flip the producer side on. If anything breaks downstream, flag-off is the rollback.</p>
+          <p>Phase-by-phase detail in the timeline section below.</p>
+        </div>
+      </details>
+
+    </div>
+  </div>
+
+  <!-- STRAWMEN -->
+  <div class="section">
+    <div class="section-head">
+      <h2>5 strawman answers — action-vocab open questions</h2>
+      <div class="meta">these set the contract pattern for the whole mesh, sharpened against this concrete case</div>
+    </div>
+    <div class="strawman-grid">
+
+      <div class="strawman">
+        <div class="sq-num">Q1 · Registry home repo</div>
+        <div class="sq-title">Kai's <code>knowledge/manifests/crew-manifest.schema.json</code></div>
+        <div class="sq-answer">
+          Conductor (the validator) lives in Kai — schema reads from same repo at runtime. ACD vendors a copy for composing; CA's drift-audit subcommand catches divergence.
+        </div>
+      </div>
+
+      <div class="strawman">
+        <div class="sq-num">Q2 · Who can edit a receiver's <code>accepts</code> block</div>
+        <div class="sq-title">Receiver-agent's owners.json gates writes</div>
+        <div class="sq-answer">
+          Conductor's <code>accepts</code> block lives under Kai's <code>scripts/mesh/**</code> — <strong>human_review_required</strong>. CA always drafts; you always review contract changes. Senders' <code>sends</code> blocks can be more freely modified (asymmetry intentional — receivers are load-bearing).
+        </div>
+      </div>
+
+      <div class="strawman">
+        <div class="sq-num">Q3 · First adoption pair</div>
+        <div class="sq-title">Replace "ACD→Framer creative_brief" with "ACD→conductor crew_manifest"</div>
+        <div class="sq-answer">
+          ACD→Framer is no longer urgent (route exists, session 2 closure). Crew_manifest is greenfield, you personally care, validation loop is short. Second pair stays as nami↔framer schedule_post_response (P0-A in overnight audit).
+        </div>
+      </div>
+
+      <div class="strawman">
+        <div class="sq-num">Q4 · Strict vs warn validation</div>
+        <div class="sq-title">Split posture — conductor warns, ACD strict</div>
+        <div class="sq-answer">
+          Conductor (receiver) stores even partially-valid manifests with <code>validation_warnings</code> populated — receiver-side strictness blocks data ingestion, too brittle. ACD (sender) refuses to emit malformed messages — sender-side strictness is cheap. Flip both to mutual strict after 2 weeks clean.
+        </div>
+      </div>
+
+      <div class="strawman">
+        <div class="sq-num">Q5 · Versioning</div>
+        <div class="sq-title">Date-versioned <code>manifest_version</code> (e.g., <code>2026-05-20.1</code>); conductor supports last 2 versions</div>
+        <div class="sq-answer">
+          Envelope carries <code>manifest_version</code>. Conductor handles current + prior version concurrently. ACD emits latest only. Hard cutoff after 1 year — conductor drops prior-version branch.
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- TIMELINE -->
+  <div class="section">
+    <div class="section-head">
+      <h2>Phased rollout</h2>
+      <div class="meta">each phase is independently reversible</div>
+    </div>
+    <div class="timeline-wrap">
+      <div class="timeline">
+        <div class="phase ca">
+          <div class="num">1</div>
+          <div class="name">Library + schema</div>
+          <div class="who">CA-authored</div>
+          <div class="desc">ACD's <code>crew_manifest.py</code>, tests, schema JSON, example docs. DA-gated auto-merge. No runtime behavior change.</div>
+        </div>
+        <div class="phase alex">
+          <div class="num">2</div>
+          <div class="name">DB + route</div>
+          <div class="who">Your hands</div>
+          <div class="desc">Conductor table created. Mesh route registered. Inert until producer emits. Verify with test message.</div>
+        </div>
+        <div class="phase alex">
+          <div class="num">3</div>
+          <div class="name">Daemon edit</div>
+          <div class="who">Your hands</div>
+          <div class="desc">ACD daemon adds emission, feature flag default <strong>OFF</strong>. Manual smoke test to confirm wiring before flipping.</div>
+        </div>
+        <div class="phase flag">
+          <div class="num">4</div>
+          <div class="name">Flag flip</div>
+          <div class="who">Env var</div>
+          <div class="desc"><code>ACD_EMIT_CREW_MANIFEST=true</code>. Real manifests start landing in conductor.db. Briefing queries return data.</div>
+        </div>
+        <div class="phase alex">
+          <div class="num">5</div>
+          <div class="name">Briefing alert</div>
+          <div class="who">Your hands</div>
+          <div class="desc">Morning briefing renders unfilled-role + missing-manifest alerts. T-3 Telegram push armed. Invariant active.</div>
+        </div>
+      </div>
+      <div class="phase-legend">
+        <div class="leg-item"><span style="display:inline-block;width:14px;height:14px;border-radius:50%;border:2px solid var(--green);"></span> CA-authored — DA gate</div>
+        <div class="leg-item"><span style="display:inline-block;width:14px;height:14px;border-radius:50%;border:2px solid var(--yellow);"></span> Your hands — per-change approval</div>
+        <div class="leg-item"><span style="display:inline-block;width:14px;height:14px;border-radius:50%;border:2px solid var(--accent);"></span> Configuration flip — instant rollback</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DA VERDICT -->
+  <div class="section">
+    <div class="section-head">
+      <h2>Devils Advocate self-pass</h2>
+      <div class="meta">CA-internal, mandatory for mesh-contract changes</div>
+    </div>
+    <div class="da-card">
+      <div class="verdict-line">
+        <span class="label">Verdict:</span>
+        <span class="verdict-pill">Passed with prerequisites</span>
+      </div>
+      <h4>Concerns surfaced + how the proposal mitigates each</h4>
+      <table class="da-table">
+        <thead><tr><th>Concern</th><th>Risk</th><th>Mitigation</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Fuzzy-fallback would silently route <code>crew_manifest_v2</code> → v1</td>
+            <td><span class="risk-pill high">High</span></td>
+            <td>Hard prerequisite — fix lands first or same PR (Q4)</td>
+          </tr>
+          <tr>
+            <td>Manifest could go stale relative to actual bookings made out-of-band</td>
+            <td><span class="risk-pill med">Med</span></td>
+            <td>Delete-then-insert upsert + date-versioning forces whole-document refresh (Q5 + strawman Q5)</td>
+          </tr>
+          <tr>
+            <td>T-1 confirmed shoot with no manifest still goes 24h before briefing catches it</td>
+            <td><span class="risk-pill med">Med</span></td>
+            <td>Phase 4: Telegram push outside email window when <code>days_to_shoot ≤ 3</code></td>
+          </tr>
+          <tr>
+            <td>Single daemon edit in ACD is the highest-risk single change</td>
+            <td><span class="risk-pill med">Med</span></td>
+            <td>Phase 3 feature flag default OFF; manual smoke test before flip</td>
+          </tr>
+          <tr>
+            <td>Concurrent emissions could race the delete-then-insert (SQLite)</td>
+            <td><span class="risk-pill low">Low</span></td>
+            <td>WAL mode + SQLite transaction wrapping. Accept risk for v1; Phase 2 hardening if observed.</td>
+          </tr>
+          <tr>
+            <td>Two schema validators (Python in ACD, JS in conductor) could drift</td>
+            <td><span class="risk-pill low">Low</span></td>
+            <td>Single JSON schema source; both consume same file. CA audit subcommand detects drift (action-vocab §3.4)</td>
+          </tr>
+          <tr>
+            <td>KMG could eventually need crew_manifests too</td>
+            <td><span class="risk-pill low">Low</span></td>
+            <td>Schema is project-agnostic; KMG joins later as another sender. Out of scope for v1.</td>
+          </tr>
+        </tbody>
+      </table>
+      <h4>Concerns deferred / accepted</h4>
+      <p style="font-size:13px; color:var(--text-2); line-height:1.6;">
+        No backfill for past shoots (forward-looking only). Schema is in two languages — drift detection is the action-vocab audit subcommand, not part of this proposal. Receiver-side strict validation moves to v2 after 2 weeks clean.
+      </p>
+    </div>
+  </div>
+
+  <!-- FILES TABLE -->
+  <div class="section">
+    <div class="section-head">
+      <h2>Files affected</h2>
+      <div class="meta">13 total · 7 new · 6 edits</div>
+    </div>
+    <table class="files-table">
+      <thead><tr><th>Repo</th><th>Path</th><th>Type</th><th>Author</th></tr></thead>
+      <tbody>
+        <tr><td><span class="repo">ACD</span></td><td><span class="path">scripts/lib/crew_manifest.py</span></td><td><span class="new">NEW</span></td><td class="ca">CA · DA-gated</td></tr>
+        <tr><td><span class="repo">ACD</span></td><td><span class="path">tests/test_crew_manifest.py</span></td><td><span class="new">NEW</span></td><td class="ca">CA · DA-gated</td></tr>
+        <tr><td><span class="repo">ACD</span></td><td><span class="path">docs/examples/crew-manifest-baptist.json</span></td><td><span class="new">NEW</span></td><td class="ca">CA · DA-gated</td></tr>
+        <tr><td><span class="repo">ACD</span></td><td><span class="path">scripts/daemon.py:464-482</span></td><td><span class="edit">EDIT</span></td><td class="alex">Your hands</td></tr>
+        <tr><td><span class="repo">Kai</span></td><td><span class="path">scripts/conductor-agent.js:286-294 (+422-440 fuzzy fix)</span></td><td><span class="edit">EDIT</span></td><td class="alex">Your hands</td></tr>
+        <tr><td><span class="repo">Kai</span></td><td><span class="path">scripts/lib/conductor-db.js:163</span></td><td><span class="edit">EDIT</span></td><td class="alex">Your hands</td></tr>
+        <tr><td><span class="repo">Kai</span></td><td><span class="path">scripts/lib/morning-briefing.js</span></td><td><span class="edit">EDIT</span></td><td class="alex">Your hands</td></tr>
+        <tr><td><span class="repo">Kai</span></td><td><span class="path">scripts/mesh/mesh-api.js:187-251</span></td><td><span class="edit">EDIT</span></td><td class="alex">Your hands</td></tr>
+        <tr><td><span class="repo">Kai</span></td><td><span class="path">knowledge/manifests/crew-manifest.schema.json</span></td><td><span class="new">NEW</span></td><td class="ca">CA · DA-gated*</td></tr>
+        <tr><td><span class="repo">Kai</span></td><td><span class="path">tests/conductor/crew_manifest.test.js</span></td><td><span class="new">NEW</span></td><td class="ca">CA · DA-gated</td></tr>
+        <tr><td><span class="repo">CA</span></td><td><span class="path">docs/proposal-crew-manifest-2026-05-20.md</span></td><td><span class="new">NEW</span></td><td class="ca">CA · already staged</td></tr>
+        <tr><td><span class="repo">CA</span></td><td><span class="path">docs/examples/crew-manifest-v1.example.json</span></td><td><span class="new">NEW</span></td><td class="ca">CA · DA-gated</td></tr>
+        <tr><td><span class="repo">CA</span></td><td><span class="path">explainers/proposal-crew-manifest-2026-05-20.html</span></td><td><span class="new">NEW</span></td><td class="ca">CA · this file</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top: 12px; font-size: 11px; color: var(--muted);">
+      <em>* Kai's <code>knowledge/manifests/</code> subdir policy needs verification at PR time — fallback to human_review if unclear.</em>
+    </p>
+  </div>
+
+  <!-- CTA -->
+  <div class="cta-card">
+    <h3>What I need from you</h3>
+    <p>
+      Read top-to-bottom. Click any decision card to expand the why. <strong>Then answer Q1–Q8 inline</strong>
+      (most have a recommended yes) plus the 5 action-vocab strawmen.
+      Anything you fork, I redraft. No code lands until you approve the phases.
+    </p>
+    <a class="file-link" href="../docs/proposal-crew-manifest-2026-05-20.md">📄 docs/proposal-crew-manifest-2026-05-20.md — full text</a>
+  </div>
+
+  <footer>
+    Generated 2026-05-20 · Code Architect session 4 · companion to <code>docs/proposal-crew-manifest-2026-05-20.md</code>
+  </footer>
+
+</div>
+</body>
+</html>

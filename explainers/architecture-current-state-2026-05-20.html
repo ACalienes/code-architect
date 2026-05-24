@@ -1,0 +1,1573 @@
+<!DOCTYPE html>
+<!-- Architecture foundation — companion to docs/architecture-current-state-2026-05-20.md -->
+<!-- Every claim grounded in live probes (SSH + curl + filesystem) at ~14:42 ET 2026-05-20. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kameha mesh — architecture, current state · 2026-05-20</title>
+<style>
+  :root {
+    --bg: #0a0d12;
+    --bg-2: #0f131a;
+    --card: #141a23;
+    --card-2: #1a212c;
+    --brief-bg: #11161e;
+    --border: #232c3a;
+    --border-bright: #2f3a4a;
+    --text: #e6edf3;
+    --text-2: #b8c5d3;
+    --muted: #7d8a99;
+    --dim: #5a6573;
+    --accent: #6ea8fe;
+    --accent-glow: rgba(110, 168, 254, 0.4);
+    --green: #4ade80;
+    --green-glow: rgba(74, 222, 128, 0.35);
+    --yellow: #facc15;
+    --orange: #fb923c;
+    --red: #f87171;
+    --red-glow: rgba(248, 113, 113, 0.35);
+    --purple: #c084fc;
+    --pink: #f472b6;
+    --teal: #5eead4;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "SF Pro Display", "SF Pro Text", BlinkMacSystemFont, "Segoe UI", sans-serif;
+    line-height: 1.6;
+    font-feature-settings: "ss01", "ss02", "cv11";
+    min-height: 100vh;
+  }
+  body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(ellipse 1200px 600px at 20% -10%, rgba(110, 168, 254, 0.06), transparent 50%),
+      radial-gradient(ellipse 800px 400px at 90% 10%, rgba(192, 132, 252, 0.05), transparent 50%),
+      radial-gradient(ellipse 1000px 500px at 50% 120%, rgba(94, 234, 212, 0.04), transparent 50%);
+  }
+  .container { position: relative; max-width: 1240px; margin: 0 auto; padding: 48px 28px 80px; z-index: 1; }
+  code, .mono { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; font-size: 0.92em; }
+
+  /* HERO */
+  .hero { margin-bottom: 36px; }
+  .eyebrow {
+    font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 2px;
+    color: var(--accent); margin-bottom: 16px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .eyebrow::before { content: ""; width: 24px; height: 1px; background: var(--accent); box-shadow: 0 0 8px var(--accent-glow); }
+  h1.title {
+    font-size: 52px; font-weight: 700; letter-spacing: -1.8px; line-height: 1.05; margin-bottom: 14px;
+    background: linear-gradient(180deg, #ffffff 0%, #b8c5d3 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .subtitle { font-size: 17px; color: var(--text-2); max-width: 920px; line-height: 1.6; margin-bottom: 22px; }
+  .meta-row { font-size: 12px; color: var(--muted); display: flex; gap: 18px; flex-wrap: wrap; }
+  .meta-row span::before { content: "·"; color: var(--dim); margin-right: 14px; }
+  .meta-row span:first-child::before { content: ""; margin: 0; }
+  .grounded-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    margin-top: 18px; padding: 8px 14px;
+    background: rgba(74,222,128,.08); border: 1px solid rgba(74,222,128,.3); border-radius: 8px;
+    font-size: 12px; color: var(--green);
+  }
+  .grounded-badge::before { content: "●"; color: var(--green); }
+
+  /* STAT TILES */
+  .stat-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin: 36px 0 48px; }
+  @media (max-width: 1100px) { .stat-grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 640px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } }
+  .stat {
+    background: linear-gradient(180deg, var(--card) 0%, var(--bg-2) 100%);
+    border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px;
+    position: relative; overflow: hidden;
+  }
+  .stat::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--border-bright), transparent); }
+  .stat .label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 8px; font-weight: 600; }
+  .stat .value { font-size: 26px; font-weight: 700; letter-spacing: -0.8px; line-height: 1; margin-bottom: 4px; font-family: "JetBrains Mono", monospace; }
+  .stat .value.blue { color: var(--accent); text-shadow: 0 0 16px var(--accent-glow); }
+  .stat .value.yellow { color: var(--yellow); }
+  .stat .value.green { color: var(--green); text-shadow: 0 0 12px var(--green-glow); }
+  .stat .value.orange { color: var(--orange); }
+  .stat .value.red { color: var(--red); text-shadow: 0 0 12px var(--red-glow); }
+  .stat .value.purple { color: var(--purple); }
+  .stat .note { font-size: 11px; color: var(--muted); line-height: 1.4; }
+
+  /* SECTION */
+  .section { margin-bottom: 56px; }
+  .section-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 22px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+  .section-head h2 { font-size: 22px; font-weight: 600; letter-spacing: -0.5px; }
+  .section-head .meta { font-size: 12px; color: var(--muted); font-family: "JetBrains Mono", monospace; }
+
+  /* THREE-ZONE COMPUTE */
+  .compute-grid { display: grid; grid-template-columns: 1fr 1.4fr 1fr; gap: 16px; }
+  @media (max-width: 980px) { .compute-grid { grid-template-columns: 1fr; } }
+  .zone {
+    background: linear-gradient(180deg, var(--card) 0%, var(--bg-2) 100%);
+    border: 1px solid var(--border); border-radius: 14px; padding: 22px 22px 18px;
+    position: relative;
+  }
+  .zone.laptop  { border-color: rgba(110,168,254,.35); }
+  .zone.mini    { border-color: rgba(74,222,128,.45); background: linear-gradient(180deg, rgba(74,222,128,.04) 0%, var(--bg-2) 100%); }
+  .zone.render  { border-color: rgba(192,132,252,.35); }
+  .zone .role-tag {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; margin-bottom: 10px;
+  }
+  .zone.laptop .role-tag { color: var(--accent); }
+  .zone.mini   .role-tag { color: var(--green); }
+  .zone.render .role-tag { color: var(--purple); }
+  .zone h3 { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+  .zone .host { font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--muted); margin-bottom: 14px; }
+  .zone .narr { font-size: 13px; color: var(--text-2); margin-bottom: 14px; line-height: 1.55; }
+  .zone .list { font-size: 12px; color: var(--text-2); }
+  .zone .list-item { padding: 6px 0; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+  .zone .list-item:last-child { border-bottom: none; }
+  .zone .list-item code { color: var(--text); font-size: 11px; }
+  .zone .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .zone .dot.live   { background: var(--green); box-shadow: 0 0 6px var(--green-glow); }
+  .zone .dot.idle   { background: var(--muted); }
+  .zone .dot.warn   { background: var(--orange); }
+  .zone .dot.broken { background: var(--red); box-shadow: 0 0 6px var(--red-glow); }
+
+  /* TOPOLOGY SVG */
+  .topo-wrap {
+    background: linear-gradient(180deg, var(--card) 0%, var(--bg-2) 100%);
+    border: 1px solid var(--border); border-radius: 14px; padding: 24px 22px 18px;
+  }
+  svg.topo { width: 100%; height: auto; display: block; }
+  svg.topo .zone-rect { fill: none; stroke-width: 1.5; }
+  svg.topo .zone-rect.laptop { stroke: var(--accent); stroke-dasharray: 5 4; opacity: 0.7; }
+  svg.topo .zone-rect.mini   { stroke: var(--green); opacity: 0.8; }
+  svg.topo .zone-rect.render { stroke: var(--purple); stroke-dasharray: 5 4; opacity: 0.7; }
+  svg.topo .zone-label { font-family: "JetBrains Mono", monospace; font-size: 12px; font-weight: 700; letter-spacing: 1px; }
+  svg.topo .zone-label.laptop { fill: var(--accent); }
+  svg.topo .zone-label.mini   { fill: var(--green); }
+  svg.topo .zone-label.render { fill: var(--purple); }
+  svg.topo .node-circ { fill: var(--card-2); stroke: var(--border-bright); stroke-width: 1.2; }
+  svg.topo .node-circ.kai     { stroke: var(--accent); fill: rgba(110,168,254,.1); }
+  svg.topo .node-circ.mesh    { stroke: var(--green); fill: rgba(74,222,128,.12); }
+  svg.topo .node-circ.bridge  { stroke: var(--purple); fill: rgba(192,132,252,.08); stroke-dasharray: 3 2; }
+  svg.topo .node-circ.broken  { stroke: var(--red); fill: rgba(248,113,113,.06); }
+  svg.topo .node-circ.idle    { stroke: var(--muted); fill: var(--card); }
+  svg.topo .node-label { font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 700; fill: var(--text); pointer-events: none; }
+  svg.topo .node-sub   { font-family: "JetBrains Mono", monospace; font-size: 8px; fill: var(--muted); pointer-events: none; }
+  svg.topo .edge { stroke: var(--accent); stroke-width: 1.4; fill: none; opacity: 0.4; }
+  svg.topo .edge.dashed { stroke-dasharray: 3 3; }
+
+  /* PROCESS TABLE */
+  .proc-table { width: 100%; border-collapse: separate; border-spacing: 0; background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .proc-table th, .proc-table td { padding: 11px 14px; text-align: left; font-size: 12.5px; border-bottom: 1px solid var(--border); }
+  .proc-table th { background: var(--card-2); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); font-weight: 600; }
+  .proc-table tr:last-child td { border-bottom: none; }
+  .proc-table .pname { font-family: "JetBrains Mono", monospace; font-weight: 700; color: var(--text); font-size: 12px; }
+  .proc-table .ppath { font-family: "JetBrains Mono", monospace; color: var(--muted); font-size: 11px; }
+  .proc-table .lang { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; font-family: "JetBrains Mono", monospace; }
+  .proc-table .lang.node    { background: rgba(74,222,128,.12); color: var(--green); }
+  .proc-table .lang.python  { background: rgba(110,168,254,.12); color: var(--accent); }
+  .proc-table .stat-cell { font-family: "JetBrains Mono", monospace; font-size: 11px; }
+  .proc-table .stat-cell.ok    { color: var(--green); }
+  .proc-table .stat-cell.warn  { color: var(--yellow); }
+  .proc-table .stat-cell.broke { color: var(--red); }
+  .proc-table .stat-cell.idle  { color: var(--muted); }
+
+  /* POLL CADENCE CHART */
+  .cadence-wrap {
+    background: linear-gradient(180deg, var(--card) 0%, var(--bg-2) 100%);
+    border: 1px solid var(--border); border-radius: 14px; padding: 24px 22px 20px;
+  }
+  .cad-row { display: grid; grid-template-columns: 130px 1fr 70px; gap: 12px; align-items: center; margin-bottom: 10px; font-size: 12.5px; }
+  .cad-row .label { font-family: "JetBrains Mono", monospace; color: var(--text-2); }
+  .cad-row .bar-track { position: relative; height: 22px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+  .cad-row .bar-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px 0 0 3px; }
+  .cad-row .bar-fill.fast   { background: linear-gradient(90deg, var(--green), rgba(74,222,128,.4)); }
+  .cad-row .bar-fill.medium { background: linear-gradient(90deg, var(--accent), rgba(110,168,254,.4)); }
+  .cad-row .bar-fill.slow   { background: linear-gradient(90deg, var(--orange), var(--red)); }
+  .cad-row .value { font-family: "JetBrains Mono", monospace; color: var(--text); text-align: right; font-weight: 600; font-size: 12px; }
+  .cad-legend { display: flex; gap: 22px; flex-wrap: wrap; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); }
+  .cad-legend .leg-item { display: flex; align-items: center; gap: 8px; }
+  .cad-legend .leg-swatch { width: 16px; height: 10px; border-radius: 2px; }
+  .cad-legend .leg-swatch.fast { background: var(--green); }
+  .cad-legend .leg-swatch.medium { background: var(--accent); }
+  .cad-legend .leg-swatch.slow { background: linear-gradient(90deg, var(--orange), var(--red)); }
+  .cad-callout {
+    margin-top: 16px; padding: 14px 18px;
+    background: rgba(251,146,60,.06); border-left: 3px solid var(--orange); border-radius: 4px;
+    font-size: 13px; color: var(--text-2);
+  }
+  .cad-callout strong { color: var(--orange); }
+
+  /* ROUTE TRAFFIC */
+  .routes-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 880px) { .routes-grid { grid-template-columns: 1fr; } }
+  .route-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px;
+  }
+  .route-card h4 { font-size: 13px; font-weight: 600; margin-bottom: 10px; }
+  .route-card.healthy h4::before { content: "✓ "; color: var(--green); }
+  .route-card.failing h4::before { content: "⚠ "; color: var(--red); }
+  .route-row { display: grid; grid-template-columns: 1fr 60px; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+  .route-row:last-child { border-bottom: none; }
+  .route-row .src { font-family: "JetBrains Mono", monospace; color: var(--text-2); }
+  .route-row .num { font-family: "JetBrains Mono", monospace; text-align: right; font-weight: 700; }
+  .route-row .num.green { color: var(--green); }
+  .route-row .num.red   { color: var(--red); }
+
+  /* DATA LAYER */
+  .data-grid { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 14px; }
+  @media (max-width: 980px) { .data-grid { grid-template-columns: 1fr; } }
+  .data-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px 22px;
+  }
+  .data-card .badge {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700;
+    padding: 3px 9px; border-radius: 8px; display: inline-block; margin-bottom: 10px;
+  }
+  .data-card .badge.silo   { background: rgba(248,113,113,.1); color: var(--red); border: 1px solid rgba(248,113,113,.3); }
+  .data-card .badge.shared { background: rgba(74,222,128,.1); color: var(--green); border: 1px solid rgba(74,222,128,.3); }
+  .data-card .badge.struct { background: rgba(110,168,254,.1); color: var(--accent); border: 1px solid rgba(110,168,254,.3); }
+  .data-card h4 { font-size: 15px; font-weight: 600; margin-bottom: 10px; }
+  .data-card p { font-size: 12.5px; color: var(--text-2); margin-bottom: 10px; line-height: 1.55; }
+  .data-card .knowledge-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 6px; font-size: 11px; }
+  .data-card .kn-item { display: flex; justify-content: space-between; padding: 5px 8px; background: var(--card-2); border-radius: 4px; }
+  .data-card .kn-item .agent { color: var(--text-2); font-family: "JetBrains Mono", monospace; font-size: 10px; }
+  .data-card .kn-item .count { color: var(--text); font-weight: 700; font-family: "JetBrains Mono", monospace; font-size: 10px; }
+  .data-card .kn-item.empty .count { color: var(--red); }
+  .data-card .file-list { font-size: 11px; color: var(--text-2); font-family: "JetBrains Mono", monospace; line-height: 1.7; }
+  .data-card .file-list .file { display: block; padding: 3px 0; border-bottom: 1px solid var(--border); }
+  .data-card .file-list .file:last-child { border-bottom: none; }
+  .data-card .file-list .file .size { float: right; color: var(--muted); }
+
+  /* PROBLEMS LIST */
+  .problems {
+    background: linear-gradient(180deg, rgba(248,113,113,.04) 0%, var(--bg-2) 100%);
+    border: 1px solid rgba(248,113,113,.25); border-radius: 14px; padding: 24px 28px;
+  }
+  .problem-item { padding: 14px 0; border-bottom: 1px solid var(--border); display: grid; grid-template-columns: 28px 1fr auto; gap: 14px; align-items: start; }
+  .problem-item:last-child { border-bottom: none; }
+  .problem-item .ico { font-size: 18px; line-height: 1; }
+  .problem-item .head { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .problem-item .body { font-size: 12.5px; color: var(--text-2); line-height: 1.55; }
+  .problem-item code { font-size: 11px; background: rgba(125,138,153,.12); color: var(--purple); padding: 1px 5px; border-radius: 3px; }
+  .problem-item .sev-pill { font-size: 9px; font-family: "JetBrains Mono", monospace; font-weight: 700; padding: 3px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: 1px; white-space: nowrap; }
+  .problem-item .sev-pill.high { background: rgba(248,113,113,.15); color: var(--red); border: 1px solid rgba(248,113,113,.3); }
+  .problem-item .sev-pill.med  { background: rgba(251,146,60,.12); color: var(--orange); border: 1px solid rgba(251,146,60,.3); }
+  .problem-item .sev-pill.low  { background: rgba(125,138,153,.1); color: var(--muted); border: 1px solid rgba(125,138,153,.25); }
+
+  /* TWO-CONCERNS LAYOUT */
+  .concerns-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 880px) { .concerns-grid { grid-template-columns: 1fr; } }
+  .concern-col {
+    background: linear-gradient(180deg, var(--card) 0%, var(--bg-2) 100%);
+    border: 1px solid var(--border); border-radius: 14px; padding: 22px 24px;
+  }
+  .concern-col.latency { border-color: rgba(251,146,60,.35); }
+  .concern-col.brain   { border-color: rgba(192,132,252,.35); }
+  .concern-col .ctag { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; margin-bottom: 8px; }
+  .concern-col.latency .ctag { color: var(--orange); }
+  .concern-col.brain   .ctag { color: var(--purple); }
+  .concern-col h3 { font-size: 17px; font-weight: 600; margin-bottom: 8px; }
+  .concern-col .q { font-size: 13px; color: var(--text-2); font-style: italic; margin-bottom: 14px; line-height: 1.55; padding: 10px 14px; border-left: 2px solid var(--border-bright); }
+  .concern-col h4 { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin: 14px 0 8px; font-weight: 600; }
+  .concern-col p { font-size: 13px; color: var(--text-2); line-height: 1.55; margin-bottom: 8px; }
+
+  /* OPTIONS / DECISION CARDS */
+  .options-list { display: flex; flex-direction: column; gap: 10px; }
+  .opt {
+    background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+  }
+  .opt summary {
+    list-style: none; cursor: pointer; padding: 14px 16px;
+    display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: center;
+  }
+  .opt summary::-webkit-details-marker { display: none; }
+  .opt summary::after {
+    content: "▸"; color: var(--muted); font-size: 12px;
+    transition: transform 0.15s;
+  }
+  .opt[open] summary::after { transform: rotate(90deg); }
+  .opt .opt-letter {
+    font-family: "JetBrains Mono", monospace; font-size: 14px; font-weight: 700;
+    width: 30px; height: 30px; border-radius: 6px; display: flex; align-items: center; justify-content: center;
+    background: rgba(110,168,254,.1); color: var(--accent); border: 1px solid rgba(110,168,254,.3);
+  }
+  .opt .opt-title { font-size: 13px; font-weight: 600; color: var(--text); }
+  .opt .opt-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .opt .opt-cost {
+    font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 700;
+    padding: 4px 9px; border-radius: 12px; letter-spacing: 0.5px; text-transform: uppercase;
+  }
+  .opt .opt-cost.small { background: rgba(74,222,128,.1); color: var(--green); border: 1px solid rgba(74,222,128,.3); }
+  .opt .opt-cost.med   { background: rgba(250,204,21,.1); color: var(--yellow); border: 1px solid rgba(250,204,21,.3); }
+  .opt .opt-cost.large { background: rgba(251,146,60,.1); color: var(--orange); border: 1px solid rgba(251,146,60,.3); }
+  .opt .opt-body { padding: 0 16px 16px; border-top: 1px solid var(--border); padding-top: 14px; margin-top: 4px; font-size: 12.5px; color: var(--text-2); line-height: 1.6; }
+  .opt .opt-body strong { color: var(--text); }
+  .opt .pro-con-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+  .opt .pro-con-grid .pc-box { padding: 10px 12px; border-radius: 6px; font-size: 12px; }
+  .opt .pro-con-grid .pc-box.pro { background: rgba(74,222,128,.05); border-left: 2px solid var(--green); }
+  .opt .pro-con-grid .pc-box.con { background: rgba(248,113,113,.05); border-left: 2px solid var(--red); }
+  .opt .pro-con-grid .pc-box .lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 4px; }
+
+  /* RECOMMENDATION callout */
+  .rec-callout {
+    background: rgba(74,222,128,.06); border: 1px solid rgba(74,222,128,.3); border-radius: 10px;
+    padding: 14px 18px; margin-top: 14px;
+  }
+  .rec-callout .lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; color: var(--green); margin-bottom: 6px; }
+  .rec-callout p { font-size: 13px; color: var(--text-2); }
+
+  /* NEXT STEPS */
+  .steps-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+  .step-row {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 18px;
+    display: grid; grid-template-columns: 36px 1fr auto; gap: 14px; align-items: center;
+  }
+  .step-row .num {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--card-2); border: 1.5px solid var(--border-bright);
+    color: var(--text); font-weight: 700; font-family: "JetBrains Mono", monospace; font-size: 12px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .step-row .head { font-size: 13.5px; font-weight: 600; }
+  .step-row .body { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .step-row .prio { font-family: "JetBrains Mono", monospace; font-size: 10px; font-weight: 700; padding: 4px 10px; border-radius: 10px; letter-spacing: 0.5px; text-transform: uppercase; white-space: nowrap; }
+  .step-row .prio.now   { background: rgba(248,113,113,.12); color: var(--red); border: 1px solid rgba(248,113,113,.3); }
+  .step-row .prio.soon  { background: rgba(251,146,60,.1); color: var(--orange); border: 1px solid rgba(251,146,60,.3); }
+  .step-row .prio.later { background: rgba(110,168,254,.1); color: var(--accent); border: 1px solid rgba(110,168,254,.3); }
+  .step-row .prio.design { background: rgba(192,132,252,.1); color: var(--purple); border: 1px solid rgba(192,132,252,.3); }
+
+  /* COMPANIONS / LINKS */
+  .companions {
+    background: linear-gradient(180deg, rgba(192,132,252,.05) 0%, var(--bg-2) 100%);
+    border: 1px solid rgba(192,132,252,.3); border-radius: 14px;
+    padding: 24px 28px;
+  }
+  .companions h3 { font-size: 16px; font-weight: 600; margin-bottom: 14px; }
+  .companion-link {
+    display: block; padding: 12px 16px; margin-bottom: 8px;
+    background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+    text-decoration: none; color: var(--text-2);
+    font-family: "JetBrains Mono", monospace; font-size: 12.5px;
+    transition: border-color 0.15s;
+  }
+  .companion-link:hover { border-color: var(--purple); color: var(--text); }
+  .companion-link strong { color: var(--purple); font-weight: 600; }
+
+  footer { margin-top: 50px; padding-top: 22px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); font-family: "JetBrains Mono", monospace; text-align: center; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- HERO -->
+  <header class="hero">
+    <div class="eyebrow">Code Architect · Architecture Audit · Ground truth</div>
+    <h1 class="title">Kameha mesh — current state</h1>
+    <p class="subtitle">
+      What you actually have today, end-to-end. Every claim in this document is backed by a live probe
+      executed today around 14:42 ET — SSH to the Mac Mini, curl to the live mesh-api on Tailscale,
+      direct filesystem reads. <strong>No memory, no inference, no extrapolation.</strong> This is the foundation
+      we'll build the "semi-instant communication + universal brain" answer on top of.
+    </p>
+    <div class="meta-row">
+      <span>2026-05-20 · 14:42 ET probe</span>
+      <span>3 compute zones</span>
+      <span>13 mesh agents</span>
+      <span>16 Mini processes live</span>
+      <span>37 routes registered</span>
+      <span>Codex-reviewed · revisions applied</span>
+    </div>
+    <div class="grounded-badge">Live-probed · SSH + curl + filesystem reads · not recalled from memory</div>
+    <div style="margin-top: 12px; padding: 10px 16px; background: rgba(192,132,252,.06); border: 1px solid rgba(192,132,252,.3); border-radius: 8px; font-size: 12px; color: var(--text-2);">
+      <strong style="color: var(--purple);">Codex review applied 2026-05-20</strong> — verdict REVISE. Corrections folded in:
+      KMG cadence is 300s (not 600s) — only 4 agents are in the 10-min cohort;
+      endpoint is <code>/stats</code> (sub-key <code>by_route</code>) not <code>/stats (by_route)</code>;
+      sync-repos.sh actual scope clarified (only Kai has dual-checkout; ACD/Framer single; <code>~/framer</code> not in sync).
+      See <code>docs/codex-review-2026-05-20-session-4-results.md</code>.
+    </div>
+  </header>
+
+  <!-- STAT TILES -->
+  <div class="stat-grid">
+    <div class="stat">
+      <div class="label">Active agents</div>
+      <div class="value green">12 / 13</div>
+      <div class="note">KMG inactive · Chronicle stale</div>
+    </div>
+    <div class="stat">
+      <div class="label">Mini processes (PM2)</div>
+      <div class="value blue">16</div>
+      <div class="note">All on one Mac Mini</div>
+    </div>
+    <div class="stat">
+      <div class="label">Avg mesh response</div>
+      <div class="value green">40s</div>
+      <div class="note">Last 7 days, all routes</div>
+    </div>
+    <div class="stat">
+      <div class="label">Slowest poll cohort</div>
+      <div class="value orange">10 min</div>
+      <div class="note">ACD · NAMI · Framer · Chronicle</div>
+    </div>
+    <div class="stat">
+      <div class="label">Silent failures</div>
+      <div class="value red">22</div>
+      <div class="note">Last 7 days · 4 routes</div>
+    </div>
+    <div class="stat">
+      <div class="label">Knowledge silos</div>
+      <div class="value purple">113 / 8</div>
+      <div class="note">files across separate dirs</div>
+    </div>
+  </div>
+
+  <!-- COST HEADLINE TILES -->
+  <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 36px;">
+    <div class="stat">
+      <div class="label">Fleet API · last 30d</div>
+      <div class="value green">$30-100</div>
+      <div class="note">Real invoice data, ex. sub</div>
+    </div>
+    <div class="stat">
+      <div class="label">Kai alone · 30d</div>
+      <div class="value blue">$20.65</div>
+      <div class="note">Live telemetry · screenshot</div>
+    </div>
+    <div class="stat">
+      <div class="label">Growth rate</div>
+      <div class="value orange">+50%/mo</div>
+      <div class="note">Feb→Mar→Apr trend</div>
+    </div>
+    <div class="stat">
+      <div class="label">Cache hit ratio</div>
+      <div class="value yellow">22.6%</div>
+      <div class="note">Target 60-80% · easy win</div>
+    </div>
+  </div>
+
+  <!-- SECTION 1: THREE COMPUTE ZONES -->
+  <div class="section">
+    <div class="section-head">
+      <h2>1 · Three places code runs</h2>
+      <div class="meta">laptop · Mac Mini · Render</div>
+    </div>
+    <div class="compute-grid">
+      <!-- LAPTOP -->
+      <div class="zone laptop">
+        <div class="role-tag">Driver Seat</div>
+        <h3>Laptop</h3>
+        <div class="host">/Users/alex/Desktop/Code/</div>
+        <p class="narr">Your machine. Claude Code CLI, MCP servers, Code Architect invocations. <strong>No mesh participant lives here.</strong></p>
+        <div class="list">
+          <div class="list-item"><span class="dot idle"></span> <code>crontab</code> — empty</div>
+          <div class="list-item"><span class="dot idle"></span> <code>pm2</code> — not installed</div>
+          <div class="list-item"><span class="dot warn"></span> <code>launchctl</code> — CFO laptop agents (legacy?)</div>
+          <div class="list-item"><span class="dot live"></span> 10× <code>kameha-research</code> MCP servers</div>
+          <div class="list-item"><span class="dot live"></span> Claude Code itself</div>
+        </div>
+      </div>
+
+      <!-- MAC MINI -->
+      <div class="zone mini">
+        <div class="role-tag">Production Mesh</div>
+        <h3>Mac Mini</h3>
+        <div class="host">100.64.114.13 · Tailscale · user kai</div>
+        <p class="narr">Every always-on daemon. PM2 supervises 16 long-running processes. Sync-repos.sh pulls from GitHub hourly. <strong>The entire mesh lives here.</strong></p>
+        <div class="list">
+          <div class="list-item"><span class="dot live"></span> <code>mesh-api</code> @ port 3341 · uptime 8.7d</div>
+          <div class="list-item"><span class="dot live"></span> Kai · telegram-bot · dashboard · iMsg poller</div>
+          <div class="list-item"><span class="dot live"></span> Conductor @ port 3344 · ACD @ port 3342</div>
+          <div class="list-item"><span class="dot live"></span> Framer · Enso · CFO · OA · PDE · Lead Engine</div>
+          <div class="list-item"><span class="dot warn"></span> Chronicle (5-day stale heartbeat)</div>
+          <div class="list-item"><span class="dot broken"></span> KMG (declared, never heartbeated)</div>
+          <div class="list-item"><span class="dot live"></span> NAMI relays: <code>bridge</code>, <code>mesh-poller</code></div>
+        </div>
+      </div>
+
+      <!-- RENDER -->
+      <div class="zone render">
+        <div class="role-tag">Cloud (one agent)</div>
+        <h3>Render</h3>
+        <div class="host">runtime: render · NAMI only</div>
+        <p class="narr">NAMI is the only cloud-hosted agent. Two Mini-side relays fake its mesh participation since Render can't reach Tailscale-internal mesh-api directly.</p>
+        <div class="list">
+          <div class="list-item"><span class="dot live"></span> NAMI daemon (Python)</div>
+          <div class="list-item"><span class="dot live"></span> Talks to Mini via HTTPS bridges</div>
+          <div class="list-item"><span class="dot warn"></span> Awkward agent in the topology</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 2: TOPOLOGY -->
+  <div class="section">
+    <div class="section-head">
+      <h2>2 · Topology — who talks to whom</h2>
+      <div class="meta">/agents + /routes from live mesh-api</div>
+    </div>
+    <div class="topo-wrap">
+      <svg class="topo" viewBox="0 0 1100 460" xmlns="http://www.w3.org/2000/svg">
+        <!-- Zone rectangles -->
+        <rect class="zone-rect laptop" x="20" y="40" width="220" height="380" rx="14"/>
+        <text class="zone-label laptop" x="32" y="65">LAPTOP</text>
+
+        <rect class="zone-rect mini" x="260" y="40" width="660" height="380" rx="14"/>
+        <text class="zone-label mini" x="272" y="65">MAC MINI · 100.64.114.13</text>
+
+        <rect class="zone-rect render" x="940" y="40" width="140" height="380" rx="14"/>
+        <text class="zone-label render" x="952" y="65">RENDER</text>
+
+        <!-- Laptop nodes -->
+        <circle class="node-circ" cx="130" cy="180" r="34"/>
+        <text class="node-label" x="130" y="178" text-anchor="middle">Claude</text>
+        <text class="node-label" x="130" y="190" text-anchor="middle">Code</text>
+        <text class="node-sub" x="130" y="222" text-anchor="middle">+ MCP servers</text>
+
+        <circle class="node-circ" cx="130" cy="320" r="30"/>
+        <text class="node-label" x="130" y="318" text-anchor="middle">CA</text>
+        <text class="node-label" x="130" y="330" text-anchor="middle">CLI</text>
+        <text class="node-sub" x="130" y="362" text-anchor="middle">single-shot</text>
+
+        <!-- Mesh-api center -->
+        <circle class="node-circ mesh" cx="590" cy="230" r="50"/>
+        <text class="node-label" x="590" y="225" text-anchor="middle" style="font-size:12px">MESH-API</text>
+        <text class="node-sub" x="590" y="240" text-anchor="middle">:3341</text>
+        <text class="node-sub" x="590" y="252" text-anchor="middle">37 routes</text>
+
+        <!-- Kai (hub) -->
+        <circle class="node-circ kai" cx="400" cy="160" r="32"/>
+        <text class="node-label" x="400" y="158" text-anchor="middle">Kai</text>
+        <text class="node-sub" x="400" y="172" text-anchor="middle">60s poll</text>
+
+        <!-- Agents arc top-right -->
+        <circle class="node-circ" cx="780" cy="130" r="22"/>
+        <text class="node-label" x="780" y="134" text-anchor="middle">ACD</text>
+        <text class="node-sub" x="780" y="165" text-anchor="middle">600s · :3342</text>
+
+        <circle class="node-circ" cx="840" cy="200" r="22"/>
+        <text class="node-label" x="840" y="204" text-anchor="middle">Framer</text>
+        <text class="node-sub" x="840" y="232" text-anchor="middle">600s</text>
+
+        <circle class="node-circ" cx="850" cy="290" r="22"/>
+        <text class="node-label" x="850" y="294" text-anchor="middle">Enso</text>
+        <text class="node-sub" x="850" y="322" text-anchor="middle">300s</text>
+
+        <circle class="node-circ" cx="790" cy="360" r="22"/>
+        <text class="node-label" x="790" y="364" text-anchor="middle">CFO</text>
+        <text class="node-sub" x="790" y="390" text-anchor="middle">300s</text>
+
+        <circle class="node-circ kai" cx="430" cy="320" r="26"/>
+        <text class="node-label" x="430" y="324" text-anchor="middle">Conductor</text>
+        <text class="node-sub" x="430" y="354" text-anchor="middle">300s · :3344</text>
+
+        <circle class="node-circ" cx="540" cy="380" r="22"/>
+        <text class="node-label" x="540" y="384" text-anchor="middle">OA</text>
+        <text class="node-sub" x="540" y="410" text-anchor="middle">300s</text>
+
+        <circle class="node-circ" cx="650" cy="380" r="22"/>
+        <text class="node-label" x="650" y="384" text-anchor="middle">PDE</text>
+        <text class="node-sub" x="650" y="410" text-anchor="middle">300s</text>
+
+        <circle class="node-circ" cx="320" cy="280" r="22"/>
+        <text class="node-label" x="320" y="284" text-anchor="middle">LE</text>
+        <text class="node-sub" x="320" y="310" text-anchor="middle">300s</text>
+
+        <circle class="node-circ broken" cx="320" cy="370" r="22"/>
+        <text class="node-label" x="320" y="374" text-anchor="middle">Chron</text>
+        <text class="node-sub" x="320" y="398" text-anchor="middle" style="fill:var(--red)">stale 5d</text>
+
+        <circle class="node-circ idle" cx="510" cy="115" r="22"/>
+        <text class="node-label" x="510" y="119" text-anchor="middle">KMG</text>
+        <text class="node-sub" x="510" y="145" text-anchor="middle" style="fill:var(--muted)">offline</text>
+
+        <!-- Bridge nodes -->
+        <circle class="node-circ bridge" cx="720" cy="290" r="20"/>
+        <text class="node-label" x="720" y="294" text-anchor="middle" style="font-size:9px">N-bridge</text>
+
+        <circle class="node-circ bridge" cx="720" cy="350" r="20"/>
+        <text class="node-label" x="720" y="354" text-anchor="middle" style="font-size:9px">N-poller</text>
+
+        <!-- Render NAMI -->
+        <circle class="node-circ" cx="1010" cy="230" r="28"/>
+        <text class="node-label" x="1010" y="226" text-anchor="middle">NAMI</text>
+        <text class="node-sub" x="1010" y="240" text-anchor="middle">600s</text>
+        <text class="node-sub" x="1010" y="262" text-anchor="middle">on Render</text>
+
+        <!-- Edges: laptop -> mesh (via SSH/curl) -->
+        <path class="edge dashed" d="M 165 180 Q 280 200 540 230"/>
+        <text class="node-sub" x="280" y="160" style="font-size:9px">Tailscale</text>
+
+        <path class="edge dashed" d="M 160 320 Q 280 280 540 230"/>
+
+        <!-- Kai <-> mesh -->
+        <path class="edge" d="M 432 175 Q 500 200 545 220"/>
+
+        <!-- Mesh -> agents -->
+        <path class="edge" d="M 630 215 Q 700 165 760 130"/>
+        <path class="edge" d="M 640 220 Q 720 210 820 200"/>
+        <path class="edge" d="M 640 250 Q 720 270 830 290"/>
+        <path class="edge" d="M 630 270 Q 700 320 770 360"/>
+        <path class="edge" d="M 580 280 Q 560 320 450 320"/>
+        <path class="edge" d="M 580 280 Q 540 350 540 380"/>
+        <path class="edge" d="M 600 280 Q 620 350 650 380"/>
+        <path class="edge" d="M 545 240 Q 420 270 340 280"/>
+        <path class="edge" d="M 555 270 Q 420 320 340 360"/>
+        <path class="edge dashed" d="M 580 195 Q 540 150 520 130"/>
+
+        <!-- Bridges to NAMI -->
+        <path class="edge" d="M 600 260 Q 650 280 705 290"/>
+        <path class="edge" d="M 600 270 Q 650 320 705 350"/>
+        <path class="edge dashed" d="M 740 290 Q 880 250 985 230"/>
+        <path class="edge dashed" d="M 740 350 Q 880 290 985 240"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- SECTION 3: POLL CADENCE -->
+  <div class="section">
+    <div class="section-head">
+      <h2>3 · Poll cadence — the "10-minute lag"</h2>
+      <div class="meta">live values from /agents</div>
+    </div>
+    <div class="cadence-wrap">
+      <div class="cad-row">
+        <div class="label">Kai (hub)</div>
+        <div class="bar-track"><div class="bar-fill fast" style="width:2%"></div></div>
+        <div class="value">60s</div>
+      </div>
+      <div class="cad-row">
+        <div class="label">NAMI Bridge</div>
+        <div class="bar-track"><div class="bar-fill fast" style="width:2%"></div></div>
+        <div class="value">60s</div>
+      </div>
+      <div class="cad-row">
+        <div class="label">CFO</div>
+        <div class="bar-track"><div class="bar-fill medium" style="width:50%"></div></div>
+        <div class="value">300s</div>
+      </div>
+      <div class="cad-row">
+        <div class="label">Lead Engine</div>
+        <div class="bar-track"><div class="bar-fill medium" style="width:50%"></div></div>
+        <div class="value">300s</div>
+      </div>
+      <div class="cad-row">
+        <div class="label">Enso</div>
+        <div class="bar-track"><div class="bar-fill medium" style="width:50%"></div></div>
+        <div class="value">300s</div>
+      </div>
+      <div class="cad-row">
+        <div class="label">Offer Architect</div>
+        <div class="bar-track"><div class="bar-fill medium" style="width:50%"></div></div>
+        <div class="value">300s</div>
+      </div>
+      <div class="cad-row">
+        <div class="label">Pitch Deck</div>
+        <div class="bar-track"><div class="bar-fill medium" style="width:50%"></div></div>
+        <div class="value">300s</div>
+      </div>
+      <div class="cad-row">
+        <div class="label">Conductor</div>
+        <div class="bar-track"><div class="bar-fill medium" style="width:50%"></div></div>
+        <div class="value">300s</div>
+      </div>
+      <div class="cad-row">
+        <div class="label">ACD</div>
+        <div class="bar-track"><div class="bar-fill slow" style="width:100%"></div></div>
+        <div class="value">600s</div>
+      </div>
+      <div class="cad-row">
+        <div class="label">NAMI</div>
+        <div class="bar-track"><div class="bar-fill slow" style="width:100%"></div></div>
+        <div class="value">600s</div>
+      </div>
+      <div class="cad-row">
+        <div class="label">Framer</div>
+        <div class="bar-track"><div class="bar-fill slow" style="width:100%"></div></div>
+        <div class="value">600s</div>
+      </div>
+      <div class="cad-row">
+        <div class="label">Chronicle</div>
+        <div class="bar-track"><div class="bar-fill slow" style="width:100%"></div></div>
+        <div class="value">600s</div>
+      </div>
+      <div class="cad-row">
+        <div class="label">KMG (inactive)</div>
+        <div class="bar-track"><div class="bar-fill medium" style="width:50%"></div></div>
+        <div class="value">300s</div>
+      </div>
+      <div class="cad-legend">
+        <div class="leg-item"><span class="leg-swatch fast"></span> Fast (60s) — interactive-ready</div>
+        <div class="leg-item"><span class="leg-swatch medium"></span> Medium (5 min) — semi-async</div>
+        <div class="leg-item"><span class="leg-swatch slow"></span> Slow (10 min) — the "10-min lag" cohort</div>
+      </div>
+      <div class="cad-callout">
+        <strong>Your felt latency comes from 4 agents.</strong> ACD, NAMI, Framer, Chronicle all poll
+        every 600 seconds. These are exactly the creative-production agents you need DURING shoots and content
+        sessions — but they were tuned for unattended overnight work. (KMG is at 300s by config but inactive in practice — never heartbeats.)
+        <strong style="color:var(--green)">The mesh average is 40 seconds</strong>, so the aggregate isn't
+        broken — only the long tail.
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 4: PROCESS INVENTORY -->
+  <div class="section">
+    <div class="section-head">
+      <h2>4 · 16 Mini processes — the full inventory</h2>
+      <div class="meta">live via SSH ps auxww</div>
+    </div>
+    <table class="proc-table">
+      <thead><tr><th>Process</th><th>Path</th><th>Lang</th><th>Role / Status</th></tr></thead>
+      <tbody>
+        <tr><td><span class="pname">mesh-api</span></td><td><span class="ppath">~/kai/scripts/mesh/mesh-api.js</span></td><td><span class="lang node">node</span></td><td><span class="stat-cell ok">live · :3341 · uptime 8.7d</span></td></tr>
+        <tr><td><span class="pname">kai (telegram-bot)</span></td><td><span class="ppath">~/kai/scripts/telegram-bot.js</span></td><td><span class="lang node">node</span></td><td><span class="stat-cell ok">live · hub agent</span></td></tr>
+        <tr><td><span class="pname">kai-dashboard</span></td><td><span class="ppath">~/kai/scripts/dashboard.js</span></td><td><span class="lang node">node</span></td><td><span class="stat-cell ok">live · web UI</span></td></tr>
+        <tr><td><span class="pname">kai-imessage-poller</span></td><td><span class="ppath">python -m imessage.poller</span></td><td><span class="lang python">python</span></td><td><span class="stat-cell ok">live · iMessage reader</span></td></tr>
+        <tr><td><span class="pname">conductor</span></td><td><span class="ppath">~/kai/scripts/conductor-agent.js</span></td><td><span class="lang node">node</span></td><td><span class="stat-cell ok">live · :3344 · projects/shoots</span></td></tr>
+        <tr><td><span class="pname">cfo-agent</span></td><td><span class="ppath">~/kai/scripts/cfo-agent.js</span></td><td><span class="lang node">node</span></td><td><span class="stat-cell ok">live · QuickBooks</span></td></tr>
+        <tr><td><span class="pname">offer-architect</span></td><td><span class="ppath">~/kai/scripts/oa-daemon.js</span></td><td><span class="lang node">node</span></td><td><span class="stat-cell ok">live · pricing</span></td></tr>
+        <tr><td><span class="pname">nami-bridge</span></td><td><span class="ppath">~/kai/scripts/nami-bridge.js</span></td><td><span class="lang node">node</span></td><td><span class="stat-cell ok">live · Render relay</span></td></tr>
+        <tr><td><span class="pname">nami-mesh-poller</span></td><td><span class="ppath">~/kai/scripts/nami-mesh-poller.js</span></td><td><span class="lang node">node</span></td><td><span class="stat-cell ok">live · mesh proxy for NAMI</span></td></tr>
+        <tr><td><span class="pname">acd-daemon</span></td><td><span class="ppath">~/acd/scripts/daemon.py</span></td><td><span class="lang python">python</span></td><td><span class="stat-cell ok">live · :3342 · own ecosystem.config.js</span></td></tr>
+        <tr><td><span class="pname">framer-daemon</span></td><td><span class="ppath">~/framer/scripts/daemon.py</span></td><td><span class="lang python">python</span></td><td><span class="stat-cell ok">live · visual production</span></td></tr>
+        <tr><td><span class="pname">enso-daemon</span></td><td><span class="ppath">~/Desktop/Code/Enso-The-Editor/scripts/enso-daemon.py</span></td><td><span class="lang python">python</span></td><td><span class="stat-cell ok">live · editor</span></td></tr>
+        <tr><td><span class="pname">pde-daemon</span></td><td><span class="ppath">~/Desktop/Code/Kameha Pitch Deck Engine/scripts/pde-d</span></td><td><span class="lang node">node</span></td><td><span class="stat-cell ok">live · pitch decks</span></td></tr>
+        <tr><td><span class="pname">lead-engine</span></td><td><span class="ppath">python run_dashboard.py --backend-only</span></td><td><span class="lang python">python</span></td><td><span class="stat-cell ok">live · APScheduler internal</span></td></tr>
+        <tr><td><span class="pname">chronicle</span></td><td><span class="ppath">tsx src/index.ts</span></td><td><span class="lang node">node</span></td><td><span class="stat-cell warn">live but heartbeat 5d stale</span></td></tr>
+        <tr><td><span class="pname">pm2-logrotate</span></td><td><span class="ppath">PM2 module</span></td><td><span class="lang node">node</span></td><td><span class="stat-cell idle">log rotation</span></td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top: 12px; font-size: 11.5px; color: var(--muted); line-height: 1.5;">
+      <strong style="color: var(--text-2)">Repo-layout note (corrected after Codex review):</strong> Hub agents live at <code>~/&lt;agent&gt;/</code> on Mini.
+      <strong style="color:var(--text-2);">Only Kai</strong> has a true dual-checkout (<code>~/kai</code> AND <code>~/Desktop/Code/Kai Executive Assistant</code>) — both synced hourly by <code>sync-repos.sh</code>.
+      <strong style="color:var(--text-2);">ACD</strong> has only <code>~/acd</code> (synced). <strong style="color:var(--text-2);">Framer</strong> has only <code>~/framer</code> — <strong style="color:var(--orange);">NOT in sync-repos.sh</strong>, so it doesn't auto-update.
+      PM2 runs each agent from the <code>~/&lt;agent&gt;/</code> path.
+    </p>
+  </div>
+
+  <!-- SECTION 5: ROUTE TRAFFIC + SILENT FAILURES -->
+  <div class="section">
+    <div class="section-head">
+      <h2>5 · Route traffic + the 22 silent failures</h2>
+      <div class="meta">/stats (by_route)?days=7 from live mesh-api</div>
+    </div>
+    <div class="routes-grid">
+      <div class="route-card healthy">
+        <h4>Healthy routes (delivered, completed)</h4>
+        <div class="route-row"><span class="src">acd → kai</span><span class="num green">26 ✓</span></div>
+        <div class="route-row"><span class="src">framer → nami</span><span class="num green">13 ✓</span></div>
+        <div class="route-row"><span class="src">framer → acd</span><span class="num green">5 ✓</span></div>
+        <div class="route-row"><span class="src">acd → framer</span><span class="num green">4 ✓</span></div>
+        <div class="route-row"><span class="src">acd → enso</span><span class="num green">1 ✓</span></div>
+        <div class="route-row"><span class="src">cfo → kai</span><span class="num green">1 ✓</span></div>
+      </div>
+      <div class="route-card failing">
+        <h4>Silent failures — 22 over 7 days</h4>
+        <div class="route-row"><span class="src">nami → framer (rejected)</span><span class="num red">13 ✗</span></div>
+        <div class="route-row"><span class="src">enso → nami (failed)</span><span class="num red">5 ✗</span></div>
+        <div class="route-row"><span class="src">acd → nami (failed)</span><span class="num red">3 ✗</span></div>
+        <div class="route-row"><span class="src">acd → conductor (rejected)</span><span class="num red">1 ✗</span></div>
+      </div>
+    </div>
+    <p style="margin-top: 16px; font-size: 13px; color: var(--text-2); line-height: 1.6;">
+      <strong>This is your live silent-failure rate: ~3 per day.</strong> The bottom-right card is exactly the bug class
+      <code>feedback_action_whitelist_insufficient</code> is about — senders believe success, receivers never got the message,
+      neither side alerts. The <code>acd → conductor</code> rejection is the route the <strong>crew_manifest proposal</strong>
+      needs registered — that's why the proposal's fuzzy-fallback fix is a hard prerequisite.
+    </p>
+  </div>
+
+  <!-- SECTION 6: DATA LAYER -->
+  <div class="section">
+    <div class="section-head">
+      <h2>6 · Data layer — what's shared, what's siloed</h2>
+      <div class="meta">filesystem reads · /Users/kai/.kameha</div>
+    </div>
+    <div class="data-grid">
+      <div class="data-card">
+        <span class="badge silo">SILOED</span>
+        <h4>Per-agent knowledge/ dirs</h4>
+        <p>Each agent has a private <code>knowledge/</code> dir. <strong>No agent can read another's directly.</strong></p>
+        <div class="knowledge-grid">
+          <div class="kn-item"><span class="agent">Kai</span><span class="count">43</span></div>
+          <div class="kn-item"><span class="agent">ACD</span><span class="count">21</span></div>
+          <div class="kn-item"><span class="agent">KMG</span><span class="count">18</span></div>
+          <div class="kn-item"><span class="agent">Framer</span><span class="count">12</span></div>
+          <div class="kn-item"><span class="agent">CFO</span><span class="count">11</span></div>
+          <div class="kn-item"><span class="agent">Enso</span><span class="count">5</span></div>
+          <div class="kn-item"><span class="agent">PDE</span><span class="count">2</span></div>
+          <div class="kn-item"><span class="agent">Lead Engine</span><span class="count">1</span></div>
+          <div class="kn-item empty"><span class="agent">Chronicle</span><span class="count">—</span></div>
+          <div class="kn-item empty"><span class="agent">NAMI</span><span class="count">—</span></div>
+          <div class="kn-item empty"><span class="agent">OA</span><span class="count">—</span></div>
+        </div>
+        <p style="margin-top: 12px; font-size: 12px; color: var(--muted);">
+          <strong>Total: 113 files across 8 silos.</strong> Three agents (Chronicle, NAMI, OA) don't even have a knowledge dir.
+        </p>
+      </div>
+
+      <div class="data-card">
+        <span class="badge shared">SHARED — informal</span>
+        <h4>~/.kameha/shared/</h4>
+        <p>One-way file drop. Agents write here; Kai's briefing reads. <strong>This is your interim "universal brain."</strong></p>
+        <div class="file-list">
+          <div class="file">acd-production-briefing.json<span class="size">253 B · today 05:15</span></div>
+          <div class="file">conductor-morning-report.json<span class="size">2.4 KB · 05:45</span></div>
+          <div class="file">conductor-overdue-alerts.json<span class="size">923 B · 09:00</span></div>
+          <div class="file">conductor-weekly-summary.json<span class="size">219 B</span></div>
+          <div class="file">financial-context.json<span class="size">5.5 KB · 06:00</span></div>
+          <div class="file">work-order-schema.json<span class="size">3.6 KB</span></div>
+          <div class="file">deliver-to-kai.js<span class="size">4.1 KB · exec</span></div>
+        </div>
+      </div>
+
+      <div class="data-card">
+        <span class="badge struct">SHARED — structured</span>
+        <h4>~/.kameha/conductor.db</h4>
+        <p>The most active shared SQLite. ACD reads directly via env var. Kai's briefing queries it.</p>
+        <div style="font-size: 12.5px; color: var(--text-2); line-height: 1.7;">
+          <div><strong style="color:var(--text)">Main DB:</strong> 196 KB (Mar 25)</div>
+          <div><strong style="color:var(--text)">WAL:</strong> <span style="color:var(--green)">3.6 MB</span> (May 19) — active</div>
+          <div><strong style="color:var(--text)">Backups:</strong> 2× pre-migration snapshots</div>
+        </div>
+        <p style="margin-top: 14px; font-size: 12px; color: var(--text-2);">
+          Tables: <code>projects</code>, <code>milestones</code>, <code>tasks</code>, <code>scope_events</code>,
+          <code>team_members</code>, <code>retainer_cycles</code>. Structured project data — but
+          <strong>shoots are JSON blobs inside retainer_cycles</strong>, not first-class.
+        </p>
+        <div style="margin-top: 14px; padding: 10px 12px; background: rgba(192,132,252,.05); border-left: 2px solid var(--purple); border-radius: 4px; font-size: 12px;">
+          <strong style="color: var(--purple);">crew_manifest proposal targets this DB.</strong> Adding crew_assignments table
+          here pilots "conductor as knowledge orchestrator."
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 7: PROBLEMS LIVE-VERIFIED -->
+  <div class="section">
+    <div class="section-head">
+      <h2>7 · Problems surfaced or confirmed by this probe</h2>
+      <div class="meta">things to address — separate from the architectural question</div>
+    </div>
+    <div class="problems">
+      <div class="problem-item">
+        <span class="ico">🚨</span>
+        <div>
+          <div class="head">Status field demotion bug is LIVE</div>
+          <div class="body">
+            Chronicle appears in <code>stale_agents</code> array AND has <code>status: "active"</code> in the same JSON. mesh-api lies about its own state. NEXT-SESSION #9 confirmed.
+          </div>
+        </div>
+        <span class="sev-pill high">High</span>
+      </div>
+      <div class="problem-item">
+        <span class="ico">🚨</span>
+        <div>
+          <div class="head">22 silent route rejections in 7 days</div>
+          <div class="body">
+            4 routes generating ~3 silent failures per day. <code>nami → framer</code>, <code>enso → nami</code>, <code>acd → nami</code>, <code>acd → conductor</code>. NEXT-SESSION #3.
+          </div>
+        </div>
+        <span class="sev-pill high">High</span>
+      </div>
+      <div class="problem-item">
+        <span class="ico">⚠</span>
+        <div>
+          <div class="head">mesh.db at both documented paths is 0 bytes</div>
+          <div class="body">
+            Both <code>~/kai/scripts/mesh/mesh.db</code> and <code>~/.kameha/mesh.db</code> are empty/abandoned. Live mesh data has 343 completed messages — it's persisted somewhere else, but I didn't track down where this round.
+          </div>
+        </div>
+        <span class="sev-pill med">Med</span>
+      </div>
+      <div class="problem-item">
+        <span class="ico">⚠</span>
+        <div>
+          <div class="head">KMG declared but never running</div>
+          <div class="body">
+            ecosystem.config.js exists at <code>~/Desktop/Code/Kameha Media Group/</code>. mesh-api shows <code>last_heartbeat: null</code>. Daemon was scaffolded; never shipped.
+          </div>
+        </div>
+        <span class="sev-pill med">Med</span>
+      </div>
+      <div class="problem-item">
+        <span class="ico">⚠</span>
+        <div>
+          <div class="head">Chronicle heartbeat 5 days stale</div>
+          <div class="body">
+            Process is live under PM2, but last mesh heartbeat 2026-05-15. Combined with NEXT-SESSION #8 (git lock on Chronicle since Mar 28), suggests Chronicle's mesh-participant code is broken or queued behind the git lock.
+          </div>
+        </div>
+        <span class="sev-pill med">Med</span>
+      </div>
+      <div class="problem-item">
+        <span class="ico">🧹</span>
+        <div>
+          <div class="head">Mini crontab has 8 duplicate header comment blocks</div>
+          <div class="body">
+            Only 3 real entries (hourly backup, hourly sync, lead-engine 5-min poll). Cosmetic but risks accidental edits to wrong section. Mechanical cleanup item.
+          </div>
+        </div>
+        <span class="sev-pill low">Low</span>
+      </div>
+      <div class="problem-item">
+        <span class="ico">❓</span>
+        <div>
+          <div class="head">CFO has BOTH laptop LaunchAgents AND Mini PM2 daemon</div>
+          <div class="body">
+            5 <code>com.kameha.cfo.*</code> LaunchAgents on laptop in addition to the Mini-side daemon. Either intentional dual-mode (laptop UI alerts, Mini headless) or leftover from older deploy. Worth a CFO-specific review.
+          </div>
+        </div>
+        <span class="sev-pill low">Low</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 8: YOUR TWO CONCERNS -->
+  <div class="section">
+    <div class="section-head">
+      <h2>8 · Your two concerns — mapped to architecture</h2>
+      <div class="meta">latency layer vs knowledge layer · solve them separately</div>
+    </div>
+    <div class="concerns-grid">
+
+      <!-- LATENCY -->
+      <div class="concern-col latency">
+        <div class="ctag">Concern 1 · Transport layer</div>
+        <h3>Semi-instant communication</h3>
+        <div class="q">"When I'm in the chair giving an agent a task, I don't want to wait 10 minutes for a reply."</div>
+        <h4>What's real today</h4>
+        <p>
+          The "10 minutes" feeling comes from <strong>5 specific agents</strong>: ACD, NAMI, Framer, Chronicle, KMG —
+          all set to 600s poll. The rest are at 1-5 min. Mesh average is 40s.
+        </p>
+        <h4>Three plausible fixes</h4>
+        <div class="options-list">
+
+          <details class="opt" open>
+            <summary>
+              <div class="opt-letter">A</div>
+              <div>
+                <div class="opt-title">Drop slow agents to 60s</div>
+                <div class="opt-sub">Per-agent cadence change or "Alex active" flag</div>
+              </div>
+              <span class="opt-cost small">Small</span>
+            </summary>
+            <div class="opt-body">
+              Set <code>poll_interval_seconds: 60</code> for ACD/NAMI/Framer in mesh-api's agents table (or each agent's local config).
+              Can be conditional: a flag at mesh-api like <code>?session_active=true</code> tells pollers to drop to fast cadence
+              until you toggle it off.
+              <div class="pro-con-grid">
+                <div class="pc-box pro">
+                  <div class="lbl">Pros</div>
+                  Smallest fix. Reuses everything. Reversible. Ships this week.
+                </div>
+                <div class="pc-box con">
+                  <div class="lbl">Cons</div>
+                  Higher steady-state CPU on Mini. Each agent's poller code may need a tweak.
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <details class="opt">
+            <summary>
+              <div class="opt-letter">B</div>
+              <div>
+                <div class="opt-title">Push model — webhooks from mesh-api</div>
+                <div class="opt-sub">mesh-api POSTs to each agent's HTTP port on arrival</div>
+              </div>
+              <span class="opt-cost med">Med</span>
+            </summary>
+            <div class="opt-body">
+              Each agent already has its own HTTP port (ACD :3342, conductor :3344, etc.). mesh-api adds a webhook
+              dispatcher: when a message lands for agent X, hit <code>POST X:port/mesh/notify</code>. Agent drains immediately.
+              <div class="pro-con-grid">
+                <div class="pc-box pro">
+                  <div class="lbl">Pros</div>
+                  True sub-second delivery. No polling waste. Right answer for next quarter.
+                </div>
+                <div class="pc-box con">
+                  <div class="lbl">Cons</div>
+                  Every agent needs a webhook handler. Failure modes (agent down, retries) need design. NAMI on Render needs separate path.
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <details class="opt">
+            <summary>
+              <div class="opt-letter">C</div>
+              <div>
+                <div class="opt-title">Long-lived connections (WebSocket/SSE)</div>
+                <div class="opt-sub">Agents hold open connection to mesh-api</div>
+              </div>
+              <span class="opt-cost large">Large</span>
+            </summary>
+            <div class="opt-body">
+              Each agent opens a persistent connection to mesh-api at startup. Messages stream down instantly.
+              <div class="pro-con-grid">
+                <div class="pc-box pro">
+                  <div class="lbl">Pros</div>
+                  Architecturally correct for a real-time mesh. No polling at all.
+                </div>
+                <div class="pc-box con">
+                  <div class="lbl">Cons</div>
+                  Significant rewrite per agent. Connection management, reconnect logic, keepalives. Overkill for current scale.
+                </div>
+              </div>
+            </div>
+          </details>
+
+        </div>
+        <div class="rec-callout">
+          <div class="lbl">CA's recommendation</div>
+          <p>Ship (A) this week for the felt pain. Design (B) as the right next step. (C) only if the mesh grows much larger.</p>
+        </div>
+      </div>
+
+      <!-- KNOWLEDGE -->
+      <div class="concern-col brain">
+        <div class="ctag">Concern 2 · Data layer</div>
+        <h3>Universal brain</h3>
+        <div class="q">"Knowledge is siloed. I have to manually copy-paste from one agent to another. I want one shared brain agents tap into."</div>
+        <h4>What's real today</h4>
+        <p>
+          113 knowledge files across 8 silos. Plus 7 file-drops in <code>~/.kameha/shared/</code>.
+          Plus conductor.db (3.6MB active). <strong>Three partial shared surfaces, no unified brain.</strong>
+        </p>
+        <h4>Three plausible architectures</h4>
+        <div class="options-list">
+
+          <details class="opt" open>
+            <summary>
+              <div class="opt-letter">A</div>
+              <div>
+                <div class="opt-title">Extend ~/.kameha/shared/ with structured contracts</div>
+                <div class="opt-sub">Formalize the file-drop pattern that already works</div>
+              </div>
+              <span class="opt-cost small">Small</span>
+            </summary>
+            <div class="opt-body">
+              Treat <code>~/.kameha/shared/</code> as a typed knowledge bus. Each file has a JSON schema. Writes go through mesh
+              messages for audit (so we know who wrote what when). Reads are direct file access.
+              <div class="pro-con-grid">
+                <div class="pc-box pro">
+                  <div class="lbl">Pros</div>
+                  Builds on the pattern already working. Cheap. Git-backed (auto-backup cron already commits hourly).
+                </div>
+                <div class="pc-box con">
+                  <div class="lbl">Cons</div>
+                  Filesystem isn't a real database. Concurrent writes risk. Eventually-consistent only.
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <details class="opt">
+            <summary>
+              <div class="opt-letter">B</div>
+              <div>
+                <div class="opt-title">Promote conductor.db to general knowledge store</div>
+                <div class="opt-sub">Add new tables beyond projects/tasks</div>
+              </div>
+              <span class="opt-cost med">Med</span>
+            </summary>
+            <div class="opt-body">
+              Conductor is the active shared SQLite (3.6 MB WAL). ACD already reads it directly via env var.
+              Add new tables for any typed cross-agent fact: <code>client_facts</code>, <code>decision_log</code>,
+              <code>crew_assignments</code> (already proposed). Conductor becomes the knowledge orchestrator, not just project orchestrator.
+              <div class="pro-con-grid">
+                <div class="pc-box pro">
+                  <div class="lbl">Pros</div>
+                  Real DB (queryable, indexable, transactional). Existing pattern. <strong>crew_manifest proposal pilots this exact path.</strong>
+                </div>
+                <div class="pc-box con">
+                  <div class="lbl">Cons</div>
+                  Conductor's role expands. Schema migrations need discipline. Concurrent writes need transaction wrapping.
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <details class="opt">
+            <summary>
+              <div class="opt-letter">C</div>
+              <div>
+                <div class="opt-title">New mesh-knowledge HTTP service on Mini</div>
+                <div class="opt-sub">Dedicated service, e.g., port 3343</div>
+              </div>
+              <span class="opt-cost large">Large</span>
+            </summary>
+            <div class="opt-body">
+              New service that holds all shared knowledge. Agents query via HTTP. Schema enforced server-side. Could include
+              vector search for semantic recall.
+              <div class="pro-con-grid">
+                <div class="pc-box pro">
+                  <div class="lbl">Pros</div>
+                  Clean architecture. Independent of conductor. Room for semantic search / RAG.
+                </div>
+                <div class="pc-box con">
+                  <div class="lbl">Cons</div>
+                  Whole new service to maintain. Every agent gets a new client lib. Overkill for current need.
+                </div>
+              </div>
+            </div>
+          </details>
+
+        </div>
+        <div class="rec-callout">
+          <div class="lbl">CA's recommendation</div>
+          <p>(B) is interesting because <strong>crew_manifest is already piloting it.</strong> If that lands well, expand conductor's role with 2-3 more typed tables. (A) is a stopgap. (C) only if (B) hits a wall.</p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- LINKING NOTE -->
+    <div style="margin-top: 18px; padding: 16px 20px; background: rgba(110,168,254,.05); border-left: 3px solid var(--accent); border-radius: 6px; font-size: 13px; color: var(--text-2); line-height: 1.55;">
+      <strong style="color: var(--accent);">These two are architecturally separate.</strong>
+      A faster transport without a shared knowledge layer just means agents say "I don't know that" faster.
+      A shared knowledge layer without faster transport means the answer exists but takes 10 minutes to retrieve.
+      <strong>You need both — but you don't need them in the same change.</strong>
+    </div>
+  </div>
+
+  <!-- SECTION 9: COST ECONOMICS -->
+  <div class="section">
+    <div class="section-head">
+      <h2>9 · Cost economics — what we know, what we don't</h2>
+      <div class="meta">Anthropic spend · grounded in live data</div>
+    </div>
+
+    <!-- REAL NUMBERS (updated from invoice + dashboard screenshots) -->
+    <div style="margin-bottom: 22px; padding: 18px 22px; background: rgba(74,222,128,.06); border: 1px solid rgba(74,222,128,.3); border-radius: 12px;">
+      <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--green); font-weight: 700; margin-bottom: 8px;">Grounded — real numbers from invoices + dashboard</div>
+      <h3 style="font-size: 15px; font-weight: 600; margin-bottom: 10px;">Fleet API: $30-100/mo. Kai: ~$20-25/mo. Growing ~50%/mo.</h3>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 18px; font-size: 13px; color: var(--text-2); line-height: 1.55;">
+        <div>
+          <strong style="color:var(--text);">Real fleet API trend (invoices, ex. subscription):</strong>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; margin-top: 6px; line-height: 1.7;">
+            Jan: $107 (pre-subscription) <br>
+            Feb: $5.45 <br>
+            Mar: $30.74 <br>
+            Apr: $71.98 <br>
+            May (partial): TBD
+          </div>
+        </div>
+        <div>
+          <strong style="color:var(--text);">Kai dashboard (30-day):</strong>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; margin-top: 6px; line-height: 1.7;">
+            Total: <span style="color:var(--green);">$20.65</span> <br>
+            Top day: $4.51 (May 2 burst) <br>
+            By source: telegram 73% <br>
+            By model: Sonnet 82% · Haiku 15% <br>
+            Cache hit ratio: <span style="color:var(--yellow);">22.6%</span>
+          </div>
+        </div>
+      </div>
+      <p style="margin-top: 14px; font-size: 12.5px; color: var(--text-2);">
+        <strong style="color:var(--accent);">The $200/mo recurring is your personal Claude.ai subscription, not fleet API.</strong>
+        Confirmed via Claude.ai usage dashboard (weekly limits, $59.68 usage credit balance, auto-reload on).
+        Fleet API runs at a tenth of what the total invoice suggested — universal brain becomes a <$50/mo decision, not $200-500.
+      </p>
+    </div>
+
+    <!-- THE GAP CALLOUT — still relevant, but lower urgency -->
+    <div style="margin-bottom: 22px; padding: 18px 22px; background: rgba(250,204,21,.06); border: 1px solid rgba(250,204,21,.3); border-radius: 12px;">
+      <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--yellow); font-weight: 700; margin-bottom: 8px;">Telemetry gap (lower urgency now)</div>
+      <h3 style="font-size: 15px; font-weight: 600; margin-bottom: 8px;">Kai measures itself. The other 12 agents don't.</h3>
+      <p style="font-size: 13px; color: var(--text-2); line-height: 1.55;">
+        <code>scripts/lib/model-router.js</code> logs every Anthropic call Kai makes to <code>logs/api-usage.jsonl</code>
+        (1,820 entries) and exposes <code>/api/costs</code> on Kai's dashboard. Other agents make their own SDK calls — none log to Kai's router.
+        If Kai is $20-25 and fleet API total is $30-100, the other 12 agents combined add $10-75/mo. <strong>Worth instrumenting eventually, but not the urgent thing.</strong>
+      </p>
+    </div>
+
+    <!-- THREE COST SURFACES -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 28px;">
+      <div class="data-card">
+        <span class="badge struct">SURFACE 1 — invoices</span>
+        <h4>Anthropic invoices</h4>
+        <p>Real $ charged each month. $200 recurring = personal Claude.ai sub. Variable charges = fleet API.</p>
+        <div style="font-size: 12px; color: var(--text-2); line-height: 1.7; font-family: 'JetBrains Mono', monospace;">
+          <div>Feb: <span style="color:var(--green);">$5.45</span></div>
+          <div>Mar: <span style="color:var(--green);">$30.74</span></div>
+          <div>Apr: <span style="color:var(--yellow);">$71.98</span></div>
+          <div>Growth: <span style="color:var(--orange);">~50%/mo</span></div>
+        </div>
+      </div>
+      <div class="data-card">
+        <span class="badge shared">SURFACE 2 — Kai dashboard</span>
+        <h4>Kai's api-usage.jsonl</h4>
+        <p>Live per-call telemetry. 30-day view from screenshot:</p>
+        <div style="font-size: 12px; color: var(--text-2); line-height: 1.7;">
+          <div>• Kai total 30d: <strong style="color:var(--green);">$20.65</strong></div>
+          <div>• Top day: $4.51 (May 2 burst)</div>
+          <div>• Source: telegram <strong>73%</strong></div>
+          <div>• Model: Sonnet <strong>82%</strong></div>
+          <div>• Cache hit: <strong style="color:var(--yellow);">22.6%</strong></div>
+        </div>
+      </div>
+      <div class="data-card">
+        <span class="badge silo">SURFACE 3 — missing</span>
+        <h4>Other 12 agents</h4>
+        <p>ACD, Framer, Enso, OA, PDE, CFO, etc. each call Anthropic directly. Combined estimate from invoice gap:</p>
+        <div style="font-size: 12px; color: var(--text-2); line-height: 1.7;">
+          <div>• Estimate: <strong style="color:var(--yellow);">$10-75/mo combined</strong></div>
+          <div>✗ No per-call logging yet</div>
+          <div>✗ No cache hit visibility</div>
+          <div style="color: var(--muted); margin-top: 6px;">Telemetry rollout useful but not urgent at this scale.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WHAT DRIVES THE COST -->
+    <div style="background: linear-gradient(180deg, var(--card) 0%, var(--bg-2) 100%); border: 1px solid var(--border); border-radius: 14px; padding: 24px 28px; margin-bottom: 22px;">
+      <h3 style="font-size: 17px; font-weight: 600; margin-bottom: 14px;">What drives token spend (in order)</h3>
+      <div style="font-size: 13px; color: var(--text-2); line-height: 1.65;">
+        <p style="margin-bottom: 10px;"><strong style="color:var(--text);">1. How much context you stuff into each Claude call.</strong> This is the dominant lever. Naive "load entire brain into prompt" vs smart "query first, then compose" = <strong style="color:var(--orange);">~10× difference</strong> on the same functional capability.</p>
+        <p style="margin-bottom: 10px;"><strong style="color:var(--text);">2. Per-agent call volume.</strong> Kai logs 3 calls/day average. ACD, Framer, etc. likely much more — we don't know yet.</p>
+        <p style="margin-bottom: 10px;"><strong style="color:var(--text);">3. Cache hit ratio.</strong> Anthropic's prompt cache discount is <strong>90%</strong> on cached reads (Sonnet: $0.30/M vs $3/M). Kai's current 22.6% hit ratio is leaving money on the table — most static prompts could be cached but aren't marked.</p>
+        <p><strong style="color:var(--text);">4. Model choice.</strong> Sonnet is ~4× the price of Haiku. Routing simple tasks to Haiku is real savings. Kai already uses both via <code>model-router.js</code>; question is whether other agents do.</p>
+      </div>
+    </div>
+
+    <!-- NAIVE VS SMART -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+      <div style="background: rgba(248,113,113,.04); border: 1px solid rgba(248,113,113,.3); border-radius: 12px; padding: 20px 24px;">
+        <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--red); font-weight: 700; margin-bottom: 8px;">Naive universal brain</div>
+        <h4 style="font-size: 15px; font-weight: 600; margin-bottom: 10px;">Dump everything into every call</h4>
+        <p style="font-size: 13px; color: var(--text-2); line-height: 1.55; margin-bottom: 10px;">Load the entire shared knowledge into every Claude prompt as context. Simple to build, but every call pays for context it doesn't need.</p>
+        <div style="font-size: 12px; color: var(--text-2); line-height: 1.7; padding: 10px 14px; background: rgba(0,0,0,.3); border-radius: 6px; font-family: 'JetBrains Mono', monospace;">
+          <div>+20-50K tokens / call</div>
+          <div style="color: var(--red);">Roughly <strong>doubles</strong> the bill</div>
+          <div style="color: var(--text);">From $30-100 → <strong style="color:var(--red);">$60-200/mo</strong></div>
+          <div style="color: var(--muted); margin-top: 4px;">Also slower (larger prompts → longer latency)</div>
+        </div>
+      </div>
+      <div style="background: rgba(74,222,128,.04); border: 1px solid rgba(74,222,128,.3); border-radius: 12px; padding: 20px 24px;">
+        <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--green); font-weight: 700; margin-bottom: 8px;">Smart universal brain</div>
+        <h4 style="font-size: 15px; font-weight: 600; margin-bottom: 10px;">Query first, then compose</h4>
+        <p style="font-size: 13px; color: var(--text-2); line-height: 1.55; margin-bottom: 10px;">3-layer retrieval. Cheap SQL + file reads first. Vector search for narrative. Only relevant chunks reach Claude. Static prompt sections cached.</p>
+        <div style="font-size: 12px; color: var(--text-2); line-height: 1.7; padding: 10px 14px; background: rgba(0,0,0,.3); border-radius: 6px; font-family: 'JetBrains Mono', monospace;">
+          <div>+1-3K tokens / call</div>
+          <div style="color: var(--green);">+20-30% on the bill</div>
+          <div style="color: var(--text);">From $30-100 → <strong style="color:var(--green);">$40-130/mo</strong></div>
+          <div style="color: var(--muted); margin-top: 4px;">Also faster (smaller prompts → shorter latency)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WHAT TO DO NOW (highest leverage) -->
+    <div style="margin-top: 22px; padding: 20px 24px; background: linear-gradient(180deg, rgba(110,168,254,.06) 0%, var(--bg-2) 100%); border: 1px solid rgba(110,168,254,.35); border-radius: 12px;">
+      <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--accent); font-weight: 700; margin-bottom: 8px;">Highest-leverage moves at this scale</div>
+      <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 12px;">Three things to do regardless of universal-brain direction</h3>
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; font-size: 12.5px; color: var(--text-2); line-height: 1.55;">
+        <div>
+          <strong style="color:var(--text);">1. Roll out prompt caching</strong><br>
+          Kai's hit ratio is 22.6%. Target 60-80%. Telegram (73% of Kai cost) is the hot path — same system prompt repeated within minutes. Easy 50% cut on cached calls.
+        </div>
+        <div>
+          <strong style="color:var(--text);">2. Route simple queries to Haiku</strong><br>
+          Sonnet is 82% of Kai's spend; Haiku is ~4× cheaper. "filing", "status", "confirmation", "calendar" query types are simple enough for Haiku. Likely $5-10/mo savings.
+        </div>
+        <div>
+          <strong style="color:var(--text);">3. Watch the growth curve</strong><br>
+          Fleet API is growing ~50%/mo. At this rate: $108 → $162 → $243 by year-end. Cost discipline matters at the curve, not at today's $30-100 floor.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 10: EFFECTIVE UB - 3-LAYER MODEL -->
+  <div class="section">
+    <div class="section-head">
+      <h2>10 · Effective universal brain — the 3-layer model</h2>
+      <div class="meta">how each agent pulls just what it needs · cheap + fast first</div>
+    </div>
+
+    <p style="font-size: 14px; color: var(--text-2); line-height: 1.6; margin-bottom: 22px; max-width: 920px;">
+      The point of layering isn't elegance — it's <strong>doing the expensive thing last</strong>. SQL is free and instant. File reads are free and instant. Vector search is nearly free and 50ms. Claude calls cost money and take seconds. Each agent's pipeline pulls from the cheap fast layers FIRST, then composes a minimal Claude prompt with only what matters.
+    </p>
+
+    <!-- THREE LAYERS VISUAL -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 28px;">
+      <!-- LAYER 1 -->
+      <div style="background: linear-gradient(180deg, rgba(74,222,128,.06) 0%, var(--bg-2) 100%); border: 1px solid rgba(74,222,128,.3); border-radius: 12px; padding: 22px 24px;">
+        <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--green); font-weight: 700; margin-bottom: 8px;">Layer 1 · Structured</div>
+        <h4 style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">SQLite tables</h4>
+        <p style="font-size: 12.5px; color: var(--text-2); line-height: 1.55; margin-bottom: 12px;">Schema'd facts: projects, shoots, decisions, crew, deliverables, clients.</p>
+        <div style="background: rgba(0,0,0,.3); padding: 10px 14px; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 11px; line-height: 1.7;">
+          <div><strong style="color:var(--text);">Lives in:</strong> <code>~/.kameha/conductor.db</code></div>
+          <div><strong style="color:var(--text);">Latency:</strong> &lt;1ms</div>
+          <div><strong style="color:var(--green);">Token cost:</strong> $0</div>
+          <div><strong style="color:var(--text);">Access:</strong> direct SQL</div>
+        </div>
+        <p style="font-size: 11.5px; color: var(--muted); line-height: 1.5; margin-top: 12px;">
+          <strong style="color:var(--text-2);">Use for:</strong> "what's the status of project X", "who's on the Baptist shoot"
+        </p>
+      </div>
+      <!-- LAYER 2 -->
+      <div style="background: linear-gradient(180deg, rgba(110,168,254,.06) 0%, var(--bg-2) 100%); border: 1px solid rgba(110,168,254,.3); border-radius: 12px; padding: 22px 24px;">
+        <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--accent); font-weight: 700; margin-bottom: 8px;">Layer 2 · Semi-structured</div>
+        <h4 style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">JSON snapshots</h4>
+        <p style="font-size: 12.5px; color: var(--text-2); line-height: 1.55; margin-bottom: 12px;">Daily-refreshed reports: briefings, financial snapshots, status digests.</p>
+        <div style="background: rgba(0,0,0,.3); padding: 10px 14px; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 11px; line-height: 1.7;">
+          <div><strong style="color:var(--text);">Lives in:</strong> <code>~/.kameha/shared/</code></div>
+          <div><strong style="color:var(--text);">Latency:</strong> &lt;1ms</div>
+          <div><strong style="color:var(--green);">Token cost:</strong> $0</div>
+          <div><strong style="color:var(--text);">Access:</strong> file read + schema validate</div>
+        </div>
+        <p style="font-size: 11.5px; color: var(--muted); line-height: 1.5; margin-top: 12px;">
+          <strong style="color:var(--text-2);">Use for:</strong> "today's morning briefing", "current financial context"
+        </p>
+      </div>
+      <!-- LAYER 3 -->
+      <div style="background: linear-gradient(180deg, rgba(192,132,252,.06) 0%, var(--bg-2) 100%); border: 1px solid rgba(192,132,252,.3); border-radius: 12px; padding: 22px 24px;">
+        <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--purple); font-weight: 700; margin-bottom: 8px;">Layer 3 · Unstructured</div>
+        <h4 style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">Vector-indexed narrative</h4>
+        <p style="font-size: 12.5px; color: var(--text-2); line-height: 1.55; margin-bottom: 12px;">Client backstory, voice notes, past decisions, learnings — facts without schema.</p>
+        <div style="background: rgba(0,0,0,.3); padding: 10px 14px; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 11px; line-height: 1.7;">
+          <div><strong style="color:var(--text);">Lives in:</strong> SQLite-vss or pgvector</div>
+          <div><strong style="color:var(--text);">Latency:</strong> 10-50ms</div>
+          <div><strong style="color:var(--yellow);">Token cost:</strong> ~$0.001/query</div>
+          <div><strong style="color:var(--text);">Access:</strong> embed task → top-K chunks</div>
+        </div>
+        <p style="font-size: 11.5px; color: var(--muted); line-height: 1.5; margin-top: 12px;">
+          <strong style="color:var(--text-2);">Use for:</strong> "what did Maria say about her story", "our voice for Direct Builders"
+        </p>
+      </div>
+    </div>
+
+    <!-- THE PIPELINE -->
+    <div style="background: linear-gradient(180deg, var(--card) 0%, var(--bg-2) 100%); border: 1px solid var(--border); border-radius: 14px; padding: 28px 32px; margin-bottom: 22px;">
+      <h3 style="font-size: 17px; font-weight: 600; margin-bottom: 18px;">The pipeline per agent task</h3>
+      <svg viewBox="0 0 1100 240" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;">
+        <!-- Step 1: Task -->
+        <rect x="20" y="80" width="130" height="80" rx="10" fill="rgba(125,138,153,.08)" stroke="#7d8a99" stroke-width="1.4"/>
+        <text x="85" y="115" text-anchor="middle" font-family="JetBrains Mono" font-size="11" font-weight="700" fill="#e6edf3">1. Receive</text>
+        <text x="85" y="130" text-anchor="middle" font-family="JetBrains Mono" font-size="11" font-weight="700" fill="#e6edf3">task</text>
+
+        <!-- Arrow -->
+        <path d="M 155 120 L 195 120" stroke="#7d8a99" stroke-width="1.5" fill="none" marker-end="url(#a-grey)"/>
+
+        <!-- Step 2: Query layers -->
+        <rect x="200" y="20" width="140" height="60" rx="10" fill="rgba(74,222,128,.08)" stroke="#4ade80" stroke-width="1.4"/>
+        <text x="270" y="46" text-anchor="middle" font-family="JetBrains Mono" font-size="10" font-weight="700" fill="#4ade80">L1: SQL</text>
+        <text x="270" y="60" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#b8c5d3">$0 · &lt;1ms</text>
+        <text x="270" y="71" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#b8c5d3">project, crew</text>
+
+        <rect x="200" y="90" width="140" height="60" rx="10" fill="rgba(110,168,254,.08)" stroke="#6ea8fe" stroke-width="1.4"/>
+        <text x="270" y="116" text-anchor="middle" font-family="JetBrains Mono" font-size="10" font-weight="700" fill="#6ea8fe">L2: file read</text>
+        <text x="270" y="130" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#b8c5d3">$0 · &lt;1ms</text>
+        <text x="270" y="141" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#b8c5d3">briefings</text>
+
+        <rect x="200" y="160" width="140" height="60" rx="10" fill="rgba(192,132,252,.08)" stroke="#c084fc" stroke-width="1.4"/>
+        <text x="270" y="186" text-anchor="middle" font-family="JetBrains Mono" font-size="10" font-weight="700" fill="#c084fc">L3: vector</text>
+        <text x="270" y="200" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#b8c5d3">$0.001 · 50ms</text>
+        <text x="270" y="211" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#b8c5d3">narrative</text>
+
+        <!-- Arrows from layers to composer -->
+        <path d="M 340 50 Q 420 80 475 110" stroke="#7d8a99" stroke-width="1.2" fill="none" stroke-dasharray="3 3" opacity="0.7"/>
+        <path d="M 340 120 L 475 120" stroke="#7d8a99" stroke-width="1.2" fill="none" stroke-dasharray="3 3" opacity="0.7"/>
+        <path d="M 340 190 Q 420 160 475 130" stroke="#7d8a99" stroke-width="1.2" fill="none" stroke-dasharray="3 3" opacity="0.7"/>
+
+        <!-- Step 3: Composer -->
+        <rect x="480" y="80" width="150" height="80" rx="10" fill="rgba(250,204,21,.06)" stroke="#facc15" stroke-width="1.4"/>
+        <text x="555" y="108" text-anchor="middle" font-family="JetBrains Mono" font-size="11" font-weight="700" fill="#e6edf3">3. Compose</text>
+        <text x="555" y="124" text-anchor="middle" font-family="JetBrains Mono" font-size="11" font-weight="700" fill="#e6edf3">minimal prompt</text>
+        <text x="555" y="142" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#facc15">cache static parts</text>
+
+        <!-- Arrow -->
+        <path d="M 635 120 L 680 120" stroke="#7d8a99" stroke-width="1.5" fill="none" marker-end="url(#a-grey)"/>
+
+        <!-- Step 4: Claude -->
+        <rect x="685" y="80" width="140" height="80" rx="10" fill="rgba(251,146,60,.08)" stroke="#fb923c" stroke-width="1.4"/>
+        <text x="755" y="108" text-anchor="middle" font-family="JetBrains Mono" font-size="11" font-weight="700" fill="#e6edf3">4. Claude</text>
+        <text x="755" y="124" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#fb923c">$0.05 · 1-5s</text>
+        <text x="755" y="140" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#b8c5d3">only step that costs</text>
+
+        <!-- Arrow -->
+        <path d="M 830 120 L 870 120" stroke="#7d8a99" stroke-width="1.5" fill="none" marker-end="url(#a-grey)"/>
+
+        <!-- Step 5: Write back -->
+        <rect x="875" y="80" width="200" height="80" rx="10" fill="rgba(74,222,128,.06)" stroke="#4ade80" stroke-width="1.4"/>
+        <text x="975" y="108" text-anchor="middle" font-family="JetBrains Mono" font-size="11" font-weight="700" fill="#e6edf3">5. Write back</text>
+        <text x="975" y="124" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#b8c5d3">to L1/L2/L3</text>
+        <text x="975" y="140" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="#4ade80">next agent reads it</text>
+
+        <defs>
+          <marker id="a-grey" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L9,3 z" fill="#7d8a99"/>
+          </marker>
+        </defs>
+      </svg>
+      <div style="margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); display: grid; grid-template-columns: 1fr 1fr; gap: 18px; font-size: 12.5px; color: var(--text-2); line-height: 1.55;">
+        <div>
+          <strong style="color:var(--text);">Key principle:</strong> the Claude call (step 4) is the only step that costs money or time. Layers 1-3 (step 2) are nearly free and instant. Composing well (step 3) means Claude gets a tight, relevant prompt.
+        </div>
+        <div>
+          <strong style="color:var(--text);">Caching baked in:</strong> the agent's system prompt + any static schema descriptions in step 3 get marked <code>cache_control</code>. Anthropic charges 10% of input rate for cached reads (5-min TTL). For active sessions, 20 calls in 10 min pay full rate once and cached 19 times.
+        </div>
+      </div>
+    </div>
+
+    <!-- EFFECTIVENESS CHECKS -->
+    <div style="background: linear-gradient(180deg, var(--card) 0%, var(--bg-2) 100%); border: 1px solid var(--border); border-radius: 14px; padding: 24px 28px;">
+      <h3 style="font-size: 17px; font-weight: 600; margin-bottom: 14px;">How we ensure each agent pulls the right slice</h3>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; font-size: 13px; color: var(--text-2); line-height: 1.6;">
+        <div>
+          <h4 style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 8px; font-weight: 600;">Discoverability</h4>
+          <p>Universal brain ships with a <strong style="color:var(--text);">schema manifest</strong> at <code>~/.kameha/shared/knowledge-manifest.json</code> that tells agents: "for queries about clients use L1 table X; for voice/tone use L3 with prefix Y." Self-describing brain.</p>
+        </div>
+        <div>
+          <h4 style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 8px; font-weight: 600;">Relevance</h4>
+          <p>Vector search returns top-K chunks ranked by cosine similarity to the task embedding. K=5 (≈2,500 tokens) is the sweet spot — enough recall, no bloat.</p>
+        </div>
+        <div>
+          <h4 style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 8px; font-weight: 600;">Freshness</h4>
+          <p>Writes to L1 are immediate (live SQLite). L2 snapshots regenerate daily (existing pattern). L3 re-embeds on write. <strong style="color:var(--text);">No agent sees stale data older than 24h.</strong></p>
+        </div>
+        <div>
+          <h4 style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 8px; font-weight: 600;">Performance budget</h4>
+          <p>Each agent's context-composer caps total retrieved tokens at <strong style="color:var(--text);">5,000</strong>. If queries return more, it summarizes via cheap Haiku first. <strong>Hard ceiling, no surprises.</strong></p>
+        </div>
+        <div>
+          <h4 style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 8px; font-weight: 600;">Per-agent budgets</h4>
+          <p>Each agent gets a daily token quota (configurable). Logged to mesh.db. Alert if any agent breaches threshold — <strong>cost surprise becomes impossible.</strong></p>
+        </div>
+        <div>
+          <h4 style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 8px; font-weight: 600;">Fallback</h4>
+          <p>If vector search is down or schema manifest is unreachable, agent falls back to current behavior (its own knowledge dir). <strong>Brain is advisory, never load-bearing for liveness.</strong></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 11: NEXT STEPS (was 9) -->
+  <div class="section">
+    <div class="section-head">
+      <h2>11 · Recommended next steps</h2>
+      <div class="meta">each is a separate proposal · pick what's worth doing</div>
+    </div>
+    <!-- RE-RANKED after real cost data: caching jumps to #1 because it's the highest-leverage move at our actual scale. -->
+    <div class="steps-grid">
+      <div class="step-row">
+        <div class="num">1</div>
+        <div>
+          <div class="head">Roll out prompt caching across Kai's hot paths</div>
+          <div class="body">Telegram is 73% of Kai's spend (~$15/mo) with same system prompt repeated within minutes. Add <code>cache_control</code> markers — push cache hit ratio from 22.6% to 60-80%. Easy ~50% cut on cached calls. <strong>Highest-leverage single move.</strong></div>
+        </div>
+        <span class="prio now">Now · 2-3 hrs</span>
+      </div>
+      <div class="step-row">
+        <div class="num">2</div>
+        <div>
+          <div class="head">Route simple query types to Haiku</div>
+          <div class="body">Sonnet is 82% of Kai's spend; Haiku is ~4× cheaper. The model-router already exists — just needs additional classification rules for "filing", "status", "confirmation", "calendar". Quick $5-10/mo cut.</div>
+        </div>
+        <span class="prio now">Now · 1-2 hrs</span>
+      </div>
+      <div class="step-row">
+        <div class="num">3</div>
+        <div>
+          <div class="head">Promote <code>logApiUsage</code> fleet-wide (deferred priority)</div>
+          <div class="body">Kai already logs. Moving to shared lib gives per-agent visibility. <strong>Less urgent than I first thought</strong> — at $30-100/mo fleet total, the unknown other-agent spend is $10-75/mo combined. Watch the growth curve instead.</div>
+        </div>
+        <span class="prio later">Later · 1-2 days when ready</span>
+      </div>
+      <div class="step-row">
+        <div class="num">3</div>
+        <div>
+          <div class="head">Locate the live mesh.db</div>
+          <div class="body">Both documented paths are 0 bytes. 10-minute mechanical task to find where the live data actually persists.</div>
+        </div>
+        <span class="prio soon">Soon · trivial</span>
+      </div>
+      <div class="step-row">
+        <div class="num">4</div>
+        <div>
+          <div class="head">Drop 10-min cohort to 60s (latency fix A)</div>
+          <div class="body">Smallest fix for the latency you actually feel. ACD/NAMI/Framer at minimum. Reversible.</div>
+        </div>
+        <span class="prio soon">Soon</span>
+      </div>
+      <div class="step-row">
+        <div class="num">5</div>
+        <div>
+          <div class="head">Fix the status-field demotion bug</div>
+          <div class="body">Single-file fix in mesh-api source. Chronicle shouldn't be both active and stale simultaneously.</div>
+        </div>
+        <span class="prio soon">Soon</span>
+      </div>
+      <div class="step-row">
+        <div class="num">6</div>
+        <div>
+          <div class="head">Fix the 22/week silent-rejection cluster</div>
+          <div class="body">Register the missing reverse routes OR change the reply mechanism. NEXT-SESSION #3 — design call.</div>
+        </div>
+        <span class="prio soon">Soon</span>
+      </div>
+      <div class="step-row">
+        <div class="num">7</div>
+        <div>
+          <div class="head">Roll out prompt caching across the fleet</div>
+          <div class="body">Kai's cache hit ratio is 22.6% — most static prompts are uncached. Add <code>cache_control</code> markers in each agent. Quick wins. 10% rate on cached reads.</div>
+        </div>
+        <span class="prio later">After telemetry</span>
+      </div>
+      <div class="step-row">
+        <div class="num">8</div>
+        <div>
+          <div class="head">Ship crew_manifest Phase A (knowledge brain pilot)</div>
+          <div class="body">Pilots the "conductor as knowledge orchestrator" pattern. Proposal already drafted. First concrete typed Layer-1 expansion.</div>
+        </div>
+        <span class="prio later">Pending approval</span>
+      </div>
+      <div class="step-row">
+        <div class="num">9</div>
+        <div>
+          <div class="head">Universal brain design doc — Layer 3 (vector)</div>
+          <div class="body">Pick embedding model, what gets indexed, who writes, freshness model. Separate proposal. Land after telemetry baseline + caching wins.</div>
+        </div>
+        <span class="prio design">Design first</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPANIONS -->
+  <div class="section">
+    <div class="section-head">
+      <h2>Companion docs</h2>
+      <div class="meta">read together for full picture</div>
+    </div>
+    <div class="companions">
+      <h3>Open these alongside this audit</h3>
+      <a class="companion-link" href="proposal-crew-manifest-2026-05-20.html">
+        <strong>📋 proposal-crew-manifest-2026-05-20.html</strong> — the crew_manifest design that pilots conductor-as-knowledge-orchestrator. 8 decisions awaiting your answers.
+      </a>
+      <a class="companion-link" href="../docs/design-cost-and-universal-brain-2026-05-20.md">
+        <strong>📄 docs/design-cost-and-universal-brain-2026-05-20.md</strong> — fleet-wide telemetry + 3-layer brain design. Phasing, budgets, vector-index choice. 5 open questions inside.
+      </a>
+      <a class="companion-link" href="../docs/architecture-current-state-2026-05-20.md">
+        <strong>📄 docs/architecture-current-state-2026-05-20.md</strong> — full markdown of this audit. More detail per section than the HTML can show.
+      </a>
+      <a class="companion-link" href="../docs/proposal-crew-manifest-2026-05-20.md">
+        <strong>📄 docs/proposal-crew-manifest-2026-05-20.md</strong> — full crew_manifest proposal markdown.
+      </a>
+      <a class="companion-link" href="../docs/NEXT-SESSION.md">
+        <strong>📋 docs/NEXT-SESSION.md</strong> — the rest of the open queue (workflow_dispatch, P2 backlog, carry-forwards).
+      </a>
+    </div>
+  </div>
+
+  <footer>
+    Generated 2026-05-20 14:42 ET · Code Architect session 4 · live-probed ground truth · companion to docs/architecture-current-state-2026-05-20.md
+  </footer>
+
+</div>
+</body>
+</html>

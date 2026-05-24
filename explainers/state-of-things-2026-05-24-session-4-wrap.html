@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<!-- CSS + section vocabulary adapted from Kai session-face (~/Desktop/Code/Kai Executive Assistant/explainers/session-latest.html). -->
+<!-- Standing rule: see ~/.claude/projects/.../memory/project_session_face_html_pattern.md -->
+<!-- v2 — system-as-visual-organism. v1 preserved at state-of-things-2026-05-17-v1.html. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Code Architect — Kameha System Map · 2026-05-19 session 3 + day 1 follow-on</title>
+<style>
+  :root {
+    --bg: #0a0d12;
+    --bg-2: #0f131a;
+    --card: #141a23;
+    --card-2: #1a212c;
+    --brief-bg: #11161e;
+    --border: #232c3a;
+    --border-bright: #2f3a4a;
+    --text: #e6edf3;
+    --text-2: #b8c5d3;
+    --muted: #7d8a99;
+    --dim: #5a6573;
+    --accent: #6ea8fe;
+    --accent-glow: rgba(110, 168, 254, 0.4);
+    --green: #4ade80;
+    --green-glow: rgba(74, 222, 128, 0.35);
+    --yellow: #facc15;
+    --orange: #fb923c;
+    --red: #f87171;
+    --red-glow: rgba(248, 113, 113, 0.35);
+    --purple: #c084fc;
+    --pink: #f472b6;
+    --teal: #5eead4;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "SF Pro Display", "SF Pro Text", BlinkMacSystemFont, "Segoe UI", sans-serif;
+    line-height: 1.55;
+    font-feature-settings: "ss01", "ss02", "cv11";
+    min-height: 100vh;
+  }
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse 1200px 600px at 20% -10%, rgba(110, 168, 254, 0.06), transparent 50%),
+      radial-gradient(ellipse 800px 400px at 90% 10%, rgba(192, 132, 252, 0.05), transparent 50%),
+      radial-gradient(ellipse 1000px 500px at 50% 120%, rgba(94, 234, 212, 0.04), transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .container { position: relative; max-width: 1280px; margin: 0 auto; padding: 48px 32px 80px; z-index: 1; }
+  code, .mono { font-family: "JetBrains Mono", "SF Mono", Menlo, monospace; }
+
+  /* ===== HERO ===== */
+  header.hero { margin-bottom: 40px; }
+  .eyebrow {
+    font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 2px;
+    color: var(--accent); margin-bottom: 16px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .eyebrow::before { content: ""; width: 24px; height: 1px; background: var(--accent); box-shadow: 0 0 8px var(--accent-glow); }
+  h1.title {
+    font-size: 56px; font-weight: 700; letter-spacing: -2px; line-height: 1.05; margin-bottom: 12px;
+    background: linear-gradient(180deg, #ffffff 0%, #b8c5d3 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .subtitle { font-size: 18px; color: var(--text-2); max-width: 820px; line-height: 1.55; margin-bottom: 24px; }
+  .date-meta { font-size: 12px; color: var(--muted); display: flex; gap: 20px; flex-wrap: wrap; }
+  .date-meta span::before { content: "·"; color: var(--dim); margin-right: 16px; }
+  .date-meta span:first-child::before { content: ""; margin: 0; }
+  .accountability-bar {
+    margin-top: 20px; padding: 12px 18px;
+    background: rgba(110,168,254,.06); border-left: 3px solid var(--accent); border-radius: 4px;
+    font-size: 12.5px; color: var(--text-2);
+  }
+  .accountability-bar code { background: rgba(125,138,153,.12); color: var(--purple); padding: 1px 5px; border-radius: 3px; font-size: 11.5px; }
+
+  /* ===== STAT TILES ===== */
+  .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 48px; }
+  @media (max-width: 880px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } }
+  .stat {
+    background: linear-gradient(180deg, var(--card) 0%, var(--bg-2) 100%);
+    border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px;
+    position: relative; overflow: hidden;
+  }
+  .stat::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--border-bright), transparent); }
+  .stat .label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 10px; font-weight: 600; }
+  .stat .value { font-size: 32px; font-weight: 700; letter-spacing: -1px; line-height: 1; margin-bottom: 6px; font-family: "JetBrains Mono", "SF Mono", monospace; }
+  .stat .value.green { color: var(--green); text-shadow: 0 0 20px var(--green-glow); }
+  .stat .value.orange { color: var(--orange); }
+  .stat .value.red { color: var(--red); text-shadow: 0 0 20px var(--red-glow); }
+  .stat .value.blue { color: var(--accent); text-shadow: 0 0 20px var(--accent-glow); }
+  .stat .value.yellow { color: var(--yellow); }
+  .stat .value.purple { color: var(--purple); }
+  .stat .note { font-size: 11px; color: var(--muted); }
+  .stat.danger { border-color: rgba(248,113,113,.45); background: linear-gradient(180deg, rgba(248,113,113,.05) 0%, var(--bg-2) 100%); }
+  .stat.warning { border-color: rgba(250,204,21,.45); background: linear-gradient(180deg, rgba(250,204,21,.05) 0%, var(--bg-2) 100%); }
+  .stat.live { border-color: rgba(74,222,128,.45); background: linear-gradient(180deg, rgba(74,222,128,.05) 0%, var(--bg-2) 100%); }
+
+  /* ===== SECTION ===== */
+  .section { margin-bottom: 56px; }
+  .section-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 22px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+  .section-head h2 { font-size: 22px; font-weight: 600; letter-spacing: -0.5px; }
+  .section-head .meta { font-size: 12px; color: var(--muted); font-family: "JetBrains Mono", monospace; }
+
+  /* ===== DECISIONS ===== */
+  .decisions-card { background: linear-gradient(180deg, var(--card) 0%, var(--bg-2) 100%); border: 1px solid var(--border); border-radius: 14px; padding: 6px 28px; }
+  .decision-row { display: grid; grid-template-columns: 28px 1fr auto; gap: 14px; align-items: start; padding: 18px 0; border-bottom: 1px solid var(--border); }
+  .decision-row:last-child { border-bottom: none; }
+  .decision-row .ico { font-size: 22px; line-height: 1; }
+  .decision-row .head { font-weight: 600; font-size: 15px; color: var(--text); margin-bottom: 4px; }
+  .decision-row .body { font-size: 13px; color: var(--muted); line-height: 1.6; }
+  .decision-row .hint { margin-top: 6px; color: var(--muted); }
+  .decision-row .pill-col { white-space: nowrap; padding-top: 2px; }
+
+  /* ===== TOPOLOGY ===== */
+  .topology-wrap {
+    background: linear-gradient(180deg, var(--card) 0%, var(--bg-2) 100%);
+    border: 1px solid var(--border); border-radius: 16px; padding: 28px 24px 22px;
+    overflow: hidden; position: relative;
+  }
+  .topology-legend {
+    display: flex; gap: 18px; flex-wrap: wrap;
+    margin-top: 14px; padding-top: 18px; border-top: 1px solid var(--border);
+    font-size: 11px; color: var(--muted);
+  }
+  .leg { display: flex; align-items: center; gap: 6px; }
+  .leg-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .leg-dot.live { background: var(--green); box-shadow: 0 0 8px var(--green-glow); }
+  .leg-dot.runtime-only { background: transparent; border: 1.5px dashed var(--accent); }
+  .leg-dot.static-only { background: transparent; border: 1.5px dashed var(--orange); }
+  .leg-dot.ghost { background: transparent; border: 1.5px dashed var(--red); }
+  .leg-dot.inactive { background: var(--orange); }
+  .leg-line { width: 18px; height: 0; }
+  .leg-line.enforced { border-top: 2px solid var(--green); }
+  .leg-line.claimed { border-top: 2px dashed var(--red); }
+  svg.topology { width: 100%; height: auto; display: block; }
+  svg.topology .node-label { font-family: "JetBrains Mono", monospace; font-size: 11px; font-weight: 700; pointer-events: none; }
+  svg.topology .node-sub { font-family: "JetBrains Mono", monospace; font-size: 9px; fill: var(--muted); pointer-events: none; }
+  svg.topology .node-meta { font-family: "JetBrains Mono", monospace; font-size: 8px; fill: var(--dim); pointer-events: none; }
+  svg.topology .edge { stroke-width: 1.3; fill: none; opacity: 0.55; }
+  svg.topology .edge.enforced { stroke: var(--green); opacity: 0.45; }
+  svg.topology .edge.enforced-t1 { stroke: var(--green); opacity: 0.6; stroke-width: 1.8; }
+  svg.topology .edge.claimed-only { stroke: var(--red); stroke-dasharray: 4 3; opacity: 0.18; }
+  svg.topology .client-chip { font-family: "JetBrains Mono", monospace; font-size: 9px; fill: var(--yellow); opacity: 0.75; }
+  svg.topology .kai-badge { font-family: "JetBrains Mono", monospace; font-size: 8px; font-weight: 700; fill: var(--muted); pointer-events: none; }
+  svg.topology .zone-label { font-family: "JetBrains Mono", monospace; font-size: 10px; opacity: 0.75; letter-spacing: 1.5px; text-transform: uppercase; font-weight: 600; }
+  @keyframes pulse { 0%, 100% { opacity: 0.9; r: 4; } 50% { opacity: 0.3; r: 6; } }
+  svg.topology .pulse { animation: pulse 2s ease-in-out infinite; }
+
+  /* ===== REGISTRY DRIFT TABLE ===== */
+  .registry-table { width: 100%; border-collapse: separate; border-spacing: 0; background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .registry-table th, .registry-table td { padding: 11px 14px; text-align: left; font-size: 12.5px; border-bottom: 1px solid var(--border); }
+  .registry-table th { background: var(--card-2); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); font-weight: 600; }
+  .registry-table tr:last-child td { border-bottom: none; }
+  .registry-table .agent-name { font-family: "JetBrains Mono", monospace; font-weight: 700; color: var(--text); }
+  .registry-table .cell-yes { color: var(--green); font-weight: 700; }
+  .registry-table .cell-no { color: var(--red); font-weight: 700; }
+  .registry-table .cell-note { font-size: 11px; color: var(--muted); }
+
+  /* ===== HEATMAP ===== */
+  .heatmap-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+  @media (max-width: 880px) { .heatmap-grid { grid-template-columns: repeat(3, 1fr); } }
+  .heatmap-cell { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+  .heatmap-cell .name { font-size: 11px; font-weight: 600; color: var(--text-2); margin-bottom: 4px; }
+  .heatmap-cell .date { font-size: 10px; color: var(--muted); font-family: "JetBrains Mono", monospace; }
+  .heatmap-cell.today { background: rgba(74,222,128,.08); border-color: rgba(74,222,128,.35); }
+  .heatmap-cell.today .name { color: var(--green); }
+  .heatmap-cell.week { background: rgba(110,168,254,.06); border-color: rgba(110,168,254,.25); }
+  .heatmap-cell.week .name { color: var(--accent); }
+  .heatmap-cell.month { background: rgba(250,204,21,.04); border-color: rgba(250,204,21,.2); }
+  .heatmap-cell.cold { opacity: 0.6; }
+
+  /* ===== INBOX BAR CHART ===== */
+  .inbox-list { display: flex; flex-direction: column; gap: 8px; }
+  .inbox-row { display: grid; grid-template-columns: 120px 1fr 60px; gap: 12px; align-items: center; font-size: 12.5px; }
+  .inbox-row .agent { font-family: "JetBrains Mono", monospace; color: var(--text-2); }
+  .inbox-row .bar-track { height: 18px; background: var(--card); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; position: relative; }
+  .inbox-row .bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--purple)); border-radius: 3px; transition: width 0.3s; }
+  .inbox-row .bar-fill.danger { background: linear-gradient(90deg, var(--orange), var(--red)); }
+  .inbox-row .count { font-family: "JetBrains Mono", monospace; color: var(--text); text-align: right; font-weight: 600; }
+
+  /* ===== PILLS ===== */
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 12px; font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; font-family: "JetBrains Mono", monospace; }
+  .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; }
+  .pill.green { background: rgba(74,222,128,.12); color: var(--green); border: 1px solid rgba(74,222,128,.3); }
+  .pill.green::before { background: var(--green); box-shadow: 0 0 6px var(--green-glow); }
+  .pill.yellow { background: rgba(250,204,21,.1); color: var(--yellow); border: 1px solid rgba(250,204,21,.3); }
+  .pill.yellow::before { background: var(--yellow); }
+  .pill.orange { background: rgba(251,146,60,.1); color: var(--orange); border: 1px solid rgba(251,146,60,.3); }
+  .pill.orange::before { background: var(--orange); }
+  .pill.red { background: rgba(248,113,113,.1); color: var(--red); border: 1px solid rgba(248,113,113,.3); }
+  .pill.red::before { background: var(--red); box-shadow: 0 0 6px var(--red-glow); }
+  .pill.blue { background: rgba(110,168,254,.1); color: var(--accent); border: 1px solid rgba(110,168,254,.3); }
+  .pill.blue::before { background: var(--accent); box-shadow: 0 0 6px var(--accent-glow); }
+  .pill.gray { background: rgba(125,138,153,.1); color: var(--muted); border: 1px solid rgba(125,138,153,.25); }
+  .pill.gray::before { background: var(--muted); }
+  .pill.purple { background: rgba(167,139,250,.12); color: var(--purple); border: 1px solid rgba(167,139,250,.3); }
+  .pill.purple::before { background: var(--purple); box-shadow: 0 0 6px rgba(167,139,250,.5); }
+
+  /* ===== FACTS GRID ===== */
+  .facts { display: grid; gap: 10px; margin-top: 4px; }
+  .fact { display: grid; grid-template-columns: 180px 1fr; gap: 16px; padding: 10px 0; border-top: 1px solid var(--border); font-size: 13px; }
+  .fact:first-child { border-top: none; padding-top: 4px; }
+  .fact .k { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); font-weight: 600; padding-top: 2px; }
+  .fact .v { color: var(--text-2); }
+  .fact .v strong { color: var(--text); }
+  .fact .v code { background: rgba(125,138,153,.12); color: var(--purple); padding: 1px 6px; border-radius: 4px; font-size: 11.5px; }
+
+  /* ===== THREADS ===== */
+  .thread { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 24px 26px; margin-bottom: 18px; }
+  .thread-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; margin-bottom: 18px; flex-wrap: wrap; }
+  .thread-title { font-size: 18px; font-weight: 600; letter-spacing: -0.3px; display: flex; align-items: center; gap: 12px; }
+  .thread-icon { width: 32px; height: 32px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; background: rgba(110,168,254,.1); color: var(--accent); font-family: "JetBrains Mono", monospace; font-size: 14px; font-weight: 700; }
+  .thread-summary { color: var(--text-2); font-size: 13.5px; margin-bottom: 16px; max-width: 880px; }
+
+  /* ===== PIPELINE ===== */
+  .pipeline { display: flex; gap: 0; margin-bottom: 18px; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
+  .pipe-stage { flex: 1; min-width: 130px; position: relative; padding: 12px 14px 12px 18px; background: var(--card-2); border: 1px solid var(--border); border-right: none; font-size: 12px; }
+  .pipe-stage:first-child { border-top-left-radius: 8px; border-bottom-left-radius: 8px; padding-left: 14px; }
+  .pipe-stage:last-child { border-right: 1px solid var(--border); border-top-right-radius: 8px; border-bottom-right-radius: 8px; }
+  .pipe-stage:not(:last-child)::after { content: ""; position: absolute; right: -10px; top: 50%; transform: translateY(-50%) rotate(45deg); width: 18px; height: 18px; border-right: 1px solid var(--border); border-top: 1px solid var(--border); background: var(--card-2); z-index: 2; }
+  .pipe-stage.done { background: rgba(74,222,128,.06); border-color: rgba(74,222,128,.25); color: var(--green); }
+  .pipe-stage.done::after { background: rgba(74,222,128,.06); border-color: rgba(74,222,128,.25); }
+  .pipe-stage.now { background: rgba(110,168,254,.1); border-color: var(--accent); color: var(--accent); box-shadow: 0 0 24px rgba(110,168,254,.15) inset; z-index: 3; }
+  .pipe-stage.now::after { background: rgba(110,168,254,.1); border-color: var(--accent); }
+  .pipe-stage.blocked { background: rgba(248,113,113,.08); border-color: rgba(248,113,113,.3); color: var(--red); }
+  .pipe-stage.blocked::after { background: rgba(248,113,113,.08); border-color: rgba(248,113,113,.3); }
+  .pipe-stage .stage-num { font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; opacity: 0.6; margin-bottom: 4px; }
+  .pipe-stage .stage-name { font-weight: 600; font-size: 12px; line-height: 1.3; }
+
+  /* ===== CALLOUTS ===== */
+  .callout { margin-top: 16px; padding: 14px 18px; border-radius: 8px; font-size: 13px; line-height: 1.55; border-left: 3px solid; }
+  .callout strong.head { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px; }
+  .callout.next { background: rgba(110,168,254,.06); border-color: var(--accent); }
+  .callout.next strong.head { color: var(--accent); }
+  .callout.block { background: rgba(248,113,113,.06); border-color: var(--red); }
+  .callout.block strong.head { color: var(--red); }
+  .callout.warn { background: rgba(251,146,60,.06); border-color: var(--orange); }
+  .callout.warn strong.head { color: var(--orange); }
+  .callout.green { background: rgba(74,222,128,.06); border-color: var(--green); }
+  .callout.green strong.head { color: var(--green); }
+  .callout.purple { background: rgba(167,139,250,.06); border-color: var(--purple); }
+  .callout.purple strong.head { color: var(--purple); }
+
+  /* ===== BRIEF (plain-English expanders) ===== */
+  details.brief { margin-top: 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--brief-bg); overflow: hidden; transition: border-color 0.2s; }
+  details.brief[open] { border-color: rgba(110,168,254,.3); box-shadow: 0 0 0 1px rgba(110,168,254,.1), 0 8px 32px rgba(0,0,0,.25); }
+  details.brief summary { cursor: pointer; user-select: none; padding: 12px 18px; display: flex; align-items: center; justify-content: space-between; list-style: none; font-size: 13px; font-weight: 600; color: var(--accent); transition: background 0.15s; }
+  details.brief summary::-webkit-details-marker { display: none; }
+  details.brief summary:hover { background: rgba(110,168,254,.04); }
+  details.brief summary .summary-left { display: flex; align-items: center; gap: 10px; }
+  details.brief summary .icon { width: 22px; height: 22px; border: 1px solid var(--accent); border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; line-height: 1; font-weight: 700; color: var(--accent); background: rgba(110,168,254,.08); }
+  details.brief summary .caret { color: var(--muted); font-size: 11px; transition: transform 0.2s; font-family: "JetBrains Mono", monospace; }
+  details.brief[open] summary .caret { transform: rotate(90deg); }
+  details.brief .brief-body { padding: 4px 22px 20px; border-top: 1px solid rgba(110,168,254,.15); }
+  details.brief .brief-section { margin-top: 18px; }
+  details.brief .brief-section:first-child { margin-top: 18px; }
+  details.brief .brief-eyebrow { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--accent); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  details.brief .brief-eyebrow.stakes { color: var(--orange); }
+  details.brief .brief-eyebrow.read { color: var(--green); }
+  details.brief .brief-eyebrow::before { content: ""; width: 14px; height: 1px; background: currentColor; opacity: 0.6; }
+  details.brief .brief-text { font-size: 14px; line-height: 1.65; color: var(--text); max-width: 760px; }
+  details.brief .brief-text strong { color: #ffffff; font-weight: 600; }
+  details.brief .brief-text code { background: rgba(125,138,153,.12); color: var(--purple); padding: 1px 5px; border-radius: 3px; font-size: 12.5px; }
+
+  /* ===== EMPTY / BLIND STATE ===== */
+  .blind-state { background: rgba(248,113,113,.04); border: 1px dashed rgba(248,113,113,.35); border-radius: 12px; padding: 22px 24px; font-size: 13px; color: var(--text-2); }
+  .blind-state strong { color: var(--red); display: block; margin-bottom: 6px; font-size: 14px; }
+  .blind-state .blind-row { margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(248,113,113,.15); }
+  .blind-state .blind-row:first-of-type { margin-top: 8px; padding-top: 0; border-top: none; }
+
+  footer { margin-top: 56px; padding-top: 22px; border-top: 1px solid var(--border); color: var(--dim); font-size: 12px; font-family: "JetBrains Mono", monospace; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- ===== HERO ===== -->
+  <header class="hero">
+    <div class="eyebrow">Code Architect · Kameha System Map · Live</div>
+    <h1 class="title">Where the system stands</h1>
+    <p class="subtitle">
+      Real-time view of the 13-agent Kameha mesh, the 32-project production floor (conductor.db), 16 client engagements, and concurrent Claude Code sessions. <strong style="color:var(--text);">Session 3 + day 1 follow-on (2026-05-19, ~04:30 ET → ~10:30 PM ET):</strong> ~14 hours of compounded work. Overnight: audit fleet + 5 CA wraps. Daytime follow-on: NAMI email-spam fix shipped, PDE governance + multi-commit salvage, Kai workflow_dispatch proposal drafted, Kai crew_manifest design intake queued. **15 CA commits today**, 1 NAMI commit shipped to origin + Render, 7 PDE commits including the owners.json bootstrap (4→3 fleet repos still missing). Two new silent-failure P0s refined (mesh routes are reply-path issues, not request-path). **Notable incident:** dental-boutique-decision source files were lost mid-salvage via a `git reset --hard` mistake; 9 of ~27 files recovered from Claude Code session JSONLs, restored to working tree per Alex's Option-1 choice. Lesson encoded as a permanent memory card.
+    </p>
+    <div class="date-meta">
+      <span class="mono">2026-05-19 · session 3 + day 1 follow-on</span>
+      <span class="mono" style="color:var(--green)">CA@6228ca0 (15 commits today)</span>
+      <span class="mono" style="color:var(--green)">Nami@aebc89a (email allowlist · shipped)</span>
+      <span class="mono" style="color:var(--green)">PDE@bd2709f (owners.json bootstrap + salvage)</span>
+      <span class="mono" style="color:var(--yellow)">4/12 still missing owners.json → 3/12 (Chronicle · KMG · PDE→fixed)</span>
+      <span>Effective coverage: 9/12 (Framer on feature-branch carve-out)</span>
+    </div>
+    <div class="accountability-bar">
+      <strong style="color: var(--accent); display:block; margin-bottom:10px; font-size:14px;">What today looks like — overnight + day 1 follow-on, plain English</strong>
+      <ol style="margin:0 0 0 18px; padding:0; line-height:1.7; color:var(--text-2);">
+        <li><strong style="color:var(--green);">NAMI email spam → FIXED + SHIPPED.</strong> You sent a screenshot at 11:37 AM showing NAMI emailing you every Framer→NAMI content arrival. Traced to <code>send_inbound_intent_alert</code> in <code>nami-platform/services/notifications.py</code>. Drafted Option B (env-var allowlist <code>NAMI_INTENT_EMAIL_INTENTS="revision_complete"</code>), you approved, shipped as <code>aebc89a</code>, Render auto-deployed. Bridge (iMessage) + SMS still fire for both intent types; only schedule_content email got muted.</li>
+        <li><strong style="color:var(--green);">PDE governance + salvage → MOSTLY SHIPPED.</strong> 7 PDE commits: owners.json bootstrap (23 paths) · two gitignore patches (root-level + 3 nested-repo builds that live in their own GitHub remotes) · mechanical-safe batch (CLAUDE.md design rules + LANGUAGE.md + skills + screenshot script) · malaga-townhomes pde-backup salvage · jmm-law proposal brief + .vercel ignore. 4 of 12 fleet repos still missing owners.json → 3 (Chronicle, KMG, PDE→fixed).</li>
+        <li><strong style="color:var(--orange);">PDE dental-boutique-decision incident — recovered, documented, archived.</strong> Mid-salvage, a bash batch script wrongly chose <code>git reset --hard</code> instead of <code>--mixed</code>. That deletes staged-but-uncommitted files. 27 source files for that build were wiped from disk. Recovery: 9 high-confidence files reconstructed from Claude Code session JSONLs via background agent. Files restored to working tree per your Option-1 choice. Remaining ~18 files were untouched template copies — frozen as-is. Lesson encoded as <code>feedback_git_reset_hard_destroys_staged</code> in CA's permanent memory.</li>
+        <li><strong style="color:var(--yellow);">Kai workflow_dispatch → DRAFT, PENDING APPROVAL.</strong> Tailscale auth-key rotation happened today; new keys set on Kai + KMG repos but neither's <code>deploy.yml</code> has <code>workflow_dispatch:</code> registered. Proposal at <code>docs/proposal-workflow-dispatch-deploy-yml-2026-05-19.md</code> — 1-line YAML add to each. KMG side blocks on KMG owners.json bootstrap (also drafted, not committed). 8-question approval matrix in the proposal.</li>
+        <li><strong style="color:var(--yellow);">Kai crew_manifest design → INTAKE QUEUED.</strong> Baptist 5/21 shoot had Sebas's PM 2nd-camera slot logged but never actioned. You caught it personally at T-2 days. Kai sent CA a prompt asking for a structured <code>crew_manifest</code> contract — first concrete test case for the action-vocabulary registry. Saved to <code>docs/intake-kai-crew-manifest-design-2026-05-19.md</code>; proposal drafting deferred to next deep-work session per Kai's own urgency framing.</li>
+        <li><strong style="color:var(--green);">Overnight (before this morning): 7-agent parallel audit + 5 CA wrap commits.</strong> Found 4 silent-failure P0s, drafted action-vocab registry + gitignore-policy proposals, wrote NEXT-SESSION pickup, bootstrapped CA-self owners.json. Full punch list at <code>docs/audit-overnight-2026-05-19.md</code> with re-verification section catching A6's misattributed path on PDE + refining A4's "missing routes" framing to reply-path-rejections.</li>
+      </ol>
+      <p style="margin:14px 0 0; font-size:12px; color:var(--muted);">Today's pending decisions are in the urgent rows below. T2 probe row TTL'd at 12:55 UTC unhandled — recorded as <code>failed</code>; no further action possible on that specific message.</p>
+    </div>
+  </header>
+
+  <!-- ===== STAT TILES (6) — day 1 follow-on state ===== -->
+  <div class="stat-grid">
+    <div class="stat live">
+      <div class="label">Mesh agents · live</div>
+      <div class="value green">11<span style="font-size:16px;color:var(--muted);font-weight:500;"> / 13</span></div>
+      <div class="note">1 stale (chronicle 4d) · 1 inactive (kmg never shipped)</div>
+    </div>
+    <div class="stat live">
+      <div class="label">CA commits today</div>
+      <div class="value green">15</div>
+      <div class="note">overnight wrap + NAMI/PDE intakes + workflow_dispatch proposal + crew_manifest intake + incident record</div>
+    </div>
+    <div class="stat live">
+      <div class="label">Ships across fleet today</div>
+      <div class="value green">3<span style="font-size:16px;color:var(--muted);font-weight:500;"> repos</span></div>
+      <div class="note">NAMI <code style="font-size:10px;">aebc89a</code> · PDE 7 commits · CA 15 commits</div>
+    </div>
+    <div class="stat">
+      <div class="label">CA owners.json coverage</div>
+      <div class="value blue">9<span style="font-size:16px;color:var(--muted);font-weight:500;"> / 12</span></div>
+      <div class="note">PDE added today · 3 missing (Chronicle · KMG · Framer-on-feature-branch)</div>
+    </div>
+    <div class="stat warning">
+      <div class="label">Pending Alex approvals</div>
+      <div class="value yellow">4</div>
+      <div class="note">workflow_dispatch · gitignore-policy · action-vocab Phase A · crew_manifest design</div>
+    </div>
+    <div class="stat warning">
+      <div class="label">P0s still open</div>
+      <div class="value red" style="color:#f87171;text-shadow:0 0 20px rgba(248,113,113,0.35);">3</div>
+      <div class="note">2 reply-path mesh routes · LE no mesh-receive · (PDE build_update demoted: 0 traffic in 7d)</div>
+    </div>
+  </div>
+
+  <!-- ===== CA AUTHORITY MAP ===== -->
+  <div class="section">
+    <div class="section-head">
+      <h2>CA Authority Map · <code>.kameha/owners.json</code> bootstrap status</h2>
+      <span class="meta">9 agents in CA's mesh.sends_to · 3 bootstrap'd · 1 inherited via Kai · 5 still fail-closed</span>
+    </div>
+
+    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 0; overflow: hidden;">
+      <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+        <thead>
+          <tr style="background: rgba(255,255,255,0.03); border-bottom: 1px solid var(--border);">
+            <th style="text-align: left; padding: 10px 14px; color: var(--muted); font-weight: 500; letter-spacing: 0.5px; font-size: 11px; text-transform: uppercase;">Agent</th>
+            <th style="text-align: left; padding: 10px 14px; color: var(--muted); font-weight: 500; letter-spacing: 0.5px; font-size: 11px; text-transform: uppercase;">Bootstrap</th>
+            <th style="text-align: right; padding: 10px 14px; color: var(--muted); font-weight: 500; letter-spacing: 0.5px; font-size: 11px; text-transform: uppercase;">Dirty</th>
+            <th style="text-align: left; padding: 10px 14px; color: var(--muted); font-weight: 500; letter-spacing: 0.5px; font-size: 11px; text-transform: uppercase;">HEAD / notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom: 1px solid var(--border);">
+            <td style="padding: 10px 14px; color: var(--text); font-weight: 600;">Kai</td>
+            <td style="padding: 10px 14px;"><span style="color: var(--green);">✅ this session</span></td>
+            <td style="padding: 10px 14px; text-align: right; color: var(--dim); font-family: ui-monospace, monospace;">34</td>
+            <td style="padding: 10px 14px; color: var(--dim); font-family: ui-monospace, monospace; font-size: 12px;"><code>52dd126e</code> feat(mesh-poller): wire creative_brief · auto-backup cron active</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--border);">
+            <td style="padding: 10px 14px; color: var(--text); font-weight: 600;">Nami</td>
+            <td style="padding: 10px 14px;"><span style="color: var(--green);">✅ this session</span></td>
+            <td style="padding: 10px 14px; text-align: right; color: var(--dim); font-family: ui-monospace, monospace;">20</td>
+            <td style="padding: 10px 14px; color: var(--dim); font-family: ui-monospace, monospace; font-size: 12px;"><code>055b551</code> feat(bridge): /intents/creative_brief · 19 PNG noise + .playwright-mcp</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--border);">
+            <td style="padding: 10px 14px; color: var(--text); font-weight: 600;">CFO</td>
+            <td style="padding: 10px 14px;"><span style="color: var(--green);">✅ this session</span></td>
+            <td style="padding: 10px 14px; text-align: right; color: var(--dim); font-family: ui-monospace, monospace;">26</td>
+            <td style="padding: 10px 14px; color: var(--dim); font-family: ui-monospace, monospace; font-size: 12px;"><code>8019706</code> chore(gitignore): pipeline unblocked · 8-commit plan drafted</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--border);">
+            <td style="padding: 10px 14px; color: var(--text); font-weight: 600;">conductor</td>
+            <td style="padding: 10px 14px;"><span style="color: var(--accent);">↳ via Kai</span></td>
+            <td style="padding: 10px 14px; text-align: right; color: var(--dim); font-family: ui-monospace, monospace;">—</td>
+            <td style="padding: 10px 14px; color: var(--dim); font-family: ui-monospace, monospace; font-size: 12px;">lives inside Kai's tree (<code>scripts/conductor-agent.js</code>); inherits Kai's policy</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--border);">
+            <td style="padding: 10px 14px; color: var(--text); font-weight: 600;">ACD</td>
+            <td style="padding: 10px 14px;"><span style="color: var(--green);">✅ this session</span></td>
+            <td style="padding: 10px 14px; text-align: right; color: var(--dim); font-family: ui-monospace, monospace;">10</td>
+            <td style="padding: 10px 14px; color: var(--dim); font-family: ui-monospace, monospace; font-size: 12px;"><code>bcce5d5</code> chore(governance): bootstrap · 30 paths · drafted by <code>bootstrap-acd</code> agent</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--border);">
+            <td style="padding: 10px 14px; color: var(--text); font-weight: 600;">Framer</td>
+            <td style="padding: 10px 14px;"><span style="color: var(--green);">✅ this session</span></td>
+            <td style="padding: 10px 14px; text-align: right; color: var(--dim); font-family: ui-monospace, monospace;">108</td>
+            <td style="padding: 10px 14px; color: var(--dim); font-family: ui-monospace, monospace; font-size: 12px;"><code>0a4d322</code> on main · 51 paths · applied via stash+switch (feature branch preserved)</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--border);">
+            <td style="padding: 10px 14px; color: var(--text); font-weight: 600;">Enso</td>
+            <td style="padding: 10px 14px;"><span style="color: var(--green);">✅ this session</span></td>
+            <td style="padding: 10px 14px; text-align: right; color: var(--dim); font-family: ui-monospace, monospace;">42</td>
+            <td style="padding: 10px 14px; color: var(--dim); font-family: ui-monospace, monospace; font-size: 12px;"><code>9935ec5</code> · 63 paths (heaviest) · surfaced dual-naming tech debt</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--border);">
+            <td style="padding: 10px 14px; color: var(--text); font-weight: 600;">Offer Architect</td>
+            <td style="padding: 10px 14px;"><span style="color: var(--green);">✅ this session</span></td>
+            <td style="padding: 10px 14px; text-align: right; color: var(--orange); font-family: ui-monospace, monospace;">9</td>
+            <td style="padding: 10px 14px; color: var(--dim); font-family: ui-monospace, monospace; font-size: 12px;"><code>5a32a99</code> · 24 paths (lightest, no code) · 4 Malaga deletions preserved untouched</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 14px; color: var(--text); font-weight: 600;">Lead Engine</td>
+            <td style="padding: 10px 14px;"><span style="color: var(--green);">✅ this session</span></td>
+            <td style="padding: 10px 14px; text-align: right; color: var(--dim); font-family: ui-monospace, monospace;">5</td>
+            <td style="padding: 10px 14px; color: var(--dim); font-family: ui-monospace, monospace; font-size: 12px;"><code>6f525ff</code> · 45 paths · cleared 2 stale <code>.git/*.lock</code> files (7-week March 30 crash)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="margin-top: 14px; padding: 14px; background: rgba(74,222,128,0.08); border-left: 3px solid var(--green); border-radius: 4px; font-size: 13px; color: var(--dim); line-height: 1.6;">
+      <strong style="color: var(--green);">All 9 of 9 covered.</strong> CA can now author cross-repo writes against every mesh.sends_to target under default-deny per-path policy (8 explicit bootstraps + conductor via Kai). 279 total paths across 8 owners.json files, all schema-compliant. Drafted by a 5-agent parallel team for the second batch (213 paths in ~3 min wall-clock); applied via surgical single-file commits with pre-staging verification. <strong>Next CA work is unblocked fleet-wide</strong> — the W4 manifest-validator / Check C policy enforcement now has authoritative per-repo policy files to read.
+    </div>
+  </div>
+
+  <!-- ===== DECISIONS AWAITING YOU ===== -->
+  <div class="section">
+    <div class="section-head">
+      <h2 style="background: linear-gradient(135deg, #f87171 0%, #facc15 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Decisions awaiting you</h2>
+      <span class="meta">Most recent at top · do in order</span>
+    </div>
+
+    <div class="decisions-card">
+
+      <!-- ===== SESSION 3 OVERNIGHT — NEW URGENT ITEMS ===== -->
+
+      <!-- ===== DAY 1 FOLLOW-ON — DECISIONS PENDING APPROVAL ===== -->
+
+      <div class="decision-row" style="background: rgba(250,204,21,0.08); border-left: 3px solid var(--yellow); padding-left: 11px;">
+        <div class="ico">⚙️</div>
+        <div>
+          <div class="head" style="color: var(--yellow);">Kai workflow_dispatch addition — draft ready, awaiting your go-ahead</div>
+          <div class="body">
+            Tailscale auth-key rotation happened 2026-05-19T17:13Z. New keys set as <code>TAILSCALE_AUTHKEY</code> in <code>ACalienes/kai-executive-assistant</code> + <code>ACalienes/kmg</code>. Old key valid until 2026-05-22 (3-day runway). Neither repo's <code>deploy.yml</code> has <code>workflow_dispatch:</code> registered, so manual deploy runs return HTTP 422. Proposal at <code>docs/proposal-workflow-dispatch-deploy-yml-2026-05-19.md</code> — 1-line YAML add to each. DA-passed for Kai; KMG side blocked on KMG owners.json bootstrap (also drafted, awaits go).
+            <div class="hint"><strong>Action:</strong> 8-question approval matrix in the proposal — simplest path is "ship Kai · draft KMG owners · ship KMG after" or "draft + ship all of it."</div>
+          </div>
+        </div>
+        <div class="pill-col"><span class="pill yellow">DECIDE</span></div>
+      </div>
+
+      <div class="decision-row" style="background: rgba(250,204,21,0.06); border-left: 3px solid var(--yellow); padding-left: 11px;">
+        <div class="ico">🎬</div>
+        <div>
+          <div class="head" style="color: var(--yellow);">Kai crew_manifest design proposal — INTAKE QUEUED for next deep-work session</div>
+          <div class="body">
+            Baptist 5/21 shoot — Sebas's AM-only constraint logged from scoping; PM 2nd-camera slot never actioned; you caught it personally at T-2 days. Kai sent a prompt asking CA to design a structured <code>crew_manifest</code> contract as the first concrete typed deliverable in the action-vocabulary registry. Saved to <code>docs/intake-kai-crew-manifest-design-2026-05-19.md</code> per intake convention. Proposal deferred to a future dedicated session per Kai's own "deep-work session" sequencing — drafting it on top of this 14-hour session would compound fatigue risk. Kai logged a feedback memory in the meantime to cover briefing-logic immediately.
+            <div class="hint"><strong>When you have a fresh CA session:</strong> use the action-vocabulary registry §5 open questions as a frame; this incident is the test case that sharpens every abstract decision.</div>
+          </div>
+        </div>
+        <div class="pill-col"><span class="pill yellow">QUEUED</span></div>
+      </div>
+
+      <div class="decision-row" style="opacity: 0.85;">
+        <div class="ico">✅</div>
+        <div>
+          <div class="head">NAMI email spam fix — <span style="color: var(--green);">SHIPPED to Render</span></div>
+          <div class="body">
+            You sent a screenshot at 11:37 AM. Diagnosis traced to <code>send_inbound_intent_alert</code> in <code>nami-platform/services/notifications.py</code>. You picked Option B (env-var allowlist), CA drafted on branch <code>ca-draft/email-allowlist-2026-05-19</code>, you said "lets ship it," merged + pushed as <code>aebc89a</code>, Render auto-deployed. Default <code>NAMI_INTENT_EMAIL_INTENTS="revision_complete"</code>; bridge + SMS unchanged. NAMI's Claude Code auto-memory notified via cross-agent update card so her next session sees the change.
+          </div>
+        </div>
+        <div class="pill-col"><span class="pill green">SHIPPED</span></div>
+      </div>
+
+      <div class="decision-row" style="opacity: 0.85;">
+        <div class="ico">✅</div>
+        <div>
+          <div class="head">PDE governance + multi-commit salvage — <span style="color: var(--green);">MOSTLY DONE</span></div>
+          <div class="body">
+            7 PDE commits today: <code>de8abb2</code> owners.json bootstrap · <code>45cce2c</code> root gitignore (.playwright-mcp/, /screenshots/) · <code>d23ef8b</code> mechanical-safe batch (CLAUDE.md design rules + LANGUAGE.md + skills + screenshot script) · <code>417e395</code> malaga-townhomes pde-backup salvage · <code>1c52843</code> jmm-law proposal brief · <code>7ec533e</code> gitignore-3-nested-repo-builds · <code>bd2709f</code> jmm-law .vercel re-apply. <strong>Note:</strong> dental-boutique-decision incident below — partial recovery only.
+          </div>
+        </div>
+        <div class="pill-col"><span class="pill green">SHIPPED</span></div>
+      </div>
+
+      <div class="decision-row" style="background: rgba(251,146,60,0.06); border-left: 3px solid var(--orange); padding-left: 11px;">
+        <div class="ico">🔍</div>
+        <div>
+          <div class="head" style="color: var(--orange);">PDE dental-boutique-decision data loss + recovery — incident documented + lesson encoded</div>
+          <div class="body">
+            Mid-salvage, a bash batch script ran <code>git reset --hard</code> after the impeccable pre-commit hook hung. <code>--hard</code> deletes staged-but-uncommitted files from working tree (vs. <code>--mixed</code> which preserves them). 27 source files for <code>builds/dental-boutique-decision/</code> were obliterated. Background-agent recovery from session JSONLs reconstructed 9 high-confidence files (App.jsx + theme.js + BananaBackground + 5 sections + index.html). Restored to working tree per your Option-1 choice (don't add template scaffolding). Lesson encoded as permanent memory card <code>feedback_git_reset_hard_destroys_staged</code>. Full incident record: <code>docs/intake-pde-dental-boutique-recovery-2026-05-19.md</code>.
+            <div class="hint"><strong>What's left:</strong> 9 files restored as untracked. If you ever revise this deck, regenerate scaffolding from <code>templates/cinematic-scroll/</code> or restore from Time Machine.</div>
+          </div>
+        </div>
+        <div class="pill-col"><span class="pill orange">RESOLVED</span></div>
+      </div>
+
+      <div class="decision-row" style="opacity: 0.6;">
+        <div class="ico">⏳</div>
+        <div>
+          <div class="head" style="color: var(--muted);">T2 mesh probe — <span style="color: var(--red);">TTL'd, status=failed</span></div>
+          <div class="body" style="color: var(--dim); font-size: 12px;">
+            <code>acd-nami-probe-1779108906</code> expired 2026-05-19T12:55:06Z without approval (<code>delivery_attempts: 0</code>). Mesh-api shows <code>status: "failed"</code>. No further action possible on this specific message. ACD got no signal whether the channel is live; if you want to re-test, send a fresh probe.
+          </div>
+        </div>
+        <div class="pill-col"><span class="pill red">TTL'd</span></div>
+      </div>
+
+      <!-- ===== OVERNIGHT — CARRIED FORWARD ===== -->
+
+      <div class="decision-row" style="background: rgba(248,113,113,0.06); border-left: 3px solid var(--red); padding-left: 11px;">
+        <div class="ico">🚨</div>
+        <div>
+          <div class="head" style="color: var(--red);">Two mesh routes silently MISSING — fire-and-forget hides total failure</div>
+          <div class="body">
+            <strong>Discovered by A4 + A7 audit subagents tonight</strong> (corroborating finds): <code>nami → framer schedule_post_response</code> 5× rejected in last 24h with <code>route_blocked</code>. <code>acd → conductor creative_brief</code> 1× same. Both routes are MISSING from mesh-api's <code>/routes</code> table. Receivers' whitelists DO include the actions — the routes themselves were never registered. <strong>Zero <code>nami → framer</code> messages have ever completed.</strong> Both sides fire-and-forget so neither notices.
+            <div class="hint"><strong>Action:</strong> Alex applies route additions in Kai <code>scripts/mesh/mesh-api.js</code> (or wherever <code>/routes</code> seeds — A4 located endpoint map at lines 1428-1842). T3 + DA-mandatory; CA can draft on go-ahead. Full triangulation in <code>docs/intake-audit-A4-mesh-api-deep-probe-2026-05-19.md</code> + A7.</div>
+          </div>
+        </div>
+        <div class="pill-col"><span class="pill red">P0</span></div>
+      </div>
+
+      <div class="decision-row" style="background: rgba(248,113,113,0.06); border-left: 3px solid var(--red); padding-left: 11px;">
+        <div class="ico">👻</div>
+        <div>
+          <div class="head" style="color: var(--red);">PDE silently completes <code>build_update</code> with ZERO work — strict isomorph of the session-2 Framer bug</div>
+          <div class="body">
+            A6 finding: <code>Kameha Pitch Deck Engine/pde-daemon.js:683-700</code> only checks <code>if (msg.action === 'build_addendum')</code>. Anything else falls through to <code>PATCH status=completed</code> with zero work performed. PDE manifest declares <code>build_update</code> but the handler is unimplemented. <strong>Senders to PDE with <code>build_update</code> get false ACK + no work done.</strong> The fact this persisted past session-2's Framer fix means **the silent-failure pattern is fleet-wide, not Framer-specific.**
+            <div class="hint"><strong>Compound finding:</strong> A6 also found Lead Engine has NO mesh-receiving daemon at all — only a FastAPI dashboard. Messages sit in <code>/inbox/lead-engine</code> until reconciler-expired. Self-retraction: session-3 task #14 (LE "dead 47 days") was wrong; LE heartbeats live but is <strong>mesh-deaf</strong>. Full picture in <code>docs/intake-audit-A6-mesh-contracts-2026-05-19.md</code>.</div>
+          </div>
+        </div>
+        <div class="pill-col"><span class="pill red">P0</span></div>
+      </div>
+
+      <div class="decision-row" style="background: rgba(250,204,21,0.06); border-left: 3px solid var(--yellow); padding-left: 11px;">
+        <div class="ico">💡</div>
+        <div>
+          <div class="head" style="color: var(--yellow);">Action-vocabulary registry design — Phase A approval needed (T3 plan-first)</div>
+          <div class="body">
+            Tonight's three P0s above (mesh routes, PDE, LE) are the same class of bug: <strong>sender thinks receiver handles action+payload; nothing verifies until silent runtime failure.</strong> Design doc drafted at <code>docs/design-action-vocabulary-registry-2026-05-19.md</code>. Phase A = JSON registry + sender pre-flight helper + mesh-api <code>/vocabulary</code> GETs. Hand-extracted from current daemon code in v1 (auto-derive deferred per scope doc DEFERRED-TO-IMPL #8). 5 open questions on registry home, authority, pacing, warn-vs-strict, versioning.
+            <div class="hint"><strong>Action:</strong> review doc, answer the 5 open questions, decide go/no-go on Phase A scope. CA-internal DA gate runs before any implementation. ~3-5 day estimated build across 3 repos.</div>
+          </div>
+        </div>
+        <div class="pill-col"><span class="pill yellow">DECIDE</span></div>
+      </div>
+
+      <div class="decision-row" style="background: rgba(250,204,21,0.04); border-left: 3px solid var(--yellow); padding-left: 11px;">
+        <div class="ico">🔓</div>
+        <div>
+          <div class="head" style="color: var(--yellow);">Owners.json policy proposal: unblock fleet-wide <code>.gitignore</code> hygiene</div>
+          <div class="body">
+            Tonight CA tried to mechanically clean Nami's 18 stray PNGs + CFO's log-output gap + Chronicle's <code>.next/trace*</code>. <strong>All blocked</strong> — every repo's owners.json falls under <code>fallback: human_review_required</code> for <code>.gitignore</code>. Even the simplest hygiene needs Alex's per-change go-ahead. Proposal at <code>docs/proposal-owners-policy-gitignore-2026-05-19.md</code>: add explicit <code>.gitignore</code> path entry to all 9 owners.json with <code>auto_merge_after:ca_internal_da</code> + DA verifies no live tracked files would be untracked. Hand-DAable; minimal blast radius.
+            <div class="hint"><strong>Action:</strong> approve and CA can mechanically close 4 of the 5 remaining gitignore hygiene items in minutes. Without this, every gitignore patch needs a session.</div>
+          </div>
+        </div>
+        <div class="pill-col"><span class="pill yellow">DECIDE</span></div>
+      </div>
+
+      <div class="decision-row" style="opacity: 0.85;">
+        <div class="ico">✅</div>
+        <div>
+          <div class="head">Session 3 overnight CA-side ships — <span style="color: var(--green);">DONE</span></div>
+          <div class="body">
+            4 CA commits pushed to <code>origin/main</code>: <code>9babe4f</code> gitignore (.playwright-mcp + session PNGs) · <code>6333bac</code> MEMORY.md indexed <code>pattern-distill-verify-paths</code> · <code>0964563</code> <strong>CA-self owners.json bootstrap</strong> (4/12 still missing: Chronicle, Framer, KMG, PDE) · <code>a86e71f</code> 7 subagent intakes + aggregate punch list + 2 proposals. Plus this wrap commit (face refresh + state-of-things snapshot + NEXT-SESSION rewrite + session-2026-05-19 log).
+          </div>
+        </div>
+        <div class="pill-col"><span class="pill green">SHIPPED</span></div>
+      </div>
+
+      <!-- ===== SESSION 2 + PRIOR — DECISIONS CARRIED FORWARD ===== -->
+
+      <div class="decision-row">
+        <div class="ico">🚨</div>
+        <div>
+          <div class="head">Chronicle 7-week commit gap — ROOT CAUSE FOUND TONIGHT</div>
+          <div class="body">
+            <strong>A2 audit subagent's discovery:</strong> the 27 uncommitted /log feature entries aren't from a missing checkpoint — Chronicle's git is <strong>LOCKED</strong>. <code>.git/refs/heads/main.lock</code> dated 2026-03-28 with a dead PID. Every git op has been failing silently for 51 days. <strong>This is TWO separate problems converged into one:</strong> (a) stale ref lock blocks all git, (b) Chronicle's PM2 daemon is also dead (last heartbeat 2026-05-15, mesh-api self-flags as <code>stale_agents</code>). <strong>Fix is now trivial:</strong> <code>rm Chronicle/.git/refs/heads/main.lock</code> → <code>git fsck</code> → commit the 27 entries → <code>pm2 restart chronicle</code> on Mini.
+            <div class="hint"><strong>Chronicle action:</strong> ~10 min (was estimated 30 min before root cause). No owners.json yet — manual operator action only.</div>
+          </div>
+        </div>
+        <div class="pill-col"><span class="pill red">CHRONICLE</span></div>
+      </div>
+
+      <div class="decision-row" style="opacity: 0.55;">
+        <div class="ico">✅</div>
+        <div>
+          <div class="head" style="color: var(--muted);">Audit memo correction — <span style="color: var(--green);">DONE</span> · <code>e90018a</code></div>
+          <div class="body" style="color: var(--dim); font-size: 12px;">
+            Corrected memo committed and pushed. Three-registry analysis + reclassified conductor as real. Cross-referenced new memory cards. Original wrong-version preserved via git history.
+          </div>
+        </div>
+        <div class="pill-col"><span class="pill green">CLOSED</span></div>
+      </div>
+
+      <div class="decision-row" style="opacity: 0.55;">
+        <div class="ico">✅</div>
+        <div>
+          <div class="head" style="color: var(--muted);">Kai <code>.kameha/owners.json</code> bootstrap — <span style="color: var(--green);">LIVE</span> · Kai <code>f36d0b87</code></div>
+          <div class="body" style="color: var(--dim); font-size: 12px;">
+            Bootstrap'd this session. 24 patterns + fallback (default-deny). Rebased onto Mini's hourly auto-backup cron (newly-discovered pattern — Mini commits <code>auto: backup YYYY-MM-DD HH:MM</code> at HH:01 every hour; saved as <code>reference_kai_hourly_auto_backup_cron</code> memory). Unblocked the ACD→NAMI <code>creative_brief</code> fix later in the session (commit <code>52dd126e</code>: poller ACTION_MAP wiring).
+          </div>
+        </div>
+        <div class="pill-col"><span class="pill green">CLOSED</span></div>
+      </div>
+
+      <div class="decision-row" style="opacity: 0.55;">
+        <div class="ico">✅</div>
+        <div>
+          <div class="head" style="color: var(--muted);">5 remaining <code>.kameha/owners.json</code> bootstraps — <span style="color: var(--green);">ALL LANDED</span></div>
+          <div class="body" style="color: var(--dim); font-size: 12px;">
+            5-agent parallel team (<code>bootstrap-{acd,framer,enso,oa,le}</code>) drafted 213 paths in ~3 min wall-clock. All applied surgically: ACD <code>bcce5d5</code> · Framer <code>0a4d322</code> (via stash+switch+pop, feature branch preserved) · Enso <code>9935ec5</code> · OA <code>5a32a99</code> (Malaga deletions untouched) · LE <code>6f525ff</code> (cleared 2 stale March-30 git locks). CA authority coverage 3/9 → 9/9 (with conductor inherited via Kai = 100%).
+          </div>
+        </div>
+        <div class="pill-col"><span class="pill green">CLOSED</span></div>
+      </div>
+
+      <div class="decision-row" style="background: rgba(248,113,113,0.06); border-left: 3px solid var(--red); padding-left: 11px;">
+        <div class="ico">🚨</div>
+        <div>
+          <div class="head" style="color: var(--red);">Memorial Day DAGDC campaign is moving on manual operator labor — not automation</div>
+          <div class="body">
+            <strong>Verify-framer-rca agent verdict (verified-confirmed):</strong> all 4 of ACD's <code>creative_brief</code> sends to Framer error-replied with <code>"Unknown action: creative_brief"</code>. The original RCA's "Framer accepts arbitrary actions" claim was wrong. The misleading detail: Framer's inbox shows <code>status=completed</code> for these messages because <code>daemon.py:163</code> AND <code>:170</code> both call <code>mesh.acknowledge()</code> — once on success branch, once after sending the error reply. "Completed" = consumed/ack'd, NOT handled.
+            <strong>But Memorial Day deliverables DO exist</strong> at <code>outputs/dagdc/memorial-day-2026/</code> (timestamps 13:52–21:40 today: contact sheet, candidates A/B, review sheets, panels). Daemon dispatched NONE of them. Corroborated by a 23:10Z reply from Framer with <code>action=creative_brief_clarification</code> — not a daemon action verb. <strong>Alex (or a concurrent Claude Code session) has been the manual relay</strong> for the campaign.
+            <div class="hint"><strong>Action:</strong> confirm whether the manual-relay assumption matches your reality. If yes — what's the right balance going forward (full automation via Framer creative_brief handler vs. intentional human-in-loop)? Full report at <code>docs/intake-framer-daemon-rca-verification-2026-05-18.md</code>.</div>
+          </div>
+        </div>
+        <div class="pill-col"><span class="pill red">URGENT</span></div>
+      </div>
+
+      <div class="decision-row">
+        <div class="ico">🔧</div>
+        <div>
+          <div class="head">Framer daemon needs a <code>creative_brief</code> handler too (parity with NAMI endpoint)</div>
+          <div class="body">
+            Implication of the verify-rca finding: the NAMI <code>creative_brief</code> endpoint shipped this session (<code>055b551</code>) is necessary but not sufficient — Framer's daemon error-replies on the same action. ACD's brief should be able to reach EITHER NAMI (cadence dispatch) OR Framer (direct production) depending on intent. Framer needs an action handler that does whatever's appropriate (record-and-notify for the manual relay path, or full automation).
+            <div class="hint"><strong>Now unblocked:</strong> Framer owners.json bootstrap'd this session (<code>0a4d322</code>), so CA can author the handler under human_review policy. Pair with the action-vocabulary registry (W5/W6) so future agent-X-thinks-agent-Y-handles-Z mismatches are self-detecting at send time.</div>
+          </div>
+        </div>
+        <div class="pill-col"><span class="pill yellow">QUEUED</span></div>
+      </div>
+
+      <div class="decision-row" style="opacity: 0.55;">
+        <div class="ico">✅</div>
+        <div>
+          <div class="head" style="color: var(--muted);">Reconcile Framer-daemon RCA — <span style="color: var(--green);">VERIFIED-REFUTED</span> · intake at <code>docs/intake-framer-daemon-rca-verification-2026-05-18.md</code></div>
+          <div class="body" style="color: var(--dim); font-size: 12px;">
+            verify-framer-rca agent triangulated mesh-api live state (via Tailscale at 100.64.114.13:3341 — see Blind Spots update), ACD inbox, Framer daemon code + git history, and physical deliverable evidence. Verdict: hypothesis (a) — daemon error-replied. Hypothesis (b) eliminated (action was flat <code>"creative_brief"</code>, not wrapped). Hypothesis (c) eliminated (no daemon.py commits since incident; same handlers dict was live). New behavior memory <code>feedback_re_verify_agent_authored_claims</code> codifies the receiver-side re-audit pattern for all agent intake.
+          </div>
+        </div>
+        <div class="pill-col"><span class="pill green">CLOSED</span></div>
+      </div>
+
+      <div class="decision-row">
+        <div class="ico">🔒</div>
+        <div>
+          <div class="head">Investigate Lead Engine 7-week stale git locks (March 30 crash)</div>
+          <div class="body">
+            During LE bootstrap, found <code>.git/HEAD.lock</code> + <code>.git/refs/heads/main.lock</code> + <code>.git/refs/remotes/origin/main.lock</code> dated 2026-03-30, sitting for ~7 weeks. Swept all 3 and bootstrap commit succeeded. <strong>Implication:</strong> something with auto-commit access to LE crashed mid-operation on March 30 and nobody noticed — any auto-committer (cron, hook, sub-agent) has been silently failing in LE for 7 weeks. Worth a quick audit: what's supposed to write to LE? Any scheduled tasks? Mac Mini cron entries?
+            <div class="hint"><strong>Time:</strong> ~15 min audit of LE's launchd/cron + recent activity logs.</div>
+          </div>
+        </div>
+        <div class="pill-col"><span class="pill orange">FOLLOWUP</span></div>
+      </div>
+
+      <div class="decision-row">
+        <div class="ico">📄</div>
+        <div>
+          <div class="head">Triage Offer Architect's 4 unattributed Malaga contract deletions</div>
+          <div class="body">
+            <code>EMAIL_TO_CHRISTIAN.md</code>, <code>KAMEHA_SERVICES_AGREEMENT_v1.md</code>, <code>MALAGA_SOW.md</code>, <code>MALAGA_SOW_v2.md</code> are in <code> D</code> (deleted-unstaged) state in OA's working tree. Last commit referencing them: <code>e582f85</code> on 2026-04-03. No commit records the deletion as intentional. Bootstrap commit (<code>5a32a99</code>) was surgical and preserved these deletions as-is, per your call.
+            <div class="hint"><strong>Three paths:</strong> restore (if unintentional), commit as a deal-closed cleanup (if intentional + remembered), or investigate which session/agent deleted them.</div>
+          </div>
+        </div>
+        <div class="pill-col"><span class="pill orange">FOLLOWUP</span></div>
+      </div>
+
+      <div class="decision-row" style="opacity: 0.55;">
+        <div class="ico">✅</div>
+        <div>
+          <div class="head" style="color: var(--muted);">ACD→NAMI <code>creative_brief</code> channel — <span style="color: var(--green);">RESTORED END-TO-END</span> · Nami <code>055b551</code> + Kai <code>52dd126e</code></div>
+          <div class="body" style="color: var(--dim); font-size: 12px;">
+            Framer-authored RCA (saved as <code>docs/intake-framer-acd-nami-rca-2026-05-18.md</code> per the new intake convention) recommended Option 1. Implementation: new <code>POST /api/bridge/intents/creative_brief</code> in Nami's bridge.py (5 required + 6 optional fields, Pydantic-validated, path-traversal-proof regex on brief_id, atomic .tmp+rename writes to <code>logs/creative-briefs/&lt;brief_id&gt;.json</code>, idempotent on replay). Kai poller gets a single-line ACTION_MAP entry. <strong>6/6 smoke tests pass</strong> (happy, traversal-blocked, bad-client, bad-dispatch, no-auth, idempotent). All 24 existing test_bridge.py still green. Cadence-engine integration (auto-dispatching downstream WOs from the brief) deferred — operator reads file and dispatches manually until that lands.
+          </div>
+        </div>
+        <div class="pill-col"><span class="pill green">CLOSED</span></div>
+      </div>
+
+      <div class="decision-row">
+        <div class="ico">🐞</div>
+        <div>
+          <div class="head">Fix pre-existing <code>review_reminder</code> NameError (Nami <code>bridge.py:611</code>)</div>
+          <div class="body">
+            Discovered during creative_brief smoke test. <code>review_reminder_intent</code> returns <code>"expires_at": expires_at</code> but <code>expires_at</code> was never defined — the canonical-link refactor dropped <code>expires_in_hours</code> support but left the orphaned reference. <code>tests/test_bridge_intents.py::test_review_reminder_account_wide</code> fails with NameError. Not introduced by my change; line 611 was untouched.
+            <div class="hint"><strong>Fix:</strong> remove the line (or set to <code>None</code> for back-compat with daemon clients expecting the key). 1-LOC mechanical fix; <code>nami-platform/routers/**</code> is <code>human_review_required</code>.</div>
+          </div>
+        </div>
+        <div class="pill-col"><span class="pill orange">QUEUED</span></div>
+      </div>
+
+      <div class="decision-row" style="opacity: 0.55;">
+        <div class="ico">✅</div>
+        <div>
+          <div class="head" style="color: var(--muted);">ACD escalation — Nami v2 send also failed — <span style="color: var(--green);">RECEIVED + COMMITTED</span> · <code>89375fd</code></div>
+          <div class="body" style="color: var(--dim); font-size: 12px;">
+            ACD dropped an update to <code>docs/acd-nami-action-contract-mismatch-2026-05-17.md</code> at 08:28 ET today (filesystem-drop pattern, provenance verified via ACD activity log, session <code>573d851c</code>). The v2 resend with the corrected action verb <code>social_deliverable_ready</code> <strong>also failed</strong> after 3 attempts with a different error: <code>"Transform social_deliverable rejected payload"</code>. Escalates Finding 1 from "action-vocabulary mismatch" to a two-layer contract gap: verbs <em>and</em> payload schemas are both undocumented. Strengthened recommendation: publish JSON Schemas per action under <code>/agents/&lt;id&gt;/capabilities</code> with optional pre-validation at <code>POST /messages</code> to eliminate the silent-failure surface. Stays W5/W6 scope (downstream of W4); engineering target is now better-specified.
+          </div>
+        </div>
+        <div class="pill-col"><span class="pill green">CLOSED</span></div>
+      </div>
+
+      <div class="decision-row">
+        <div class="ico">⚙️</div>
+        <div>
+          <div class="head">Start CA W4 build session #1 (run-ledger)?</div>
+          <div class="body">
+            W3 closed today. W4 is the actual next-real-milestone for CA: <code>scripts/lib/run-ledger.js</code>, mesh.db replication, <code>code-architect implement</code> wiring. ~13 sessions per the design trilogy. Independent of the owners.json gate — runs in parallel.
+            <div class="hint"><strong>Time:</strong> session #1 ~1.5-2 hr · <strong>If you defer:</strong> CA stays scaffold-only; can audit but cannot implement.</div>
+          </div>
+        </div>
+        <div class="pill-col"><span class="pill green">UNBLOCKED</span></div>
+      </div>
+
+      <div class="decision-row" style="opacity: 0.55;">
+        <div class="ico">✅</div>
+        <div>
+          <div class="head" style="color: var(--muted);">Triage 350+ uncommitted files — <span style="color: var(--green);">DONE</span></div>
+          <div class="body" style="color: var(--dim); font-size: 12px;">
+            Triage memo at <code>docs/uncommitted-triage-2026-05-17.md</code>. Surfaced Chronicle + CFO as HIGH-risk (decision above), Framer carousel branch as MEDIUM (96-file feature work ripe to land), and cross-fleet gitignore opportunities. Kai / DAGDC / KMG / Enso / Pitch-deck classified LOW (normal in-flight). 350+ uncommitted reduced to actionable buckets.
+          </div>
+        </div>
+        <div class="pill-col"><span class="pill green">CLOSED</span></div>
+      </div>
+
+      <div class="decision-row">
+        <div class="ico">🧹</div>
+        <div>
+          <div class="head">Cross-fleet <code>.gitignore</code> — CA done, others blocked by owners.json policy</div>
+          <div class="body">
+            <strong>CFO done</strong> session 2 (<code>8019706</code>). <strong>CA done tonight</strong> (<code>9babe4f</code> — <code>.playwright-mcp/</code> + session-screenshot PNGs ignored, A2 verified post-commit state clean). <strong>Remaining 3 repos</strong> — Nami 18 stray PNGs, CFO log-output gap (new from A2), Framer <code>.playwright-mcp/</code>, Chronicle <code>.next/trace*</code> — are ALL blocked: <strong><code>.gitignore</code> falls under <code>human_review_required</code> fallback in every repo's owners.json.</strong> Even one-line additive patterns need Alex per-change. Proposal at <code>docs/proposal-owners-policy-gitignore-2026-05-19.md</code> unblocks this class permanently.
+            <div class="hint"><strong>Action:</strong> approve the gitignore-policy proposal (above) and CA can sweep the 3 remaining repos mechanically in ~5 min. <strong>If you wait:</strong> noise keeps accumulating; each one requires its own session.</div>
+          </div>
+        </div>
+        <div class="pill-col"><span class="pill purple">4 LEFT</span></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== SYSTEM TOPOLOGY (THE MAP) ===== -->
+  <div class="section">
+    <div class="section-head">
+      <h2>System Map · Agent Roster</h2>
+      <span class="meta">12 known agents · 3 registries · 16 enforced routes</span>
+    </div>
+
+    <div class="topology-wrap">
+      <svg class="topology" viewBox="0 0 1200 760" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <marker id="arrow-green" markerWidth="6" markerHeight="6" refX="5.5" refY="3" orient="auto" markerUnits="strokeWidth">
+            <path d="M 0 0 L 6 3 L 0 6 z" fill="#4ade80" />
+          </marker>
+          <marker id="arrow-red" markerWidth="6" markerHeight="6" refX="5.5" refY="3" orient="auto" markerUnits="strokeWidth">
+            <path d="M 0 0 L 6 3 L 0 6 z" fill="#f87171" />
+          </marker>
+        </defs>
+
+        <!-- ZONE LABELS -->
+        <text class="zone-label" x="600" y="34" text-anchor="middle" fill="var(--green)">FULLY REGISTERED · ACTIVE MESH</text>
+        <text class="zone-label" x="160" y="430" text-anchor="middle" fill="var(--accent)">RUNTIME ONLY</text>
+        <text class="zone-label" x="1040" y="430" text-anchor="middle" fill="var(--orange)">STATIC MANIFEST ONLY</text>
+        <text class="zone-label" x="600" y="610" text-anchor="middle" fill="var(--red)">GHOST AGENTS · code exists · registry-invisible</text>
+        <text class="zone-label" x="600" y="710" text-anchor="middle" fill="var(--yellow)">CLIENT ENGAGEMENTS · 16 workspaces in ~/.kameha/clients/</text>
+        <!-- client chips row -->
+        <g transform="translate(0, 730)">
+          <text class="client-chip" x="80" y="0">arena-strikers</text>
+          <text class="client-chip" x="200" y="0">bkb-boxing</text>
+          <text class="client-chip" x="290" y="0">blinking-owl</text>
+          <text class="client-chip" x="385" y="0">cdc</text>
+          <text class="client-chip" x="425" y="0">chatter-up-therapy</text>
+          <text class="client-chip" x="565" y="0">dag-construction</text>
+          <text class="client-chip" x="685" y="0">direct-builders</text>
+          <text class="client-chip" x="790" y="0">dwell-365-malaga</text>
+          <text class="client-chip" x="920" y="0">focus-gts</text>
+          <text class="client-chip" x="1000" y="0">jmm-law</text>
+          <text class="client-chip" x="1075" y="0">malaga-th.</text>
+          <text class="client-chip" x="80" y="16">nami</text>
+          <text class="client-chip" x="130" y="16">restoration-medics</text>
+          <text class="client-chip" x="265" y="16">smiles-and-sonrisas</text>
+          <text class="client-chip" x="415" y="16">vanya</text>
+          <text class="client-chip" x="465" y="16">williamson-cadillac</text>
+        </g>
+
+        <!-- ===== ENFORCED EDGES (from mesh.db route_permissions) ===== -->
+        <!-- Kai is the hub at (540, 280) -->
+        <!-- kai <-> cfo (T1) -->
+        <path class="edge enforced-t1" d="M 580 290 Q 280 130 200 80" marker-end="url(#arrow-green)" />
+        <path class="edge enforced-t1" d="M 200 100 Q 340 200 540 290" marker-end="url(#arrow-green)" />
+        <!-- kai <-> lead-engine (T2) -->
+        <path class="edge enforced" d="M 600 290 Q 540 130 410 80" marker-end="url(#arrow-green)" />
+        <path class="edge enforced" d="M 420 100 Q 510 220 600 290" marker-end="url(#arrow-green)" />
+        <!-- kai <-> oa (T2) -->
+        <path class="edge enforced" d="M 620 290 Q 660 130 620 80" marker-end="url(#arrow-green)" />
+        <path class="edge enforced" d="M 620 110 Q 670 220 620 290" marker-end="url(#arrow-green)" />
+        <!-- kai <-> enso (T2) -->
+        <path class="edge enforced" d="M 640 290 Q 770 150 830 80" marker-end="url(#arrow-green)" />
+        <path class="edge enforced" d="M 830 110 Q 770 220 640 290" marker-end="url(#arrow-green)" />
+        <!-- kai <-> pitch-deck (T2) -->
+        <path class="edge enforced" d="M 660 290 Q 900 160 1040 80" marker-end="url(#arrow-green)" />
+        <path class="edge enforced" d="M 1040 100 Q 880 220 660 290" marker-end="url(#arrow-green)" />
+        <!-- kai → nami (T3, one-way) -->
+        <path class="edge enforced" d="M 580 320 Q 350 380 230 350" marker-end="url(#arrow-green)" />
+        <!-- kai <-> chronicle (T1) — chronicle on runtime-only side -->
+        <path class="edge enforced-t1" d="M 540 305 Q 350 400 220 470" marker-end="url(#arrow-green)" />
+        <path class="edge enforced-t1" d="M 230 470 Q 380 410 540 305" marker-end="url(#arrow-green)" />
+        <!-- oa <-> pitch-deck (T1) -->
+        <path class="edge enforced-t1" d="M 660 110 Q 850 100 1030 110" marker-end="url(#arrow-green)" />
+        <path class="edge enforced-t1" d="M 1030 90 Q 850 50 660 90" marker-end="url(#arrow-green)" />
+        <!-- cfo → oa (T2) -->
+        <path class="edge enforced" d="M 250 90 Q 430 60 600 90" marker-end="url(#arrow-green)" />
+
+        <!-- ===== CLAIMED-NOT-ENFORCED EDGES (CA → 9 agents) ===== -->
+        <!-- Code Architect at (740, 660) — 9 outbound to all mesh agents, none enforced -->
+        <path class="edge claimed-only" d="M 740 660 Q 540 480 200 100" />
+        <path class="edge claimed-only" d="M 740 660 Q 580 480 420 100" />
+        <path class="edge claimed-only" d="M 740 660 Q 660 480 620 110" />
+        <path class="edge claimed-only" d="M 740 660 Q 730 460 830 110" />
+        <path class="edge claimed-only" d="M 740 660 Q 880 480 1040 110" />
+        <path class="edge claimed-only" d="M 740 660 Q 540 530 230 350" />
+        <path class="edge claimed-only" d="M 740 660 Q 460 510 220 470" />
+        <path class="edge claimed-only" d="M 740 660 Q 950 450 1040 240" />
+        <path class="edge claimed-only" d="M 740 660 Q 950 470 1040 350" />
+
+        <!-- ===== NODES ===== -->
+
+        <!-- KAI (hub) -->
+        <g transform="translate(540, 280)">
+          <rect width="160" height="68" rx="10" fill="#1a212c" stroke="#4ade80" stroke-width="2.5" style="filter: drop-shadow(0 0 18px rgba(74,222,128,0.4));"/>
+          <text class="node-label" x="80" y="26" text-anchor="middle" fill="#4ade80">KAI</text>
+          <text class="node-sub" x="80" y="42" text-anchor="middle">executive assistant · hub</text>
+          <text class="node-meta" x="80" y="58" text-anchor="middle">node · 41 tools · 33 inbox</text>
+        </g>
+
+        <!-- TOP ROW — FULLY REGISTERED ACTIVE -->
+        <!-- CFO -->
+        <g transform="translate(140, 60)">
+          <rect width="120" height="60" rx="10" fill="#1a212c" stroke="#4ade80" stroke-width="1.5"/>
+          <text class="node-label" x="60" y="24" text-anchor="middle" fill="#4ade80">CFO</text>
+          <text class="node-sub" x="60" y="40" text-anchor="middle">finance · node</text>
+          <text class="node-meta" x="60" y="54" text-anchor="middle">11 inbox · live 5m</text>
+          <circle class="pulse" cx="112" cy="10" r="4" fill="#4ade80" />
+        </g>
+        <!-- LEAD ENGINE -->
+        <g transform="translate(350, 60)">
+          <rect width="120" height="60" rx="10" fill="#1a212c" stroke="#4ade80" stroke-width="1.5"/>
+          <text class="node-label" x="60" y="24" text-anchor="middle" fill="#4ade80">LEAD ENGINE</text>
+          <text class="node-sub" x="60" y="40" text-anchor="middle">pipeline · python</text>
+          <text class="node-meta" x="60" y="54" text-anchor="middle">0 inbox</text>
+        </g>
+        <!-- OFFER ARCHITECT -->
+        <g transform="translate(560, 60)">
+          <rect width="120" height="60" rx="10" fill="#1a212c" stroke="#4ade80" stroke-width="1.5"/>
+          <text class="node-label" x="60" y="24" text-anchor="middle" fill="#4ade80">OFFER ARCH.</text>
+          <text class="node-sub" x="60" y="40" text-anchor="middle">pricing · node</text>
+          <text class="node-meta" x="60" y="54" text-anchor="middle">4 inbox</text>
+        </g>
+        <!-- ENSO -->
+        <g transform="translate(770, 60)">
+          <rect width="120" height="60" rx="10" fill="#1a212c" stroke="#4ade80" stroke-width="1.5"/>
+          <text class="node-label" x="60" y="24" text-anchor="middle" fill="#4ade80">ENSO</text>
+          <text class="node-sub" x="60" y="40" text-anchor="middle">video editor · python</text>
+          <text class="node-meta" x="60" y="54" text-anchor="middle">0 inbox · 3 live sessions</text>
+        </g>
+        <!-- PITCH DECK ENGINE -->
+        <g transform="translate(980, 60)">
+          <rect width="120" height="60" rx="10" fill="#1a212c" stroke="#4ade80" stroke-width="1.5"/>
+          <text class="node-label" x="60" y="24" text-anchor="middle" fill="#4ade80">PITCH DECK</text>
+          <text class="node-sub" x="60" y="40" text-anchor="middle">proposals · node</text>
+          <text class="node-meta" x="60" y="54" text-anchor="middle">9 inbox</text>
+        </g>
+
+        <!-- NAMI (inactive in mesh seed, but live session right now!) -->
+        <g transform="translate(170, 330)">
+          <rect width="120" height="60" rx="10" fill="#1a212c" stroke="#fb923c" stroke-width="1.5"/>
+          <text class="node-label" x="60" y="24" text-anchor="middle" fill="#fb923c">NAMI</text>
+          <text class="node-sub" x="60" y="40" text-anchor="middle">social · node · INACTIVE</text>
+          <text class="node-meta" x="60" y="54" text-anchor="middle">9 inbox · LIVE session</text>
+          <circle class="pulse" cx="112" cy="10" r="4" fill="#fb923c" />
+        </g>
+
+        <!-- LEFT — RUNTIME-ONLY (in agents.json + mesh.db, no static manifest) -->
+        <!-- CHRONICLE -->
+        <g transform="translate(60, 450)">
+          <rect width="140" height="60" rx="10" fill="#1a212c" stroke="#6ea8fe" stroke-width="1.5" stroke-dasharray="5,3"/>
+          <text class="node-label" x="70" y="24" text-anchor="middle" fill="#6ea8fe">CHRONICLE</text>
+          <text class="node-sub" x="70" y="40" text-anchor="middle">health · node</text>
+          <text class="node-meta" x="70" y="54" text-anchor="middle">no static manifest</text>
+        </g>
+        <!-- CONDUCTOR -->
+        <g transform="translate(220, 450)">
+          <rect width="140" height="60" rx="10" fill="#1a212c" stroke="#6ea8fe" stroke-width="1.5" stroke-dasharray="5,3"/>
+          <text class="node-label" x="70" y="24" text-anchor="middle" fill="#6ea8fe">CONDUCTOR</text>
+          <text class="node-sub" x="70" y="40" text-anchor="middle">project state · node</text>
+          <text class="node-meta" x="70" y="54" text-anchor="middle">↩K · owns conductor.db</text>
+          <text class="kai-badge" x="130" y="14" text-anchor="end">↩K</text>
+        </g>
+
+        <!-- RIGHT — STATIC-ONLY (in knowledge/manifests/ only, missing from agents.json + mesh.db) -->
+        <!-- FRAMER -->
+        <g transform="translate(990, 210)">
+          <rect width="140" height="60" rx="10" fill="#1a212c" stroke="#fb923c" stroke-width="1.5" stroke-dasharray="5,3"/>
+          <text class="node-label" x="70" y="24" text-anchor="middle" fill="#fb923c">FRAMER</text>
+          <text class="node-sub" x="70" y="40" text-anchor="middle">visual prod · python</text>
+          <text class="node-meta" x="70" y="54" text-anchor="middle">no mesh registration</text>
+        </g>
+        <!-- ACD -->
+        <g transform="translate(990, 330)">
+          <rect width="140" height="60" rx="10" fill="#1a212c" stroke="#fb923c" stroke-width="1.5" stroke-dasharray="5,3"/>
+          <text class="node-label" x="70" y="24" text-anchor="middle" fill="#fb923c">ACD</text>
+          <text class="node-sub" x="70" y="40" text-anchor="middle">creative dir · python</text>
+          <text class="node-meta" x="70" y="54" text-anchor="middle">5 inbox · no mesh reg.</text>
+        </g>
+
+        <!-- BOTTOM — GHOSTS -->
+        <!-- KMG -->
+        <g transform="translate(330, 630)">
+          <rect width="140" height="60" rx="10" fill="#1a212c" stroke="#f87171" stroke-width="1.5" stroke-dasharray="5,3"/>
+          <text class="node-label" x="70" y="24" text-anchor="middle" fill="#f87171">KMG</text>
+          <text class="node-sub" x="70" y="40" text-anchor="middle">brand strategy · node</text>
+          <text class="node-meta" x="70" y="54" text-anchor="middle">code only · no registry</text>
+        </g>
+        <!-- CODE ARCHITECT -->
+        <g transform="translate(670, 630)">
+          <rect width="160" height="60" rx="10" fill="#1a212c" stroke="#f87171" stroke-width="1.5" stroke-dasharray="5,3" style="filter: drop-shadow(0 0 14px rgba(248,113,113,0.3));"/>
+          <text class="node-label" x="80" y="24" text-anchor="middle" fill="#f87171">CODE ARCHITECT</text>
+          <text class="node-sub" x="80" y="40" text-anchor="middle">engineering · node · ME</text>
+          <text class="node-meta" x="80" y="54" text-anchor="middle">9 routes claimed · 0 enforced</text>
+          <circle class="pulse" cx="152" cy="10" r="4" fill="#f87171" />
+        </g>
+
+      </svg>
+
+      <div class="topology-legend">
+        <div class="leg"><span class="leg-dot live"></span> in all 3 registries (active)</div>
+        <div class="leg"><span class="leg-dot runtime-only"></span> runtime registry only</div>
+        <div class="leg"><span class="leg-dot static-only"></span> static manifest only</div>
+        <div class="leg"><span class="leg-dot ghost"></span> code exists · no registry</div>
+        <div class="leg"><span class="leg-dot inactive"></span> registered but inactive</div>
+        <div class="leg"><span class="leg-line enforced"></span> enforced route (mesh.db)</div>
+        <div class="leg"><span class="leg-line claimed"></span> claimed in manifest · not enforced</div>
+        <div class="leg" style="margin-left: auto; font-size: 10px;">↩K = code lives in Kai's repo</div>
+      </div>
+
+      <details class="brief">
+        <summary>
+          <span class="summary-left"><span class="icon">?</span> Brief me — what does this map actually mean?</span>
+          <span class="caret">▶</span>
+        </summary>
+        <div class="brief-body">
+          <div class="brief-section">
+            <div class="brief-eyebrow">What this is</div>
+            <p class="brief-text">Think of this as your <strong>team roster</strong> — every AI agent in the Kameha system, where they live, and who can talk to whom. <strong>Kai is the hub</strong> (the executive assistant); everyone else reports through Kai or talks to specific peers. The lines are like phone routes — solid green = a real phone line that the mesh enforces, dashed red = a route your config says should exist but doesn't actually work right now.</p>
+            <p class="brief-text" style="margin-top: 8px;">The four ZONES tell you about <strong>registry health</strong> — i.e., does the system actually know this agent exists in every place it should? You have three different lists of agents (static manifests, runtime registry, mesh database) and they disagree with each other. Each zone shows agents grouped by which lists they're on.</p>
+          </div>
+          <div class="brief-section">
+            <div class="brief-eyebrow stakes">Why it matters to you</div>
+            <p class="brief-text">Right now, <strong>my agent (Code Architect — the red ghost at the bottom)</strong> claims it can send messages to 9 other agents. Reality: zero of those routes are enforced. If I tried to call ACD or Framer through the mesh today, the message would be rejected at the gate. Same for Framer and ACD trying to talk through the mesh — they have static manifests but no enforcement. That's the gap between "what the docs say the team does" and "what the team actually does." This map makes that gap visible at a glance.</p>
+            <p class="brief-text" style="margin-top: 8px;"><strong>NAMI is interesting</strong> — registered as INACTIVE in the mesh seed, but there's a live Claude Code session running on Nami's repo right now. The system says it's offline; reality says you're working in it. That's another drift signal worth surfacing.</p>
+          </div>
+          <div class="brief-section">
+            <div class="brief-eyebrow read">My read</div>
+            <p class="brief-text">The map is healthier than it looks for daily work — Kai + the 5 active agents (CFO, Lead Engine, OA, Enso, Pitch Deck) are fully wired through the mesh. The drift is in the second tier: agents that exist and run, but the registries are stale about them. None of that breaks today's work; it'll break the day we try to enforce strict mesh mode (planned). Closing the registry gaps is mostly mechanical, gated only on the owners.json bootstrap (Decision #2 above).</p>
+          </div>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- ===== REGISTRY HEALTH ===== -->
+  <div class="section">
+    <div class="section-head">
+      <h2>Registry Health</h2>
+      <span class="meta">3 sources of truth · disagreement table</span>
+    </div>
+
+    <table class="registry-table">
+      <thead>
+        <tr>
+          <th>Agent</th>
+          <th>knowledge/manifests/<br>(static)</th>
+          <th>~/.kameha/agents.json<br>(runtime)</th>
+          <th>mesh.db agents<br>(mesh API)</th>
+          <th>Real code?</th>
+          <th>Diagnosis</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="agent-name">kai</td><td class="cell-yes">✓</td><td class="cell-yes">✓</td><td class="cell-yes">✓</td><td class="cell-yes">✓</td><td class="cell-note">healthy</td></tr>
+        <tr><td class="agent-name">cfo</td><td class="cell-yes">✓</td><td class="cell-yes">✓</td><td class="cell-yes">✓</td><td class="cell-yes">✓</td><td class="cell-note">healthy</td></tr>
+        <tr><td class="agent-name">lead-engine</td><td class="cell-yes">✓</td><td class="cell-yes">✓</td><td class="cell-yes">✓</td><td class="cell-yes">✓</td><td class="cell-note">healthy</td></tr>
+        <tr><td class="agent-name">enso</td><td class="cell-yes">✓</td><td class="cell-yes">✓</td><td class="cell-yes">✓</td><td class="cell-yes">✓</td><td class="cell-note">healthy</td></tr>
+        <tr><td class="agent-name">offer-architect</td><td class="cell-yes">✓</td><td class="cell-yes">✓</td><td class="cell-yes">✓</td><td class="cell-yes">✓</td><td class="cell-note">healthy</td></tr>
+        <tr><td class="agent-name">nami</td><td class="cell-yes">✓</td><td class="cell-yes">✓</td><td class="cell-yes">✓ <span style="color:var(--orange)">(inactive)</span></td><td class="cell-yes">✓</td><td class="cell-note">registered inactive · live session running now</td></tr>
+        <tr><td class="agent-name">chronicle</td><td class="cell-no">✗</td><td class="cell-yes">✓</td><td class="cell-yes">✓</td><td class="cell-yes">✓</td><td class="cell-note">missing static manifest</td></tr>
+        <tr><td class="agent-name">conductor</td><td class="cell-no">✗</td><td class="cell-yes">✓</td><td class="cell-no">✗</td><td class="cell-yes">✓ (in Kai repo)</td><td class="cell-note">missing static + mesh.db registration</td></tr>
+        <tr><td class="agent-name">pitch-deck-engine</td><td class="cell-no">✗</td><td class="cell-yes">✓ (as <code>pitch-deck</code>)</td><td class="cell-yes">✓ (as <code>pitch-deck-engine</code>)</td><td class="cell-yes">✓</td><td class="cell-note">name collision: <code>pitch-deck</code> vs <code>pitch-deck-engine</code></td></tr>
+        <tr><td class="agent-name">framer</td><td class="cell-yes">✓</td><td class="cell-no">✗</td><td class="cell-no">✗</td><td class="cell-yes">✓</td><td class="cell-note">no mesh registration — 96 uncommitted files</td></tr>
+        <tr><td class="agent-name">acd</td><td class="cell-yes">✓</td><td class="cell-no">✗</td><td class="cell-no">✗</td><td class="cell-yes">✓</td><td class="cell-note">no mesh registration — 5 pending inbox</td></tr>
+        <tr><td class="agent-name">kmg</td><td class="cell-no">✗</td><td class="cell-no">✗</td><td class="cell-no">✗</td><td class="cell-yes">✓</td><td class="cell-note"><strong>GHOST</strong> — real codebase, zero registry entries</td></tr>
+        <tr><td class="agent-name">code-architect (me)</td><td class="cell-yes">✓ (own repo)</td><td class="cell-no">✗</td><td class="cell-no">✗</td><td class="cell-yes">✓</td><td class="cell-note">9 routes claimed in own manifest · 0 enforced</td></tr>
+      </tbody>
+    </table>
+
+    <details class="brief">
+      <summary>
+        <span class="summary-left"><span class="icon">?</span> Brief me — why do we have 3 different lists?</span>
+        <span class="caret">▶</span>
+      </summary>
+      <div class="brief-body">
+        <div class="brief-section">
+          <div class="brief-eyebrow">What this is</div>
+          <p class="brief-text">Like any growing organization, the "who works here?" list lives in <strong>three different places</strong> for different purposes. <strong>(1)</strong> The static manifests under <code>knowledge/manifests/</code> are the <strong>spec / job descriptions</strong> — what each agent IS and what it CAN do. <strong>(2)</strong> <code>~/.kameha/agents.json</code> is the <strong>HR roster</strong> — who's currently employed, what's their inbox, are they active. <strong>(3)</strong> <code>mesh.db.agents</code> is the <strong>phone directory</strong> — who has a working mesh route, who can send to whom, what's the tier.</p>
+        </div>
+        <div class="brief-section">
+          <div class="brief-eyebrow stakes">Why it matters to you</div>
+          <p class="brief-text">When all three agree (top 6 rows), the agent works normally. When they disagree, weird things happen: agents that work in practice but aren't in the spec (chronicle, conductor — no job description), agents whose spec says they exist but aren't on the HR roster (framer, acd — no employee badge), and one outright ghost (kmg — real code, zero paperwork). My own row is the worst: I claim I can call 9 other agents in my manifest, but the mesh phone directory has zero of those routes wired up. <strong>I am a paper tiger right now.</strong> Fixing this is most of the "owners.json bootstrap" → "mesh route seeding" work in W4+.</p>
+        </div>
+        <div class="brief-section">
+          <div class="brief-eyebrow read">My read</div>
+          <p class="brief-text">For daily operations, this is fine — Kai + 5 active agents work. For "Code Architect actually does cross-agent work," every drift row above is blocking. The fix is mechanical (a one-time reconciliation pass once you authorize owners.json bootstrap). Highest priority once W4 ships is closing my own row.</p>
+        </div>
+      </div>
+    </details>
+  </div>
+
+  <!-- ===== PRODUCTION FLOOR ===== -->
+  <div class="section">
+    <div class="section-head">
+      <h2>Production Floor · conductor.db</h2>
+      <span class="meta">your actual business · 32 projects · 16 clients</span>
+    </div>
+
+    <div class="stat-grid" style="margin-bottom: 18px;">
+      <div class="stat">
+        <div class="label">Projects in flight</div>
+        <div class="value blue">32</div>
+        <div class="note">across 7 lifecycle stages</div>
+      </div>
+      <div class="stat">
+        <div class="label">Stage 12 (delivered-ish)</div>
+        <div class="value green">9</div>
+        <div class="note">most populated stage</div>
+      </div>
+      <div class="stat">
+        <div class="label">Stage 1 (intake)</div>
+        <div class="value blue">8</div>
+        <div class="note">incoming pipeline</div>
+      </div>
+      <div class="stat">
+        <div class="label">Active retainer cycles</div>
+        <div class="value purple">3</div>
+        <div class="note">recurring engagements</div>
+      </div>
+      <div class="stat">
+        <div class="label">Client workspaces</div>
+        <div class="value blue">16</div>
+        <div class="note">in ~/.kameha/clients/</div>
+      </div>
+      <div class="stat warning">
+        <div class="label">Lessons captured</div>
+        <div class="value yellow">1</div>
+        <div class="note">conductor.db lessons table · likely under-populated</div>
+      </div>
+    </div>
+
+    <div class="thread">
+      <div class="thread-head">
+        <div class="thread-title">
+          <span class="thread-icon" style="background: rgba(74,222,128,.1); color: var(--green); border: 1px solid rgba(74,222,128,.3);">🎬</span>
+          Project distribution by stage
+        </div>
+      </div>
+      <div class="inbox-list">
+        <div class="inbox-row"><span class="agent">stage 12 (done)</span><div class="bar-track"><div class="bar-fill" style="width: 100%; background: var(--green);"></div></div><span class="count">9</span></div>
+        <div class="inbox-row"><span class="agent">stage 1 (intake)</span><div class="bar-track"><div class="bar-fill" style="width: 89%; background: var(--accent);"></div></div><span class="count">8</span></div>
+        <div class="inbox-row"><span class="agent">stage 5</span><div class="bar-track"><div class="bar-fill" style="width: 67%;"></div></div><span class="count">6</span></div>
+        <div class="inbox-row"><span class="agent">stage 7</span><div class="bar-track"><div class="bar-fill" style="width: 56%;"></div></div><span class="count">5</span></div>
+        <div class="inbox-row"><span class="agent">stage 3</span><div class="bar-track"><div class="bar-fill" style="width: 22%;"></div></div><span class="count">2</span></div>
+        <div class="inbox-row"><span class="agent">stage 2</span><div class="bar-track"><div class="bar-fill" style="width: 11%;"></div></div><span class="count">1</span></div>
+        <div class="inbox-row"><span class="agent">stage 8</span><div class="bar-track"><div class="bar-fill" style="width: 11%;"></div></div><span class="count">1</span></div>
+      </div>
+
+      <div class="callout warn">
+        <strong class="head">CA can't fully label stages yet</strong>
+        Stage column is integer (1-12) without a stages lookup table I've found yet. Stage 12 reads as "delivered/done" by population pattern (most populated), stage 1 as "intake" (next most). Need to scan the conductor-db.js schema source or a stages reference table to label the middle stages confidently. Surfacing the raw counts above; will tighten labels next pass.
+      </div>
+
+      <details class="brief">
+        <summary>
+          <span class="summary-left"><span class="icon">?</span> Brief me — what's the production floor?</span>
+          <span class="caret">▶</span>
+        </summary>
+        <div class="brief-body">
+          <div class="brief-section">
+            <div class="brief-eyebrow">What this is</div>
+            <p class="brief-text"><code>conductor.db</code> is the <strong>operational backbone of your business</strong> — every shoot, every revision cycle, every deliverable, every retainer client, every lesson learned. 28 tables covering projects, milestones, tasks, scope events, creative briefs, deliverables, production days, talent releases, shot trackers, media backups, client reviews, retainer cycles, and lessons learned (with full-text search). You have 32 projects in flight across 7 stages, 16 client workspaces, 3 active retainer cycles. This is the real business.</p>
+          </div>
+          <div class="brief-section">
+            <div class="brief-eyebrow stakes">Why it matters to you</div>
+            <p class="brief-text">Before this build, no CA dashboard touched conductor.db at all. The session-face was 100% CA-internal scaffolding. That meant the most important data in your entire system — what work is actually moving through Kameha — was invisible to the CTO-seat dashboard. Surfacing it here is the first step toward real situational awareness. The lessons-learned count being just 1 is a yellow flag: the system has the table and the FTS5 index but isn't being fed; we're losing institutional memory.</p>
+          </div>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <!-- ===== LIVE STUDIOS + INBOX QUEUES ===== -->
+  <div class="section">
+    <div class="section-head">
+      <h2>What's moving right now</h2>
+      <span class="meta">live sessions + delegation backlogs</span>
+    </div>
+
+    <div class="thread">
+      <div class="thread-head">
+        <div class="thread-title">
+          <span class="thread-icon" style="background: rgba(74,222,128,.1); color: var(--green); border: 1px solid rgba(74,222,128,.3);">▶</span>
+          Live Claude Code sessions (last 30 min)
+        </div>
+        <span class="pill green">4 ACTIVE</span>
+      </div>
+      <div class="facts">
+        <div class="fact"><div class="k">Code Architect</div><div class="v"><strong>this session</strong> · 22:05 · CA is YOU reading this</div></div>
+        <div class="fact"><div class="k">Kai Executive Assistant</div><div class="v">22:05 · concurrent · likely doing schema-backfill / orchestration</div></div>
+        <div class="fact"><div class="k">Nami Social Media</div><div class="v">22:04 · concurrent · social content work</div></div>
+        <div class="fact"><div class="k">CFO</div><div class="v">21:47 · recent · financial sync</div></div>
+      </div>
+    </div>
+
+    <div class="thread">
+      <div class="thread-head">
+        <div class="thread-title">
+          <span class="thread-icon" style="background: rgba(250,204,21,.1); color: var(--yellow); border: 1px solid rgba(250,204,21,.3);">📨</span>
+          Inbox queues (delegations pending)
+        </div>
+        <span class="pill yellow">73 TOTAL PENDING</span>
+      </div>
+      <div class="inbox-list">
+        <div class="inbox-row"><span class="agent">kai</span><div class="bar-track"><div class="bar-fill danger" style="width: 100%;"></div></div><span class="count">33</span></div>
+        <div class="inbox-row"><span class="agent">cfo</span><div class="bar-track"><div class="bar-fill" style="width: 33%;"></div></div><span class="count">11</span></div>
+        <div class="inbox-row"><span class="agent">nami</span><div class="bar-track"><div class="bar-fill" style="width: 27%;"></div></div><span class="count">9</span></div>
+        <div class="inbox-row"><span class="agent">pitch-deck</span><div class="bar-track"><div class="bar-fill" style="width: 27%;"></div></div><span class="count">9</span></div>
+        <div class="inbox-row"><span class="agent">acd</span><div class="bar-track"><div class="bar-fill" style="width: 15%;"></div></div><span class="count">5</span></div>
+        <div class="inbox-row"><span class="agent">offer-architect</span><div class="bar-track"><div class="bar-fill" style="width: 12%;"></div></div><span class="count">4</span></div>
+        <div class="inbox-row"><span class="agent">framer</span><div class="bar-track"><div class="bar-fill" style="width: 6%;"></div></div><span class="count">2</span></div>
+        <div class="inbox-row"><span class="agent">chronicle, conductor, enso, lead-engine</span><div class="bar-track"><div class="bar-fill" style="width: 0%;"></div></div><span class="count">0</span></div>
+      </div>
+      <div class="callout warn">
+        <strong class="head">Kai's 33 is the real signal</strong>
+        Kai is the orchestrator; 33 pending delegations means 33 things waiting for Kai to route. Could be normal workload, could be a processing slowdown. Worth a poke into the Kai session to see what's queued.
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== CROSS-REPO ACTIVITY HEATMAP ===== -->
+  <div class="section">
+    <div class="section-head">
+      <h2>Repo Activity · last 30 days</h2>
+      <span class="meta">20 repos with git remotes</span>
+    </div>
+
+    <div class="heatmap-grid">
+      <div class="heatmap-cell today"><div class="name">Code Architect</div><div class="date">today · 618e6a1</div></div>
+      <div class="heatmap-cell today"><div class="name">Kai Executive Assistant</div><div class="date">today · a68c8331</div></div>
+      <div class="heatmap-cell week"><div class="name">Nami Social Media</div><div class="date">2026-05-16</div></div>
+      <div class="heatmap-cell week"><div class="name">KMG</div><div class="date">2026-05-12</div></div>
+      <div class="heatmap-cell week"><div class="name">ACD</div><div class="date">2026-05-11</div></div>
+      <div class="heatmap-cell week"><div class="name">Framer</div><div class="date">2026-05-11 · branch</div></div>
+      <div class="heatmap-cell week"><div class="name">VCM Production</div><div class="date">2026-05-11</div></div>
+      <div class="heatmap-cell week"><div class="name">DAGDC</div><div class="date">2026-05-10</div></div>
+      <div class="heatmap-cell week"><div class="name">Enso</div><div class="date">2026-05-07</div></div>
+      <div class="heatmap-cell week"><div class="name">Pitch Deck Engine</div><div class="date">2026-05-07</div></div>
+      <div class="heatmap-cell month"><div class="name">TDB Website</div><div class="date">2026-04-27</div></div>
+      <div class="heatmap-cell month"><div class="name">CFO</div><div class="date">2026-04-22</div></div>
+      <div class="heatmap-cell month"><div class="name">Offer Architect</div><div class="date">2026-04-03</div></div>
+      <div class="heatmap-cell month"><div class="name">Lead Engine</div><div class="date">2026-03-30</div></div>
+      <div class="heatmap-cell month"><div class="name">Chronicle</div><div class="date">2026-03-29</div></div>
+      <div class="heatmap-cell cold"><div class="name">DAG Pitch Deck</div><div class="date">2026-02-20</div></div>
+      <div class="heatmap-cell cold"><div class="name">Direct Builders</div><div class="date">2026-02-03</div></div>
+      <div class="heatmap-cell cold"><div class="name">Ecological MMA</div><div class="date">2026-01-20</div></div>
+      <div class="heatmap-cell cold"><div class="name">Test Kameha Site</div><div class="date">2026-01-12</div></div>
+      <div class="heatmap-cell cold"><div class="name">higgsfield_ai_mcp</div><div class="date">2025-11-03 · vendor</div></div>
+    </div>
+    <p style="margin-top: 12px; font-size: 11.5px; color: var(--muted); font-family: 'JetBrains Mono', monospace;">
+      green = touched today · blue = this week · yellow = this month · gray = older. GitHub PRs: 0 open across all repos (you commit straight to main).
+    </p>
+  </div>
+
+  <!-- ===== CA PIPELINE ===== -->
+  <div class="section">
+    <div class="section-head">
+      <h2>Code Architect · build pipeline</h2>
+      <span class="meta">v0.1.0 · phase 1 W3 done · W4 D4 in flight</span>
+    </div>
+
+    <div class="pipeline">
+      <div class="pipe-stage done"><div class="stage-num">W3 · D1</div><div class="stage-name">CLAUDE.md + methodology distill</div></div>
+      <div class="pipe-stage done"><div class="stage-num">W3 · D2</div><div class="stage-name">memory-doctor + tests + CI</div></div>
+      <div class="pipe-stage done"><div class="stage-num">W3 · D3</div><div class="stage-name">CLI scaffold + manifest</div></div>
+      <div class="pipe-stage done"><div class="stage-num">W3 · review</div><div class="stage-name">Codex R1→R4 SHIP</div></div>
+      <div class="pipe-stage done"><div class="stage-num">W3 · audit</div><div class="stage-name">first mesh audit + corrections</div></div>
+      <div class="pipe-stage done"><div class="stage-num">W3 · face</div><div class="stage-name">session-face v2 (this build)</div></div>
+      <div class="pipe-stage now"><div class="stage-num">W4 · D4</div><div class="stage-name">run-ledger landed (uncommitted)</div></div>
+    </div>
+
+    <div class="callout green">
+      <strong class="head">W4 D4 in progress · run-ledger landed (uncommitted)</strong>
+      72/72 tests passing (was 48; +24 from run-ledger). New module <code>scripts/lib/run-ledger.js</code> (~580 LOC) + <code>test/run-ledger.test.js</code> (~430 LOC). Local-JSON-primary, mesh.db mirror best-effort (graceful degrade when better-sqlite3 isn't installed — CA stays zero-dep). ULID inline, ISO8601-ET timestamps, strict run.lock per CLAUDE.md hard boundary #6. 3 mesh.db tests skip locally (no sqlite); 23/23 effective tests green. Staged not committed — awaits Alex's go-ahead per CA hard boundary #1.
+    </div>
+  </div>
+
+  <!-- ===== BLIND SPOTS ===== -->
+  <div class="section">
+    <div class="section-head">
+      <h2>Blind Spots · honest disclosure</h2>
+      <span class="meta">what I can't see from this laptop</span>
+    </div>
+
+    <div class="blind-state">
+      <strong>I cannot directly observe:</strong>
+      <div class="blind-row" style="border-left: 3px solid var(--green); padding-left: 11px;">
+        ✅ <strong style="color:var(--green);display:inline">Mac Mini mesh state — NO LONGER BLIND</strong> (session 2 discovery). verify-framer-rca agent reached Mini's mesh-api live over Tailscale at <code>http://100.64.114.13:3341</code> and queried authoritative inbox state for ACD and Framer. Used during the creative_brief verification to confirm the daemon error-replies. Laptop mesh.db copy (<code>~/.kameha/mesh/mesh.db</code>) IS still stale (0 bytes / 7 weeks); just don't use it. Saved as <code>reference_mac_mini_live_mesh_state_via_tailscale</code> memory card so future CA sessions default to the HTTP path. Heartbeat aggregator / PM2 process state may be similarly addressable — untested.
+      </div>
+      <div class="blind-row">
+        ⚠️ <strong style="color:var(--orange);display:inline">PM2 process state on Mini.</strong> No way to `pm2 list` from here. Daemon up/down status is inferred from heartbeat files, which are stale (see above).
+      </div>
+      <div class="blind-row">
+        ⚠️ <strong style="color:var(--orange);display:inline">What the other 3 concurrent Claude Code sessions are doing.</strong> I can see their JSONL files grew in the last 30 min but not the conversation contents (would need to read each JSONL — possible but privacy-sensitive choice).
+      </div>
+      <div class="blind-row">
+        🔵 <strong style="color:var(--accent);display:inline">conductor.db stage label semantics.</strong> I'm reading stage numbers (1-12) without a stages lookup table; my "stage 12 = done" inference is from population pattern, not source. Need to read conductor-db.js source for the canonical stage map.
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== FOOTER ===== -->
+  <footer>
+    <span>v6 refresh · 2026-05-19 session 3 + day 1 follow-on · CA@6228ca0 (15 commits today) · Nami@aebc89a (intent email allowlist · shipped) · PDE@bd2709f (7 commits, owners.json + salvage) · session 2 snapshot at state-of-things-2026-05-18.html · day 1 morning snapshot at state-of-things-2026-05-19.html · day 1 evening snapshot at state-of-things-2026-05-19-pm.html · audit punch list: docs/audit-overnight-2026-05-19.md · today's incident: docs/intake-pde-dental-boutique-recovery-2026-05-19.md</span>
+    <span>Refresh after milestones · file:// in your laptop browser</span>
+  </footer>
+
+</div>
+</body>
+</html>
