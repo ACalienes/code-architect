@@ -1,0 +1,51 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shared Layer health · 2026-05-25T21:47:25.799Z</title><style>
+:root{--bg:#0a0d12;--card:#141a23;--bg2:#0f131a;--border:#232c3a;--text:#e6edf3;--text2:#b8c5d3;--muted:#7d8a99;--dim:#5a6573;--green:#4ade80;--red:#f87171;--yellow:#facc15;--accent:#6ea8fe;}
+*{box-sizing:border-box;margin:0;padding:0}body{background:var(--bg);color:var(--text);font-family:-apple-system,"SF Pro Text",sans-serif;line-height:1.55;padding:40px 24px 80px}
+.wrap{max-width:960px;margin:0 auto}.mono{font-family:"JetBrains Mono","SF Mono",monospace}
+.eyebrow{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:var(--green);margin-bottom:12px}
+h1{font-size:34px;letter-spacing:-0.8px;margin-bottom:6px}.sub{color:var(--muted);font-size:13px;margin-bottom:28px}
+.banner{border-radius:12px;padding:16px 20px;margin-bottom:24px;font-weight:700;font-size:16px;border:1px solid}
+.banner.ok{background:rgba(74,222,128,0.08);border-color:rgba(74,222,128,0.4);color:var(--green)}
+.banner.bad{background:rgba(248,113,113,0.08);border-color:rgba(248,113,113,0.45);color:var(--red)}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px}@media(max-width:760px){.grid{grid-template-columns:repeat(2,1fr)}}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+.stat .l{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:6px}
+.stat .v{font-size:24px;font-weight:700;font-family:"JetBrains Mono",monospace}
+h2{font-size:12px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text2);border-bottom:1px solid var(--border);padding-bottom:8px;margin:28px 0 14px}
+.alert{border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:14px;background:var(--card);border:1px solid var(--border);display:flex;gap:12px;align-items:baseline}
+.alert .lvl{font-family:"JetBrains Mono",monospace;font-size:10px;text-transform:uppercase;letter-spacing:1px;padding:2px 7px;border-radius:5px;font-weight:700}
+.alert.critical{border-color:rgba(248,113,113,0.45)}.alert.critical .lvl{background:rgba(248,113,113,0.18);color:var(--red)}
+.alert.warn{border-color:rgba(250,204,21,0.4)}.alert.warn .lvl{background:rgba(250,204,21,0.15);color:var(--yellow)}
+.alert.ok .lvl{background:rgba(74,222,128,0.15);color:var(--green)}
+table{width:100%;border-collapse:collapse;font-size:13px}th{text-align:left;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:1px;padding:8px 10px;border-bottom:1px solid var(--border)}
+td{padding:9px 10px;border-bottom:1px solid var(--border);color:var(--text2)}
+.pill{font-size:11px;font-weight:700;border:1px solid;border-radius:20px;padding:2px 10px}.dim{color:var(--dim)}
+.foot{margin-top:36px;padding-top:18px;border-top:1px solid var(--border);font-size:11px;color:var(--dim)}
+</style></head><body><div class="wrap">
+<div class="eyebrow">Code Architect · Shared Layer · live health</div>
+<h1>Fleet health</h1><div class="sub mono">re-audited from the central store · 2026-05-25T21:47:25.799Z</div>
+<div class="banner ok">● All clear — no critical alerts</div>
+<div class="grid">
+  <div class="stat"><div class="l">Facts</div><div class="v">5</div></div>
+  <div class="stat"><div class="l">Pending</div><div class="v">3</div></div>
+  <div class="stat"><div class="l">Dead-letter</div><div class="v" style="color:undefined">1</div></div>
+  <div class="stat"><div class="l">Isolation refused</div><div class="v" style="color:undefined">0</div></div>
+</div>
+<h2>Alerts</h2><div class="alert warn"><span class="lvl">warn</span>dead-letter queue: 1 item(s) (oldest 0s)</div><div class="alert warn"><span class="lvl">warn</span>projector for tdb-repo: 12m behind (1 pending)</div>
+<h2>Agents</h2><table><thead><tr><th>Agent</th><th>Kind</th><th>Status</th><th>Pending</th><th>Lag</th><th>Attributed to</th></tr></thead><tbody><tr>
+    <td class="mono">acd</td><td>internal</td>
+    <td><span class="pill" style="color:#4ade80;border-color:#4ade80">healthy</span></td>
+    <td class="mono">1</td><td class="mono">0s</td><td class="dim">agent_drainer</td></tr><tr>
+    <td class="mono">nami</td><td>internal</td>
+    <td><span class="pill" style="color:#4ade80;border-color:#4ade80">healthy</span></td>
+    <td class="mono">1</td><td class="mono">0s</td><td class="dim">agent_drainer</td></tr><tr>
+    <td class="mono">dag-repo</td><td>client:dagdc</td>
+    <td><span class="pill" style="color:#7d8a99;border-color:#7d8a99">idle</span></td>
+    <td class="mono">0</td><td class="mono">0s</td><td class="dim">projector</td></tr><tr>
+    <td class="mono">tdb-repo</td><td>client:tdb</td>
+    <td><span class="pill" style="color:#facc15;border-color:#facc15">projector_lagging</span></td>
+    <td class="mono">1</td><td class="mono">12m</td><td class="dim">projector</td></tr></tbody></table>
+<div class="foot mono">Shared Layer health · observability is re-audit, not telemetry-trust · liveness via heartbeat only.</div>
+</div></body></html>

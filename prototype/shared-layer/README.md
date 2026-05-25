@@ -35,7 +35,7 @@ rule + the deliveries split *is* the isolation boundary.
 - `demo.js` — the runnable proof of the core invariants (asserts every one).
 - `runner.js` — the **drainer runner** (hardening roadmap #1): the always-on ~60s loop every agent
   rides. `createDrainer({db, agent, handler, ...})` → `.start()/.stop()/.tickOnce()/.wake()/.getStats()`.
-- `runner.test.js` — the runnable proof of the runner (30 checks, deterministic via injected clock + fake scheduler).
+- `runner.test.js` — the runnable proof of the runner (35 checks, deterministic via injected clock + fake scheduler).
 - `notify.js` — **event-driven wake** (the "priority cadence" half of #1): `signalWake(dir,agent)` (producer
   pokes an agent) + `watchWake(dir,agent,runner)` (consumer turns the poke into `runner.wake()`). Low
   latency without a tighter poll; the ~60s interval stays the safety-net heartbeat.
@@ -52,14 +52,33 @@ rule + the deliveries split *is* the isolation boundary.
   `<dir>/<agent>/inbox.db`, so a client process can't even open another client's bytes.
 - `projection.test.js` — the runnable proof (19 checks): the decisive one reads a client's RAW
   FILE BYTES and asserts another client's data is physically absent.
+- `health.js` — **observability** (hardening roadmap #5): `health(db)` RE-AUDITS the central store
+  into a report + synthesized `alerts[]` (isolation=critical, dead-letter by age, lag attributed to
+  drainer vs projector, liveness). `recordHeartbeat` (liveness only), `renderHealthText`/`renderHealthHtml`.
+- `health.test.js` — the runnable proof (28 checks). `health-dashboard.js` — emits a live dashboard
+  HTML from a representative fleet state.
 
 ```bash
-node prototype/shared-layer/demo.js            # core invariants (18)
-node prototype/shared-layer/runner.test.js     # drainer-runner invariants (23)
-node prototype/shared-layer/backfill.test.js   # backfill-as-claims invariants (35)
-node prototype/shared-layer/projection.test.js # physical per-client isolation (19)
-node prototype/shared-layer/notify.test.js     # event-driven wake / low latency (5)
+node prototype/shared-layer/demo.js            # core invariants
+node prototype/shared-layer/runner.test.js     # drainer-runner + wake + onTick
+node prototype/shared-layer/backfill.test.js   # backfill-as-claims
+node prototype/shared-layer/projection.test.js # physical per-client isolation
+node prototype/shared-layer/notify.test.js     # event-driven wake / low latency
+node prototype/shared-layer/health.test.js     # observability / alert synthesis
+node prototype/shared-layer/health-dashboard.js  # → writes a live health dashboard HTML
+# 139 checks total, all green.
 ```
+
+## Observability — re-audit, not telemetry-trust
+
+`health(db)` answers the operational questions by reading the store, never by trusting a runner's
+self-report: **isolation violations** (`projection_refused_cross_client`) are always CRITICAL;
+**dead-letters** warn, or go critical past an age threshold; **backlog/lag is attributed** — an
+internal agent's pending blames its own drainer, a client repo's pending blames the *projector*
+(the client isn't at fault). Runners may only assert *liveness* (`recordHeartbeat`, wired via the
+runner's `onTick`); health folds that in for "is the consumer alive", never for "what got delivered".
+Honest gap: a client repo heartbeats into its own projection file, so central client-liveness needs
+`opts.projections` (read their files) — supported optionally, documented as the ack-back roadmap item.
 
 ## Why ~60s, and why not tighter
 

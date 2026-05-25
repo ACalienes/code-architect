@@ -212,6 +212,22 @@ const feedback = (client_id, subject_id) => ({
     d.stop();
   }
 
+  // ── 10. onTick — the observability seam fires each tick with a snapshot ──
+  h('10. onTick — publishes a snapshot every tick (the heartbeat/observability seam)');
+  {
+    const db = openDb();
+    subscribe(db, 'acd', 'client_feedback', '*');
+    writeFact(db, feedback('dagdc', 'seam'));
+    const seen = [];
+    const d = createDrainer({ db, agent: 'acd', handler: async () => {}, onTick: (s) => seen.push(s) });
+    await d.tickOnce();
+    check('onTick fired once with a snapshot', seen.length === 1 && typeof seen[0].pending === 'number' && 'lagMs' in seen[0]);
+    check('a thrown onTick never breaks the loop', await (async () => {
+      const d2 = createDrainer({ db: openDb(), agent: 'x', handler: async () => {}, onTick: () => { throw new Error('boom'); } });
+      try { await d2.tickOnce(); return true; } catch (_) { return false; }
+    })());
+  }
+
   // ── result ──
   h(failures === 0 ? '\x1b[32mALL RUNNER INVARIANTS HOLD ✓\x1b[0m' : `\x1b[31m${failures} CHECK(S) FAILED\x1b[0m`);
   process.exit(failures === 0 ? 0 : 1);

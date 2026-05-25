@@ -52,6 +52,7 @@ function createDrainer(o) {
     scheduler = realScheduler,
     rng = Math.random,
     onError = null,
+    onTick = null,
   } = o || {};
 
   if (!db || !agent || typeof handler !== 'function') {
@@ -67,6 +68,14 @@ function createDrainer(o) {
   let timer = null;
   let inTick = false;       // true only while a drain pass is awaiting its handler
   let wakePending = false;  // a wake() arrived mid-tick → drain again immediately when it finishes
+
+  // A point-in-time view of this runner: durable backlog/lag (re-read from the db) + the
+  // process-local counters. getStats() returns it; onTick/heartbeat publish it.
+  function snapshot() {
+    const p = pendingStats(db, agent);
+    const lagMs = p.oldest ? Math.max(0, clock() - Date.parse(p.oldest)) : 0;
+    return { ...stats, pending: p.pending, lagMs, at: clock() };
+  }
 
   // ±jitterRatio around intervalMs, or 0 when catching up on a backlog.
   function nextDelay(immediate) {
@@ -107,6 +116,9 @@ function createDrainer(o) {
     // drain again immediately. A full batch that made NO progress (all poison) waits the
     // normal interval, so a poison run can't hot-loop the CPU.
     const drainedFull = batch.length === batchSize && handled > 0;
+    // Observability seam: publish a snapshot each tick (e.g. recordHeartbeat) — never lets the
+    // hook break the loop, and is liveness only (health re-audits the store for what was delivered).
+    if (onTick) { try { onTick(snapshot()); } catch (_) {} }
     return { drainedFull };
   }
 
@@ -162,11 +174,7 @@ function createDrainer(o) {
     },
     /** Run exactly one drain pass now (tests / manual one-shot / cron-style invocation). */
     async tickOnce() { return tick(); },
-    getStats() {
-      const p = pendingStats(db, agent);
-      const lagMs = p.oldest ? Math.max(0, clock() - Date.parse(p.oldest)) : 0;
-      return { ...stats, pending: p.pending, lagMs };
-    },
+    getStats() { return snapshot(); },
   };
 }
 
