@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<!-- Phase 0b — dead drainers, grounded. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phase 0b — turning the dead mailboxes back on · 2026-05-25</title>
+<style>
+  :root {
+    --bg:#0a0d12; --bg-2:#0f131a; --card:#141a23; --bg-3:#11161e; --border:#232c3a; --border-bright:#2f3a4a;
+    --text:#e6edf3; --text-2:#b8c5d3; --muted:#7d8a99; --dim:#5a6573;
+    --accent:#6ea8fe; --accent-glow:rgba(110,168,254,0.4); --green:#4ade80; --green-glow:rgba(74,222,128,0.35);
+    --yellow:#facc15; --orange:#fb923c; --red:#f87171; --purple:#c084fc; --teal:#5eead4;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html,body { background:var(--bg); color:var(--text);
+    font-family:-apple-system,"SF Pro Display","SF Pro Text",BlinkMacSystemFont,"Segoe UI",sans-serif;
+    line-height:1.6; min-height:100vh; }
+  body::before { content:""; position:fixed; inset:0;
+    background:
+      radial-gradient(ellipse 1200px 600px at 20% -10%, rgba(110,168,254,0.06), transparent 50%),
+      radial-gradient(ellipse 900px 450px at 85% 5%, rgba(251,146,60,0.04), transparent 50%);
+    pointer-events:none; z-index:0; }
+  .container { position:relative; max-width:1000px; margin:0 auto; padding:48px 28px 80px; z-index:1; }
+  code { font-family:"JetBrains Mono","SF Mono",Menlo,monospace; font-size:0.85em; background:var(--bg-3); border:1px solid var(--border); border-radius:5px; padding:1px 6px; color:var(--teal); }
+
+  .eyebrow { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:2px; color:var(--accent);
+    margin-bottom:16px; display:flex; align-items:center; gap:12px; }
+  .eyebrow::before { content:""; width:24px; height:1px; background:var(--accent); box-shadow:0 0 8px var(--accent-glow); }
+  h1.title { font-size:42px; font-weight:700; letter-spacing:-1.2px; line-height:1.07; margin-bottom:14px;
+    background:linear-gradient(180deg,#fff 0%,#b8c5d3 100%); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .subtitle { font-size:17px; color:var(--text-2); max-width:820px; margin-bottom:34px; }
+
+  section { margin-bottom:40px; }
+  h2.sec { font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:var(--text-2);
+    margin-bottom:18px; padding-bottom:10px; border-bottom:1px solid var(--border); display:flex; gap:10px; }
+  h2.sec .num { color:var(--accent); font-family:"JetBrains Mono",monospace; }
+  p.lead { font-size:15px; color:var(--text-2); margin-bottom:18px; max-width:820px; }
+
+  .rows { display:flex; flex-direction:column; gap:12px; }
+  .row { display:flex; gap:18px; align-items:flex-start; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:18px 20px; }
+  .row .badge { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; padding:5px 11px; border-radius:20px; white-space:nowrap; align-self:center; min-width:88px; text-align:center; }
+  .row.go .badge { background:rgba(74,222,128,0.12); color:var(--green); border:1px solid rgba(74,222,128,0.4); }
+  .row.skip .badge { background:rgba(125,138,153,0.12); color:var(--muted); border:1px solid rgba(125,138,153,0.4); }
+  .row.diff .badge { background:rgba(250,204,21,0.1); color:var(--yellow); border:1px solid rgba(250,204,21,0.4); }
+  .row .name { font-size:16px; font-weight:700; min-width:130px; }
+  .row .desc { font-size:13.5px; color:var(--text-2); } .row .desc .m { color:var(--muted); }
+  .row.go { border-color:rgba(74,222,128,0.3); } .row.diff { border-color:rgba(250,204,21,0.3); }
+
+  .note { background:var(--bg-3); border:1px solid var(--border-bright); border-radius:12px; padding:18px 22px; font-size:14px; color:var(--text-2); }
+  .note strong { color:var(--text); }
+
+  .gos { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  @media (max-width:680px){ .gos{ grid-template-columns:1fr;} }
+  .go-card { background:linear-gradient(180deg,var(--card),var(--bg-2)); border:1px solid var(--border-bright); border-radius:12px; padding:20px; }
+  .go-card .n { font-size:20px; font-weight:700; color:var(--accent); font-family:"JetBrains Mono",monospace; margin-bottom:8px; }
+  .go-card h4 { font-size:14.5px; margin-bottom:6px; } .go-card p { font-size:12.5px; color:var(--muted); }
+
+  .footer { margin-top:52px; padding-top:24px; border-top:1px solid var(--border); font-size:12px; color:var(--dim); }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="eyebrow">Code Architect · Phase 0b</div>
+  <h1 class="title">Turning the dead mailboxes back on</h1>
+  <p class="subtitle">Some agents had messages delivered but nothing running to pick them up. The list of "four dead
+  drainers" shrank once I checked the actual repos — only two are a real, cheap fix; one's dormant; one's a different problem.</p>
+
+  <section>
+    <h2 class="sec"><span class="num">01</span> The grounded list</h2>
+    <div class="rows">
+      <div class="row go"><span class="badge">Schedule</span><div class="name">CFO</div><div class="desc">Already has its mailbox-checker (<code>process_inbox.py</code>) — it was just never put on a timer. <span class="m">10 work orders stuck since March.</span></div></div>
+      <div class="row go"><span class="badge">Schedule</span><div class="name">Lead Engine</div><div class="desc">Also already has a checker (<code>inbox_processor.py</code>). <span class="m">(Corrects an old note of mine that said it had none — it does.)</span></div></div>
+      <div class="row skip"><span class="badge">Skip</span><div class="name">Chronicle</div><div class="desc">No checker at all, and the repo hasn't been touched in 8 weeks. <span class="m">Not worth building one for a dormant agent on a mesh we're retiring — revisit if it's revived.</span></div></div>
+      <div class="row diff"><span class="badge">Different fix</span><div class="name">NAMI</div><div class="desc">Its inbox code is the <em>social-media</em> inbox (Meta DMs/comments), not a mesh checker. NAMI gets mesh messages via the Mini <strong>bridge</strong>, so its failures are a bridge problem — <span class="m">needs a separate look, not a timer.</span></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec"><span class="num">02</span> Why it shrank — and why that's good</h2>
+    <div class="note">Scheduling a checker that <strong>already exists</strong> is near-zero effort and real relief, and the habit
+    ("run the checker every ~60s") carries straight into the new Shared Layer. But <strong>building</strong> a brand-new checker
+    for a dormant agent (Chronicle) on the mesh we're sunsetting would be throwaway. So we do the two cheap wins and skip the waste.</div>
+  </section>
+
+  <section>
+    <h2 class="sec"><span class="num">03</span> What I need from you</h2>
+    <div class="gos">
+      <div class="go-card"><div class="n">1</div><h4>Relay to CFO + LE owners</h4><p>I've drafted the exact one-line schedule command. They turn on their checker; stuck mail starts draining.</p></div>
+      <div class="go-card"><div class="n">2</div><h4>Ask Kai to check NAMI's bridge</h4><p>NAMI's 22 failures are bridge-side delivery, not a missing timer — Kai owns that path.</p></div>
+    </div>
+  </section>
+
+  <div class="footer">
+    Code Architect · Phase 0b · 2026-05-25 · grounded vs the actual repos · CFO + LE = schedule existing checkers · Chronicle skip · NAMI = bridge ·
+    drafts + relay in docs/phase-0b-drainers-2026-05-25.md
+  </div>
+
+</div>
+</body>
+</html>
