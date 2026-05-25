@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<!-- Kai's infra reply digested — Shared Layer Phase 0. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kai checked the plumbing · Shared Layer · 2026-05-25</title>
+<style>
+  :root {
+    --bg:#0a0d12; --bg-2:#0f131a; --card:#141a23; --card-2:#1a212c; --brief-bg:#11161e;
+    --border:#232c3a; --border-bright:#2f3a4a; --text:#e6edf3; --text-2:#b8c5d3; --muted:#7d8a99; --dim:#5a6573;
+    --accent:#6ea8fe; --accent-glow:rgba(110,168,254,0.4); --green:#4ade80; --green-glow:rgba(74,222,128,0.35);
+    --yellow:#facc15; --orange:#fb923c; --red:#f87171; --red-glow:rgba(248,113,113,0.35); --purple:#c084fc; --teal:#5eead4;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html,body { background:var(--bg); color:var(--text);
+    font-family:-apple-system,"SF Pro Display","SF Pro Text",BlinkMacSystemFont,"Segoe UI",sans-serif;
+    line-height:1.6; font-feature-settings:"ss01","ss02","cv11"; min-height:100vh; }
+  body::before { content:""; position:fixed; inset:0;
+    background:
+      radial-gradient(ellipse 1200px 600px at 20% -10%, rgba(110,168,254,0.06), transparent 50%),
+      radial-gradient(ellipse 800px 400px at 90% 10%, rgba(192,132,252,0.05), transparent 50%),
+      radial-gradient(ellipse 1000px 500px at 50% 120%, rgba(94,234,212,0.04), transparent 50%);
+    pointer-events:none; z-index:0; }
+  .container { position:relative; max-width:1040px; margin:0 auto; padding:48px 28px 80px; z-index:1; }
+  code { font-family:"JetBrains Mono","SF Mono",Menlo,monospace; font-size:0.85em; background:var(--brief-bg); border:1px solid var(--border); border-radius:5px; padding:1px 6px; color:var(--teal); }
+
+  .eyebrow { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:2px; color:var(--accent);
+    margin-bottom:16px; display:flex; align-items:center; gap:12px; }
+  .eyebrow::before { content:""; width:24px; height:1px; background:var(--accent); box-shadow:0 0 8px var(--accent-glow); }
+  h1.title { font-size:42px; font-weight:700; letter-spacing:-1.2px; line-height:1.07; margin-bottom:14px;
+    background:linear-gradient(180deg,#fff 0%,#b8c5d3 100%); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .subtitle { font-size:17px; color:var(--text-2); max-width:820px; margin-bottom:30px; }
+
+  .stat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:46px; }
+  @media (max-width:880px){ .stat-grid{ grid-template-columns:repeat(2,1fr);} }
+  .stat { background:linear-gradient(180deg,var(--card) 0%,var(--bg-2) 100%); border:1px solid var(--border);
+    border-radius:12px; padding:16px 18px; position:relative; overflow:hidden; }
+  .stat::before { content:""; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,var(--border-bright),transparent); }
+  .stat .label { font-size:10px; text-transform:uppercase; letter-spacing:1px; color:var(--muted); margin-bottom:8px; font-weight:600; }
+  .stat .value { font-size:17px; font-weight:700; letter-spacing:-0.3px; line-height:1.15; margin-bottom:4px; }
+  .stat .value.green{ color:var(--green);} .stat .value.blue{ color:var(--accent);} .stat .value.yellow{ color:var(--yellow);} .stat .value.red{ color:var(--red);}
+  .stat .note { font-size:11px; color:var(--muted); }
+
+  section { margin-bottom:42px; }
+  h2.sec { font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:var(--text-2);
+    margin-bottom:18px; padding-bottom:10px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; }
+  h2.sec .num { color:var(--accent); font-family:"JetBrains Mono",monospace; }
+  p.lead { font-size:15px; color:var(--text-2); margin-bottom:18px; max-width:820px; }
+
+  .twocol { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:760px){ .twocol{ grid-template-columns:1fr;} }
+  .col { border-radius:12px; padding:20px 22px; border:1px solid var(--border); background:var(--card); }
+  .col.failed { border-color:rgba(251,146,60,0.4);} .col.rejected { border-color:rgba(248,113,113,0.4);}
+  .col h3 { font-size:16px; margin-bottom:4px; } .col.failed h3{ color:var(--orange);} .col.rejected h3{ color:var(--red);}
+  .col .sub { font-size:12px; color:var(--muted); margin-bottom:12px; font-style:italic; }
+  .col ul { list-style:none; } .col li { font-size:13px; color:var(--text-2); padding:4px 0 4px 18px; position:relative; }
+  .col li::before { content:"•"; position:absolute; left:4px; color:var(--dim); }
+  .col .fix { margin-top:12px; font-size:12.5px; font-weight:600; } .col.failed .fix{ color:var(--orange);} .col.rejected .fix{ color:var(--red);}
+
+  .retract { background:rgba(192,132,252,0.07); border:1px solid var(--purple); border-left:3px solid var(--purple); border-radius:8px; padding:14px 18px; font-size:14px; color:var(--text-2); }
+  .retract strong { color:var(--purple); }
+
+  .decision { background:linear-gradient(180deg,var(--card) 0%,var(--bg-2) 100%); border:1px solid var(--green); border-radius:14px; padding:24px; box-shadow:0 0 24px var(--green-glow); }
+  .decision .h { font-size:12px; text-transform:uppercase; letter-spacing:1px; color:var(--green); font-weight:700; margin-bottom:8px; }
+  .decision h3 { font-size:20px; margin-bottom:12px; letter-spacing:-0.5px; }
+  .decision p { font-size:14.5px; color:var(--text-2); margin-bottom:10px; } .decision strong{ color:var(--text);}
+  .decision .agree { margin-top:12px; font-size:13.5px; color:var(--green); font-weight:600; }
+
+  .next { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
+  @media (max-width:760px){ .next{ grid-template-columns:1fr;} }
+  .nx { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:16px; }
+  .nx .t { font-size:14px; font-weight:700; margin-bottom:5px; } .nx .d { font-size:12.5px; color:var(--muted); }
+  .nx .who { font-size:10px; text-transform:uppercase; letter-spacing:0.5px; margin-top:8px; color:var(--dim); }
+
+  .gos { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  @media (max-width:760px){ .gos{ grid-template-columns:1fr;} }
+  .go { background:linear-gradient(180deg,var(--card) 0%,var(--bg-2) 100%); border:1px solid var(--border-bright); border-radius:12px; padding:20px; }
+  .go .n { font-size:22px; font-weight:700; color:var(--accent); font-family:"JetBrains Mono",monospace; margin-bottom:8px; }
+  .go h4 { font-size:14.5px; margin-bottom:6px; } .go p { font-size:12.5px; color:var(--muted); }
+
+  .footer { margin-top:54px; padding-top:24px; border-top:1px solid var(--border); font-size:12px; color:var(--dim); }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="eyebrow">Code Architect · Kai checked the plumbing</div>
+  <h1 class="title">Kai verified the mesh — and sharpened the plan</h1>
+  <p class="subtitle">Kai confirmed CA's read against the live database, fixed one thing I got wrong, and recommended a
+  cleaner cutover than I'd proposed. Net: the plan got better. Here's the digest.</p>
+
+  <div class="stat-grid">
+    <div class="stat"><div class="label">CA routes</div><div class="value green">live ✓</div><div class="note">but need seeding to be permanent</div></div>
+    <div class="stat"><div class="label">Real mesh health</div><div class="value yellow">1 solid edge</div><div class="note">ACD↔Kai; most else broken</div></div>
+    <div class="stat"><div class="label">Cutover</div><div class="value blue">clean, not gradual</div><div class="note">little to protect → simpler</div></div>
+    <div class="stat"><div class="label">Reply to CA</div><div class="value red">one-way</div><div class="note">Alex relays back for now</div></div>
+  </div>
+
+  <!-- CONFIRMED -->
+  <section>
+    <h2 class="sec"><span class="num">01</span> What Kai confirmed (CA's read was accurate)</h2>
+    <p class="lead">Checked against the live mesh database, not memory: CA's 9 routes are live (but only in the running DB, so a
+    reset would wipe them). The traffic numbers held up — <code>acd→kai</code> ~29 delivered, <code>framer→nami</code> 13 delivered,
+    <code>nami→framer</code> 13 rejected, <code>enso→nami</code> 5 failed.</p>
+  </section>
+
+  <!-- CORRECTION -->
+  <section>
+    <h2 class="sec"><span class="num">02</span> What Kai corrected — two different problems, not one</h2>
+    <p class="lead">I'd lumped all the broken traffic together. Kai split it, and the split tells us exactly what fixes what:</p>
+    <div class="twocol">
+      <div class="col failed">
+        <h3>"Failed" = dead mailbox-checker</h3>
+        <div class="sub">delivery happened, but nothing was running to pick it up</div>
+        <ul><li>NAMI 22 · CFO 8 (dark since March) · Kai 4 · Lead-Engine 3 · Chronicle 2</li></ul>
+        <div class="fix">Fix → turn on the ~60s checker (Phase 0b)</div>
+      </div>
+      <div class="col rejected">
+        <h3>"Rejected" = no permission to send</h3>
+        <div class="sub">the route was never granted — blocked by default</div>
+        <ul><li>to Kai 21 · to Framer 20 · to NAMI 5 · to ACD 4</li></ul>
+        <div class="fix">Fix → grant the route row (same as I just did for CA)</div>
+      </div>
+    </div>
+    <p class="lead" style="margin-top:16px;">This means <code>nami→framer</code> (13 rejected) isn't a dead checker — <strong>it's a missing
+    permission, and I can fix it in seconds, exactly like CA's.</strong> That's the broken return-leg of the creative work.</p>
+    <div class="retract"><strong>My correction:</strong> I called ACD↔Framer↔NAMI↔Kai a "working loop." It isn't a loop — it's a few healthy
+    one-way edges (ACD↔Kai and ACD↔Framer solid, Framer→NAMI one-way) with <strong>every NAMI return-leg broken</strong>. Kai was right; my framing was too generous.</div>
+  </section>
+
+  <!-- DECISION -->
+  <section>
+    <h2 class="sec"><span class="num">03</span> The big decision — Kai recommends a cleaner path</h2>
+    <div class="decision">
+      <div class="h">✓ Recommendation (Kai + the infra reality)</div>
+      <h3>Shared Layer becomes the one system; old mesh gets a thin adapter + a shut-off date — not "build on top of it."</h3>
+      <p><strong>Why not build on top:</strong> the old mesh's routing model is exactly what Codex made us move away from
+      (the per-client isolation redesign). Layering the new system on the old one would drag that flawed model back in.</p>
+      <p><strong>Why a clean cutover is safe:</strong> there's barely any healthy mesh to protect — one solid two-way link (ACD↔Kai)
+      and a couple of one-way flows; everything else is already broken. So we keep a small compatibility shim for just that one
+      live link, set a sunset date, and let the migration *force* the broken routes to finally get fixed.</p>
+      <div class="agree">↳ This matches your own instinct — "we aren't using it correctly anyway." You were right; gradual was overcautious.</div>
+    </div>
+  </section>
+
+  <!-- NEXT -->
+  <section>
+    <h2 class="sec"><span class="num">04</span> What this unblocks</h2>
+    <div class="next">
+      <div class="nx"><div class="t">Fix the rejected routes now</div><div class="d">Grant the missing permissions — starting with <code>nami→framer</code>, the broken creative return-leg. Same 10-second move as CA's.</div><div class="who">CA drafts · you OK · I run</div></div>
+      <div class="nx"><div class="t">Make CA's routes permanent</div><div class="d">Kai adds the 9 to the seed (I've drafted the exact lines) — flagged as the LAST hardcoded ones before agents declare their own.</div><div class="who">Kai applies · DA + your approval</div></div>
+      <div class="nx"><div class="t">Turn on the dead checkers</div><div class="d">~60s timers for NAMI/CFO/Kai/Lead-Engine/Chronicle so delivered mail stops rotting.</div><div class="who">per agent · CA drafts</div></div>
+      <div class="nx"><div class="t">Register DAGDC before retiring the side-door</div><div class="d">DAGDC isn't even a registered agent — the relay accepts it unauthenticated. Give it a real identity + routes first.</div><div class="who">prereq for 0c</div></div>
+    </div>
+  </section>
+
+  <!-- GO-AHEADS -->
+  <section>
+    <h2 class="sec"><span class="num">05</span> What I need from you</h2>
+    <div class="gos">
+      <div class="go"><div class="n">1</div><h4>Bless the clean cutover</h4><p>Shared Layer canonical + thin adapter + sunset date (Kai's rec). Matches your instinct.</p></div>
+      <div class="go"><div class="n">2</div><h4>Fix nami→framer (+ other rejected routes)?</h4><p>Say go and I grant the missing permissions, fixing the broken creative return-leg now.</p></div>
+      <div class="go"><div class="n">3</div><h4>Relay my reply to Kai</h4><p>I've drafted the reply (accepts the decision, sends the seed lines, agrees the fixes). You paste it.</p></div>
+    </div>
+  </section>
+
+  <div class="footer">
+    Code Architect · Kai infra reply digest · 2026-05-25 · verified vs ~/kai/logs/mesh.db ·
+    CA routes live (37→46) · decision: Shared Layer canonical + adapter + sunset (pending Alex blessing).
+  </div>
+
+</div>
+</body>
+</html>

@@ -82,9 +82,9 @@ Client repos (DAG, TDB, …) contribute facts and learn from the fleet. **Hard r
 
 ## 8. Review status (DA ✓ + Codex ✓ — both complete)
 
-The DA (REVISE, 4 fixes) and Codex (Phase 0 sound; Phase 1 unsafe until isolation redesigned) both ran; all findings dispositioned in `codex-review-kameha-shared-layer-2026-05-25-results.md` and folded into v2 above. The one decision still owed before Phase 1 code:
+The DA (REVISE, 4 fixes) and Codex (Phase 0 sound; Phase 1 unsafe until isolation redesigned) both ran; all findings dispositioned in `codex-review-kameha-shared-layer-2026-05-25-results.md` and folded into v2 above.
 
-- **Canonical transport + registry must be declared (Codex S14):** is Kameha the typed-memory/projection layer *on top of* the existing mesh/conductor substrate, or is mesh-api formally deprecated (with dates + adapters)? No silent parallel system. Recommend deciding this with Kai at Phase 0.
+- **Canonical transport — DECIDED (Alex blessed 2026-05-25, Kai recommended):** the Shared Layer is canonical; mesh-api goes **behind a thin compat adapter for just the live ACD↔Kai loop + a sunset date** — NOT layered on top (which would re-inherit the drifting route_permissions model the Codex isolation redesign moves away from). Clean cutover is lower-risk than "gradual" because there's almost no healthy mesh to protect (verified: one solid two-way link + a couple one-way flows; the rest rejected/failed).
 
 Residual items carried into impl (Codex S5/S8/S10): single-store backup/restore + corruption drill, SQLite contention (WAL/busy_timeout/jitter), priority-specific drain cadence.
 
