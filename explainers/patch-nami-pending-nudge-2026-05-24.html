@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<!-- Explainer — NAMI pending-review nudge patch. Companion to docs/patch-nami-pending-nudge-2026-05-24/README.md -->
+<!-- Visual language inherited from explainers/proposal-crew-manifest-2026-05-20.html (Kai-derived). -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NAMI Pending-Review Nudge · how it works · 2026-05-24</title>
+<style>
+  :root {
+    --bg: #0a0d12; --bg-2: #0f131a; --card: #141a23; --card-2: #1a212c;
+    --brief-bg: #11161e; --border: #232c3a; --border-bright: #2f3a4a;
+    --text: #e6edf3; --text-2: #b8c5d3; --muted: #7d8a99; --dim: #5a6573;
+    --accent: #6ea8fe; --accent-glow: rgba(110,168,254,0.4);
+    --green: #4ade80; --green-glow: rgba(74,222,128,0.35);
+    --yellow: #facc15; --orange: #fb923c;
+    --red: #f87171; --red-glow: rgba(248,113,113,0.35);
+    --purple: #c084fc; --pink: #f472b6; --teal: #5eead4;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, "SF Pro Display", "SF Pro Text", BlinkMacSystemFont, "Segoe UI", sans-serif;
+    line-height: 1.6; font-feature-settings: "ss01","ss02","cv11"; min-height: 100vh;
+  }
+  body::before {
+    content: ""; position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse 1200px 600px at 20% -10%, rgba(110,168,254,0.06), transparent 50%),
+      radial-gradient(ellipse 800px 400px at 90% 10%, rgba(192,132,252,0.05), transparent 50%),
+      radial-gradient(ellipse 1000px 500px at 50% 120%, rgba(94,234,212,0.04), transparent 50%);
+    pointer-events: none; z-index: 0;
+  }
+  .container { position: relative; max-width: 1080px; margin: 0 auto; padding: 48px 28px 80px; z-index: 1; }
+  code, .mono { font-family: "JetBrains Mono","SF Mono",Menlo,monospace; font-size: 0.9em; }
+  code { background: var(--brief-bg); border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; color: var(--teal); }
+
+  .eyebrow { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 2px;
+    color: var(--accent); margin-bottom: 16px; display: flex; align-items: center; gap: 12px; }
+  .eyebrow::before { content: ""; width: 24px; height: 1px; background: var(--accent); box-shadow: 0 0 8px var(--accent-glow); }
+  h1.title { font-size: 46px; font-weight: 700; letter-spacing: -1.5px; line-height: 1.05; margin-bottom: 14px;
+    background: linear-gradient(180deg,#fff 0%,#b8c5d3 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .subtitle { font-size: 17px; color: var(--text-2); max-width: 820px; margin-bottom: 22px; }
+  .meta-row { font-size: 12px; color: var(--muted); display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 44px; }
+  .meta-row span::before { content: "·"; color: var(--dim); margin-right: 16px; }
+  .meta-row span:first-child::before { content: ""; margin: 0; }
+
+  .stat-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 52px; }
+  @media (max-width: 880px) { .stat-grid { grid-template-columns: repeat(2,1fr); } }
+  .stat { background: linear-gradient(180deg,var(--card) 0%,var(--bg-2) 100%); border: 1px solid var(--border);
+    border-radius: 12px; padding: 18px 20px; position: relative; overflow: hidden; }
+  .stat::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg,transparent,var(--border-bright),transparent); }
+  .stat .label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 10px; font-weight: 600; }
+  .stat .value { font-size: 28px; font-weight: 700; letter-spacing: -1px; line-height: 1; margin-bottom: 6px; font-family: "JetBrains Mono","SF Mono",monospace; }
+  .stat .value.blue { color: var(--accent); text-shadow: 0 0 20px var(--accent-glow); }
+  .stat .value.green { color: var(--green); text-shadow: 0 0 16px var(--green-glow); }
+  .stat .value.orange { color: var(--orange); }
+  .stat .value.purple { color: var(--purple); }
+  .stat .note { font-size: 11px; color: var(--muted); }
+
+  section { margin-bottom: 52px; }
+  h2.sec { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-2);
+    margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+  h2.sec .num { color: var(--accent); font-family: "JetBrains Mono",monospace; }
+  p.lead { font-size: 15px; color: var(--text-2); margin-bottom: 20px; max-width: 820px; }
+
+  /* lifecycle bar */
+  .flow { display: flex; align-items: stretch; gap: 0; flex-wrap: wrap; }
+  .stage { flex: 1; min-width: 120px; background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 12px; text-align: center; position: relative; }
+  .stage .s-name { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+  .stage .s-sub { font-size: 10.5px; color: var(--muted); }
+  .arrow { display: flex; align-items: center; color: var(--dim); font-size: 20px; padding: 0 8px; }
+  .stage.trap { border-color: var(--red); box-shadow: 0 0 0 1px var(--red-glow), 0 0 24px rgba(248,113,113,0.15); }
+  .stage.trap .s-name { color: var(--red); }
+  .stage.safe { border-color: rgba(74,222,128,0.4); }
+  .stage.safe .s-name { color: var(--green); }
+  .trap-callout { margin-top: 16px; background: rgba(248,113,113,0.07); border: 1px solid var(--red);
+    border-left: 3px solid var(--red); border-radius: 8px; padding: 14px 18px; font-size: 14px; color: var(--text-2); }
+  .trap-callout strong { color: var(--red); }
+
+  /* generic cards grid */
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 760px) { .cards { grid-template-columns: 1fr; } }
+  .card { background: linear-gradient(180deg,var(--card) 0%,var(--bg-2) 100%); border: 1px solid var(--border);
+    border-radius: 12px; padding: 22px 24px; }
+  .card h3 { font-size: 16px; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 10px; }
+  .card .who { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; margin-bottom: 12px; }
+  .card.admin h3 .dot, .card.admin .who { color: var(--accent); }
+  .card.client h3 .dot, .card.client .who { color: var(--purple); }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: currentColor; box-shadow: 0 0 10px currentColor; display: inline-block; }
+  .card ul { list-style: none; }
+  .card li { font-size: 13.5px; color: var(--text-2); padding: 6px 0 6px 22px; position: relative; }
+  .card li::before { content: "→"; position: absolute; left: 0; color: var(--dim); }
+
+  /* step loop */
+  .steps { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; }
+  @media (max-width: 760px) { .steps { grid-template-columns: 1fr; } }
+  .step { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; position: relative; }
+  .step .n { font-family: "JetBrains Mono",monospace; font-size: 12px; color: var(--accent); font-weight: 700; margin-bottom: 10px; }
+  .step h4 { font-size: 15px; margin-bottom: 8px; }
+  .step p { font-size: 13px; color: var(--muted); }
+
+  /* dedup highlight */
+  .dedup { background: var(--brief-bg); border: 1px solid var(--border-bright); border-radius: 12px; padding: 22px 24px; }
+  .dedup pre { font-family: "JetBrains Mono","SF Mono",monospace; font-size: 12.5px; color: var(--text-2); overflow-x: auto; line-height: 1.7; }
+  .dedup pre .k { color: var(--pink); } .dedup pre .s { color: var(--teal); } .dedup pre .c { color: var(--dim); }
+  .dedup .cap { font-size: 13px; color: var(--text-2); margin-top: 14px; }
+  .dedup .cap strong { color: var(--green); }
+
+  /* file list */
+  .files { display: flex; flex-direction: column; gap: 10px; }
+  .file { display: flex; gap: 16px; align-items: flex-start; background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 18px; }
+  .file .fname { font-family: "JetBrains Mono",monospace; font-size: 12.5px; color: var(--teal); min-width: 230px; }
+  .file .fdesc { font-size: 13px; color: var(--text-2); }
+  .file .tag { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; padding: 2px 8px;
+    border-radius: 20px; white-space: nowrap; align-self: center; }
+  .tag.review { background: rgba(250,204,21,0.12); color: var(--yellow); border: 1px solid rgba(250,204,21,0.3); }
+  .tag.cawrite { background: rgba(74,222,128,0.1); color: var(--green); border: 1px solid rgba(74,222,128,0.3); }
+  @media (max-width: 760px) { .file { flex-direction: column; gap: 6px; } .file .fname { min-width: 0; } }
+
+  /* flags */
+  .flag { background: rgba(251,146,60,0.07); border: 1px solid rgba(251,146,60,0.4); border-left: 3px solid var(--orange);
+    border-radius: 8px; padding: 14px 18px; margin-bottom: 12px; font-size: 14px; color: var(--text-2); }
+  .flag strong { color: var(--orange); }
+
+  .verdict { display: flex; align-items: center; gap: 16px; background: linear-gradient(180deg,var(--card) 0%,var(--bg-2) 100%);
+    border: 1px solid rgba(74,222,128,0.4); border-radius: 12px; padding: 20px 24px; }
+  .verdict .badge { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--green);
+    border: 1px solid var(--green); border-radius: 30px; padding: 8px 18px; box-shadow: 0 0 18px var(--green-glow); white-space: nowrap; }
+  .verdict .vtext { font-size: 14px; color: var(--text-2); }
+
+  .footer { margin-top: 60px; padding-top: 24px; border-top: 1px solid var(--border); font-size: 12px; color: var(--dim); }
+  .footer code { color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="eyebrow">Code Architect · patch explainer</div>
+  <h1 class="title">The Pending-Review Nudge</h1>
+  <p class="subtitle">A post waiting for client approval can silently miss its scheduled slot — no publish, no warning.
+  This job watches for that and pings you (and the client) once, before it's too late.</p>
+  <div class="meta-row">
+    <span>For NAMI · <code>nami-platform/</code></span>
+    <span>From the work order Nami filed 2026-05-24</span>
+    <span>CA drafts → you apply</span>
+    <span>DA: PASS</span>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat"><div class="label">The gap</div><div class="value red">SILENT</div><div class="note">stuck posts miss their slot with no alert</div></div>
+    <div class="stat"><div class="label">Nudges sent</div><div class="value green">1×</div><div class="note">exactly one per post, ever</div></div>
+    <div class="stat"><div class="label">Lead window</div><div class="value blue">18h</div><div class="note">starts nudging this far before the slot</div></div>
+    <div class="stat"><div class="label">Who hears it</div><div class="value purple">2 sides</div><div class="note">you + the client, both</div></div>
+  </div>
+
+  <!-- PROBLEM -->
+  <section>
+    <h2 class="sec"><span class="num">01</span> The problem, in one picture</h2>
+    <p class="lead">Every post moves through this lifecycle. The publishing robot only ever picks up posts that are
+    <span style="color:var(--green)">Approved</span> or <span style="color:var(--green)">Scheduled</span>. A post parked at
+    <span style="color:var(--red)">Pending Review</span> — waiting on the client — is invisible to it.</p>
+    <div class="flow">
+      <div class="stage"><div class="s-name">Draft</div><div class="s-sub">being written</div></div>
+      <div class="arrow">→</div>
+      <div class="stage trap"><div class="s-name">Pending Review ⚠</div><div class="s-sub">waiting on client</div></div>
+      <div class="arrow">→</div>
+      <div class="stage safe"><div class="s-name">Approved</div><div class="s-sub">client said yes</div></div>
+      <div class="arrow">→</div>
+      <div class="stage safe"><div class="s-name">Scheduled</div><div class="s-sub">robot will publish</div></div>
+      <div class="arrow">→</div>
+      <div class="stage"><div class="s-name">Published</div><div class="s-sub">live</div></div>
+    </div>
+    <div class="trap-callout">If the client never clicks approve, the post sits in <strong>Pending Review</strong> forever.
+    The scheduled time comes and goes — <strong>nothing publishes, and nobody is told.</strong> That's the exact gap that
+    nearly hit the DAG Memorial Day post.</div>
+  </section>
+
+  <!-- FIX -->
+  <section>
+    <h2 class="sec"><span class="num">02</span> The fix — a quiet hourly check</h2>
+    <p class="lead">Once an hour, the job runs three steps. No new app, no new notification channel — it reuses what NAMI already has.</p>
+    <div class="steps">
+      <div class="step"><div class="n">STEP 1</div><h4>Find the stuck ones</h4><p>Look for posts in Pending Review whose scheduled time is within the next 18 hours and hasn't passed yet — across all active clients.</p></div>
+      <div class="step"><div class="n">STEP 2</div><h4>Claim it once</h4><p>Stamp the post as "nudged" in a single atomic step, so it can never be picked up twice — even by overlapping runs.</p></div>
+      <div class="step"><div class="n">STEP 3</div><h4>Send the nudge</h4><p>Ping you (with the review link to forward) and, if the client has an email on file, gently re-ping the client too.</p></div>
+    </div>
+  </section>
+
+  <!-- TWO SIDES -->
+  <section>
+    <h2 class="sec"><span class="num">03</span> Two nudges, one trigger</h2>
+    <p class="lead">You asked for visibility on <em>both</em> sides — so a single stuck post fires two messages.</p>
+    <div class="cards">
+      <div class="card admin">
+        <h3><span class="dot"></span> The operator nudge</h3>
+        <div class="who">To you</div>
+        <ul>
+          <li>Same email + bridge + SMS fanout as the approval alert you already get</li>
+          <li>Non-urgent — the slot hasn't passed, it's a heads-up</li>
+          <li>Carries the client review link so you can forward it directly</li>
+          <li>Leads with <em>"You have content pending review"</em> — clear at a glance</li>
+        </ul>
+      </div>
+      <div class="card client">
+        <h3><span class="dot"></span> The client reminder</h3>
+        <div class="who">To the client (e.g. Dan)</div>
+        <ul>
+          <li>Subject: <em>"✅ You have content waiting for your approval"</em></li>
+          <li>Opens with <em>"You have content pending your review and approval"</em> — no ambiguity</li>
+          <li>A plain email to the client's address on file — no new channel</li>
+          <li>Links straight to their review page to approve</li>
+          <li>Toggle it off anytime with one setting if you'd rather stay operator-only</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- DEDUP -->
+  <section>
+    <h2 class="sec"><span class="num">04</span> Why it can't spam</h2>
+    <p class="lead">The worry with any hourly job: does it re-send every hour? No. One new column on the post
+    (<code>pending_nudge_sent_at</code>) is the memory, and it's claimed <em>before</em> the message goes out.</p>
+    <div class="dedup">
+      <pre><span class="c">-- one atomic step: stamp it, but only if it isn't already stamped</span>
+<span class="k">UPDATE</span> posts <span class="k">SET</span> pending_nudge_sent_at = now
+<span class="k">WHERE</span> id = ? <span class="k">AND</span> pending_nudge_sent_at <span class="k">IS NULL</span>;</pre>
+      <div class="cap">If two runs ever overlap, only one wins the claim — the other sees the row already stamped and walks away.
+      <strong>At most one nudge per post, guaranteed.</strong> (If the client later asks for a fresh round of changes, the
+      stamp is cleared so a re-review gets a new nudge.)</div>
+    </div>
+  </section>
+
+  <!-- FILES -->
+  <section>
+    <h2 class="sec"><span class="num">05</span> What changes (and who applies it)</h2>
+    <p class="lead">Five files. The four code files are <span style="color:var(--yellow)">human-review-required</span> by NAMI's
+    own rules — I drafted them, you apply them. The test file I can place directly.</p>
+    <div class="files">
+      <div class="file"><div class="fname">database.py</div><div class="fdesc">One new column + two small helpers (find-due, claim-once) + clear-on-reopen</div><div class="tag review">you apply</div></div>
+      <div class="file"><div class="fname">config.py</div><div class="fdesc">Three settings: master switch, client-side toggle, the 18-hour window</div><div class="tag review">you apply</div></div>
+      <div class="file"><div class="fname">services/notifications.py</div><div class="fdesc">The operator nudge + the client reminder (both reuse existing send paths)</div><div class="tag review">you apply</div></div>
+      <div class="file"><div class="fname">services/scheduler.py</div><div class="fdesc">The hourly job + its handler (skips automatically on the standby laptop)</div><div class="tag review">you apply</div></div>
+      <div class="file"><div class="fname">tests/test_pending_review_nudge.py</div><div class="fdesc">12 tests — fires-once, dedup, window, readonly, multi-client safety</div><div class="tag cawrite">CA places</div></div>
+    </div>
+  </section>
+
+  <!-- FLAGS -->
+  <section>
+    <h2 class="sec"><span class="num">06</span> Two things to know</h2>
+    <div class="flag"><strong>The client reminder needs Dan's email allowed.</strong> NAMI only emails addresses on its safelist
+    (so test runs can't spam real clients). For the client reminder to actually reach Dan, his address must be on
+    <code>NAMI_EMAIL_SAFELIST</code> — otherwise it quietly skips and only you get nudged.</div>
+    <div class="flag"><strong>This is the durable fix, not tonight's rescue.</strong> It won't retroactively save tomorrow's
+    9am DAG post unless it's deployed today. For that one post, the reliable move is a one-off manual nudge now — forward Dan
+    the review link directly.</div>
+  </section>
+
+  <!-- VERDICT -->
+  <section>
+    <h2 class="sec"><span class="num">07</span> Safety check</h2>
+    <div class="verdict">
+      <div class="badge">DA · Pass</div>
+      <div class="vtext">Adversarial review covered spam, double-nudge, timezone edge cases, cross-client leakage, and the
+      migration's safety. No code blockers. A Codex review prompt ships with the patch as a second pair of eyes before push.</div>
+    </div>
+  </section>
+
+  <div class="footer">
+    Code Architect · patch bundle <code>docs/patch-nami-pending-nudge-2026-05-24/</code> ·
+    work order <code>docs/intake-nami-pending-review-nudge-2026-05-24.md</code> ·
+    drafted 2026-05-24 · DA passed · awaiting Alex apply + Codex review
+  </div>
+
+</div>
+</body>
+</html>
