@@ -62,6 +62,12 @@ rule + the deliveries split *is* the isolation boundary.
   -subset `validate`, `validatePayload`, and `writeFactValidated()` (validate → stamp version → core writeFact).
 - `registry.test.js` — the runnable proof (25 checks): validator subset, vocabulary accept/reject,
   reject-at-the-door, version stamping, schema evolution (v1→v2), registry/core drift guard.
+- `identity.js` — **agent identity + signed source claims** (hardening roadmap #4): Ed25519 identities
+  (the layer stores only public keys), `signFact`/`verifyFact`, `writeSignedFact()` (verify → authZ →
+  schema → core write), `authorizeSubscribe()` (refuses cross-client subscription). `registerIdentity`
+  is privileged enrollment.
+- `identity.test.js` — the runnable proof (19 checks): unforgeable attribution, tamper/impersonation
+  rejection, client-binding on produce + subscribe, composition with the registry, no key leakage.
 
 ```bash
 node prototype/shared-layer/demo.js            # core invariants
@@ -71,9 +77,23 @@ node prototype/shared-layer/projection.test.js # physical per-client isolation
 node prototype/shared-layer/notify.test.js     # event-driven wake / low latency
 node prototype/shared-layer/health.test.js     # observability / alert synthesis
 node prototype/shared-layer/registry.test.js   # fact_type schemas + versioning
+node prototype/shared-layer/identity.test.js   # agent identity + signed source claims
 node prototype/shared-layer/health-dashboard.js  # → writes a live health dashboard HTML
-# 164 checks total, all green.
+# 183 checks total, all green.
 ```
+
+## Identity & authorization (signed source claims)
+
+The lenient core trusts `source_agent` (a string) and lets anyone subscribe anything — `identity.js`
+fixes both. Each agent has an Ed25519 keypair; the layer stores **only public keys** (HB#9 — private
+keys never touch it). `writeSignedFact()` is the authenticated door: it **verifies** the signature
+against the registered key (forged/tampered/impersonated → rejected, nothing persists), enforces
+**authZ** (an identity may only produce its permitted fact_types, and a client-bound identity may only
+produce its own client's facts), then writes — composing with the registry as verify → authZ → schema →
+core. `authorizeSubscribe()` closes the cross-client subscription hole (a client repo can't subscribe to
+another client). Additive + opt-in (core stays lenient → prior checks green; production routes through
+these). DA-recorded limits/roadmap: replay protection (nonce + seen-window), stored signatures for
+after-the-fact non-repudiation, key-rotation history, and a privileged enrollment trust root at deploy.
 
 ## fact_type contracts (the action-vocabulary registry)
 

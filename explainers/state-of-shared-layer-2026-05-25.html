@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<!-- State of the Shared Layer — session 6: the reference build, end to end. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>State of the Shared Layer · session 6 · 2026-05-25</title>
+<style>
+  :root{
+    --bg:#0a0d12;--bg-2:#0f131a;--card:#141a23;--card-2:#1a212c;--brief-bg:#0c1016;
+    --border:#232c3a;--border-bright:#2f3a4a;--text:#e6edf3;--text-2:#b8c5d3;--muted:#7d8a99;--dim:#5a6573;
+    --accent:#6ea8fe;--accent-glow:rgba(110,168,254,0.4);--green:#4ade80;--green-glow:rgba(74,222,128,0.35);
+    --yellow:#facc15;--orange:#fb923c;--red:#f87171;--red-glow:rgba(248,113,113,0.35);--purple:#c084fc;--teal:#5eead4;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);
+    font-family:-apple-system,"SF Pro Display","SF Pro Text",BlinkMacSystemFont,"Segoe UI",sans-serif;
+    line-height:1.6;font-feature-settings:"ss01","ss02","cv11";min-height:100vh}
+  body::before{content:"";position:fixed;inset:0;background:
+      radial-gradient(ellipse 1200px 600px at 18% -10%,rgba(74,222,128,0.06),transparent 50%),
+      radial-gradient(ellipse 800px 400px at 92% 8%,rgba(110,168,254,0.055),transparent 50%),
+      radial-gradient(ellipse 1000px 500px at 50% 120%,rgba(192,132,252,0.04),transparent 50%);
+    pointer-events:none;z-index:0}
+  .container{position:relative;max-width:1060px;margin:0 auto;padding:48px 28px 90px;z-index:1}
+  .mono{font-family:"JetBrains Mono","SF Mono",Menlo,monospace}
+  code{font-family:"JetBrains Mono","SF Mono",Menlo,monospace;font-size:0.85em;background:var(--brief-bg);border:1px solid var(--border);border-radius:5px;padding:1px 6px;color:var(--teal)}
+
+  .eyebrow{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:var(--green);margin-bottom:16px;display:flex;align-items:center;gap:12px}
+  .eyebrow::before{content:"";width:24px;height:1px;background:var(--green);box-shadow:0 0 8px var(--green-glow)}
+  h1.title{font-size:46px;font-weight:700;letter-spacing:-1.4px;line-height:1.04;margin-bottom:14px;
+    background:linear-gradient(180deg,#fff 0%,#b8c5d3 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .subtitle{font-size:17px;color:var(--text-2);max-width:860px;margin-bottom:30px}
+
+  .stat-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:44px}
+  @media (max-width:880px){.stat-grid{grid-template-columns:repeat(2,1fr)}}
+  .stat{background:linear-gradient(180deg,var(--card) 0%,var(--bg-2) 100%);border:1px solid var(--border);border-radius:12px;padding:15px 16px;position:relative;overflow:hidden}
+  .stat::before{content:"";position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--border-bright),transparent)}
+  .stat .label{font-size:9.5px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:8px;font-weight:600}
+  .stat .value{font-size:25px;font-weight:700;letter-spacing:-1px;line-height:1;margin-bottom:4px;font-family:"JetBrains Mono",monospace}
+  .stat .value.green{color:var(--green);text-shadow:0 0 16px var(--green-glow)}.stat .value.blue{color:var(--accent)}.stat .value.purple{color:var(--purple)}
+  .stat .note{font-size:10.5px;color:var(--muted)}
+
+  section{margin-bottom:44px}
+  h2.sec{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-2);margin-bottom:20px;padding-bottom:10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+  h2.sec .num{color:var(--green);font-family:"JetBrains Mono",monospace}
+  p.lead{font-size:15px;color:var(--text-2);margin-bottom:20px;max-width:860px}
+
+  /* flow diagram */
+  .flow{display:flex;flex-direction:column;gap:0;border:1px solid var(--border-bright);border-radius:14px;overflow:hidden;background:var(--brief-bg)}
+  .stage{padding:15px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:16px;position:relative}
+  .stage:last-child{border-bottom:none}
+  .stage .tag{font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--accent);min-width:64px;font-weight:700}
+  .stage .body{flex:1}
+  .stage .body b{font-size:14px}.stage .body .d{font-size:12.5px;color:var(--muted)}
+  .stage .badge{font-family:"JetBrains Mono",monospace;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--green);border:1px solid rgba(74,222,128,0.3);border-radius:20px;padding:2px 9px;white-space:nowrap}
+  .stage.split{background:linear-gradient(90deg,rgba(110,168,254,0.04),transparent)}
+  .branch{display:grid;grid-template-columns:1fr 1fr;gap:0}
+  @media (max-width:680px){.branch{grid-template-columns:1fr}}
+  .branch .b{padding:14px 20px;font-size:12.5px;color:var(--text-2)}
+  .branch .b:first-child{border-right:1px solid var(--border)}
+  .branch .b b{display:block;font-size:12px;margin-bottom:3px}
+  .branch .b.int b{color:var(--teal)}.branch .b.cli b{color:var(--purple)}
+  .arrow{text-align:center;color:var(--dim);font-size:14px;padding:3px 0;background:var(--brief-bg)}
+  .rails{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}
+  @media (max-width:760px){.rails{grid-template-columns:repeat(2,1fr)}}
+  .rail{border:1px dashed var(--border-bright);border-radius:10px;padding:11px 13px;font-size:11.5px;color:var(--muted)}
+  .rail b{display:block;color:var(--text-2);font-size:12px;margin-bottom:2px}
+
+  /* increment cards */
+  .builds{display:grid;grid-template-columns:repeat(3,1fr);gap:13px}
+  @media (max-width:840px){.builds{grid-template-columns:1fr}}
+  .build{border-radius:12px;padding:18px;border:1px solid var(--border);background:linear-gradient(180deg,var(--card) 0%,var(--bg-2) 100%);position:relative;overflow:hidden}
+  .build::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--green),var(--teal));opacity:0.7}
+  .build .tag{font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--green);letter-spacing:1px;text-transform:uppercase}
+  .build h3{font-size:15.5px;margin:6px 0 8px;letter-spacing:-0.3px}
+  .build p{font-size:12.5px;color:var(--text-2);margin-bottom:11px}
+  .build .meta{display:flex;justify-content:space-between;align-items:center}
+  .build .checks{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--green);font-weight:700}
+  .build .sha{font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--dim)}
+
+  .twocol{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media (max-width:760px){.twocol{grid-template-columns:1fr}}
+  .col{border-radius:12px;padding:20px 22px;border:1px solid var(--border);background:var(--card)}
+  .col h3{font-size:15px;margin-bottom:10px}.col.now h3{color:var(--green)}.col.next h3{color:var(--accent)}
+  .col ul{list-style:none}.col li{font-size:13px;color:var(--text-2);padding:5px 0 5px 22px;position:relative}
+  .col.now li::before{content:"✓";position:absolute;left:0;color:var(--green)}
+  .col.next li::before{content:"▸";position:absolute;left:0;color:var(--accent)}
+
+  .honest{border:1px solid rgba(250,204,21,0.32);background:rgba(250,204,21,0.04);border-radius:12px;padding:20px 22px}
+  .honest h3{font-size:14px;color:var(--yellow);margin-bottom:12px}
+  .honest ul{list-style:none}.honest li{font-size:13px;color:var(--text-2);padding:5px 0 5px 22px;position:relative}
+  .honest li::before{content:"!";position:absolute;left:2px;color:var(--yellow);font-weight:700}
+  .honest li b{color:var(--text)}
+
+  .pointer{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px}
+  .pointer a,.pointer span{font-family:"JetBrains Mono",monospace;font-size:11.5px;color:var(--accent);text-decoration:none;border:1px solid var(--border);border-radius:8px;padding:7px 12px;background:var(--card)}
+  .footer{margin-top:54px;padding-top:24px;border-top:1px solid var(--border);font-size:12px;color:var(--dim)}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="eyebrow">Code Architect · session 6 · the Shared Layer</div>
+  <h1 class="title">State of the Shared Layer</h1>
+  <p class="subtitle">One session, seven increments. The cross-agent information system now has a complete,
+  tested reference spine: a fact typed into one repo can flow to exactly the agents that need it — fast,
+  walled per client at the filesystem, contract-checked at the door, recoverable, and observable. Built as
+  runnable reference code Kai can adopt, proven green, committed locally — nothing pushed, nothing live yet.</p>
+
+  <div class="stat-grid">
+    <div class="stat"><div class="label">Increments</div><div class="value blue">7</div><div class="note">one session</div></div>
+    <div class="stat"><div class="label">Tests passing</div><div class="value green">183/183</div><div class="note">8 suites, deterministic</div></div>
+    <div class="stat"><div class="label">Cross-client leaks</div><div class="value green">0</div><div class="note">proven at the byte level</div></div>
+    <div class="stat"><div class="label">Walls on client data</div><div class="value purple">2</div><div class="note">logical + physical</div></div>
+    <div class="stat"><div class="label">Pushed to live</div><div class="value">0</div><div class="note">human gate intact</div></div>
+  </div>
+
+  <!-- ARCHITECTURE -->
+  <section>
+    <h2 class="sec"><span class="num">01</span> How a fact moves — the whole path</h2>
+    <p class="lead">Every fact takes the same journey. The two things that make it safe — the client wall and
+    the contract — sit right at the start; the two things that make it usable — fast delivery and visibility —
+    wrap the end.</p>
+    <div class="flow">
+      <div class="stage"><span class="tag">WRITE</span><div class="body"><b>Any agent records a fact</b><div class="d">"Dan loved the Memorial Day posts" — typed once, in one repo.</div></div></div>
+      <div class="arrow">↓</div>
+      <div class="stage"><span class="tag">DOOR</span><div class="body"><b>Verify sender · authorize · contract check</b><div class="d">A forged/unsigned sender, a write across the client boundary, an unknown type, or a payload that breaks its schema → rejected before it ever persists.</div></div><span class="badge">#4 + #6</span></div>
+      <div class="arrow">↓</div>
+      <div class="stage"><span class="tag">ROUTE</span><div class="body"><b>Trusted router writes per-recipient deliveries</b><div class="d">Scoped by client. Nobody subscribed → dead-letter (never silently dropped).</div></div><span class="badge">core</span></div>
+      <div class="arrow">↓</div>
+      <div class="stage split"><span class="tag">SPLIT</span><div class="body"><b>Internal agents vs client repos</b><div class="d">The fork where per-client isolation becomes physical.</div></div></div>
+      <div class="branch">
+        <div class="b int"><b>Internal (acd, nami — every client)</b>Read their deliveries straight from the shared store.</div>
+        <div class="b cli"><b>Client repos (one client only)</b>A trusted projector copies only their data into their OWN permissioned file — another client's bytes aren't in it.</div>
+      </div>
+      <div class="arrow">↓ <span style="color:var(--purple)">#3 physical wall</span></div>
+      <div class="stage"><span class="tag">DRAIN</span><div class="body"><b>The drainer runner — the loop every agent rides</b><div class="d">At-least-once (a crash redelivers, never loses); poison messages parked; ~60s idle heartbeat.</div></div><span class="badge">#1 runner</span></div>
+      <div class="arrow">↓</div>
+      <div class="stage"><span class="tag">WAKE</span><div class="body"><b>Delivered on signal, not on the clock</b><div class="d">The sender pokes the agent → it drains in ~20ms. Low latency with zero extra empty polls.</div></div><span class="badge">+ event-wake</span></div>
+    </div>
+    <div class="rails">
+      <div class="rail"><b>Backfill · #2</b>History enters as quarantined, scrubbed claims — never routes until a human promotes it.</div>
+      <div class="rail"><b>Retraction · core</b>"That was wrong" reaches everyone who got the original, as a correction.</div>
+      <div class="rail"><b>Fail-closed · core</b>An unroutable fact lands in dead-letter — recoverable and alertable, never lost.</div>
+      <div class="rail"><b>Observability · #5</b>Health re-audits the whole store: lag, dead-letters, isolation alarms.</div>
+    </div>
+  </section>
+
+  <!-- THE SIX -->
+  <section>
+    <h2 class="sec"><span class="num">02</span> The six increments</h2>
+    <div class="builds">
+      <div class="build"><div class="tag">#1 · runner</div><h3>Drainer runner</h3><p>The always-on loop every agent rides. At-least-once delivery; poison messages parked so one bad fact can't jam the queue.</p><div class="meta"><span class="checks">✓ 35</span><span class="sha">9e9536c</span></div></div>
+      <div class="build"><div class="tag">#2 · backfill</div><h3>Backfill as claims</h3><p>Pours our history in as quarantined, secret-scrubbed claims that stay invisible until a human-gated promotion turns one into a routed fact.</p><div class="meta"><span class="checks">✓ 36</span><span class="sha">dc27da3</span></div></div>
+      <div class="build"><div class="tag">#3 · projection</div><h3>Physical client wall</h3><p>Each client repo gets its own permissioned file. Reading the raw bytes proves another client's data is simply not there.</p><div class="meta"><span class="checks">✓ 19</span><span class="sha">effe91a</span></div></div>
+      <div class="build"><div class="tag">+ wake</div><h3>Event-driven wake</h3><p>Wake the right drainer on delivery instead of polling faster — ~20ms latency, no empty-poll tax, heartbeat as the fallback.</p><div class="meta"><span class="checks">✓ in #1</span><span class="sha">b00bf70</span></div></div>
+      <div class="build"><div class="tag">#5 · health</div><h3>Observability</h3><p>Re-audits the store into a live dashboard + alerts. Isolation = critical; lag is attributed to the drainer or the projector, never blamed on the wrong party.</p><div class="meta"><span class="checks">✓ 28</span><span class="sha">e537db7</span></div></div>
+      <div class="build"><div class="tag">#6 · registry</div><h3>Message contracts</h3><p>Each fact type gets a typed payload + version, checked at the door. The action-vocabulary registry made concrete — the systemic fix for silent failures.</p><div class="meta"><span class="checks">✓ 25</span><span class="sha">a16e038</span></div></div>
+      <div class="build"><div class="tag">#4 · identity</div><h3>Signed source claims</h3><p>Who-sent-what becomes cryptographically true (Ed25519). Forged, tampered, or impersonated facts are refused; a client repo can't write or subscribe to another client.</p><div class="meta"><span class="checks">✓ 19</span><span class="sha">local</span></div></div>
+    </div>
+  </section>
+
+  <!-- HONEST LIMITS -->
+  <section>
+    <h2 class="sec"><span class="num">03</span> What I'm <em>not</em> claiming</h2>
+    <p class="lead">Every increment got an internal Devil's Advocate pass. The holes are written down — in the
+    code, the commits, and here — not buried. None block a tested reference; all are tracked for the hardening before this touches live data.</p>
+    <div class="honest"><ul>
+      <li><b>The physical wall is proven by content + permissions, not cross-user denial yet</b> — that last step needs each client file owned by its own OS user on the Mac Mini (a one-line deploy step), documented, not faked.</li>
+      <li><b>Secret scrubbing is best-effort</b> — it catches known shapes (keys, tokens, emails); the real safety net is that claims are quarantined and human-reviewed before anything routes.</li>
+      <li><b>The runner is at-least-once</b> — handlers must be safe to run twice; one-runner-per-agent is the deploy assumption.</li>
+      <li><b>Schema checking is opt-in and a JSON-Schema subset</b> — production routes writes through the validated path and may swap in a full validator behind the same surface.</li>
+      <li><b>Codex review is intentionally deferred</b> to just before deployment — six scoped prompts are drafted, to run against the real ported code, not throwaway prototype specifics.</li>
+    </ul></div>
+  </section>
+
+  <!-- NOW / NEXT -->
+  <section>
+    <h2 class="sec"><span class="num">04</span> Where the roadmap stands</h2>
+    <div class="twocol">
+      <div class="col now"><h3>Proven now (the spine)</h3><ul>
+        <li>Core — type once → the right agents get it, walled, audited</li>
+        <li>#1 Drainer runner + event-driven wake</li>
+        <li>#2 Backfill — history in safely, human-gated</li>
+        <li>#3 Physical per-client files — the filesystem wall</li>
+        <li>#5 Observability — live health dashboard</li>
+        <li>#6 Message contracts — typed payloads + versioning</li>
+        <li>#4 Agent identity — signed source claims; cross-client writes/subscribes refused</li>
+      </ul></div>
+      <div class="col next"><h3>Still owed before production</h3><ul>
+        <li>#7 Thin adapter for the live ACD↔Kai loop + mesh sunset</li>
+        <li>#8 The real DAG → ACD/NAMI pilot, on the Mini</li>
+        <li>Deploy hardening: cross-uid chown · ack-back · deeper scrub</li>
+        <li>One Codex round against the ported code, pre-deploy</li>
+      </ul></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec"><span class="num">05</span> See it yourself</h2>
+    <div class="pointer">
+      <span>node prototype/shared-layer/health-dashboard.js</span>
+      <span>explainers/shared-layer-health-2026-05-25.html — live ops view</span>
+      <span>prototype/shared-layer/ — 7 test suites, 164 checks</span>
+    </div>
+  </section>
+
+  <div class="footer">
+    Code Architect · State of the Shared Layer · session 6 · 2026-05-25 · 7 increments · 183/183 green ·
+    local commits only (not pushed) · reference for Kai to adopt; production hardening tracked per increment.
+  </div>
+
+</div>
+</body>
+</html>
