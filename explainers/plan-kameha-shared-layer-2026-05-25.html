@@ -251,13 +251,13 @@
     <h2 class="sec"><span class="num">07</span> The gate before we build a single line</h2>
     <p class="lead">You're right that this is essential — so it goes through the full review before implementation, exactly like the patches did.</p>
     <div class="gate">
-      <div class="g build"><div class="n">1 · You approve ◐</div><div class="d">direction (you're here)</div></div>
+      <div class="g build"><div class="n">1 · Direction ✓</div><div class="d">approved + refined</div></div>
       <div class="arr">→</div>
-      <div class="g build"><div class="n">2 · CA-internal DA ✓</div><div class="d">done — REVISE, 4 fixes folded</div></div>
+      <div class="g build"><div class="n">2 · CA DA ✓</div><div class="d">REVISE, 4 fixes folded</div></div>
       <div class="arr">→</div>
-      <div class="g now"><div class="n">3 · Codex review ▸</div><div class="d">prompt ready to run</div></div>
+      <div class="g build"><div class="n">3 · Codex ✓</div><div class="d">blockers found + folded</div></div>
       <div class="arr">→</div>
-      <div class="g"><div class="n">4 · Implement</div><div class="d">phase by phase, with Kai</div></div>
+      <div class="g now"><div class="n">4 · Build Phase 0 ◐</div><div class="d">on your go (with Kai)</div></div>
     </div>
   </section>
 
@@ -282,9 +282,24 @@
     <div class="risk" style="border-left-color:var(--dim);"><strong>Also watching:</strong> single-point-of-failure backup story, drainer cost (cheap triage before any AI call), out-of-order delivery, SQLite contention. Carried into build.</div>
   </section>
 
+  <!-- CODEX FINDINGS -->
+  <section>
+    <h2 class="sec"><span class="num">10</span> What Codex caught — and the one big correction</h2>
+    <p class="lead">Codex's verdict: <strong style="color:var(--green)">Phase 0 is sound</strong>, but <strong style="color:var(--orange)">Phase 1 wasn't safe</strong> as first drawn. It found a real hole in my isolation plan — and it was right. Here's the honest correction:</p>
+    <div class="callout live"><strong style="color:var(--yellow)">The fix I had to make:</strong> I'd planned to keep clients apart with a shared "rulebook" that every agent applies when reading. Codex showed that's just a promise — any stray script or stale copy reading the database directly would see everything. <strong style="color:var(--yellow)">Isolation now works by what an agent can physically reach:</strong> a trusted router writes each agent its own private inbox, and client repos read only their own pre-filtered slice — they literally cannot see another client's data. A boundary, not a promise.</div>
+    <div class="chips" style="margin-top:16px;">
+      <div class="chip"><div class="h"><span class="ic">✓</span>Private inboxes</div><div class="d">Each agent reads only rows written <em>for it</em> — not the shared pool. DAG can't reach TDB's data even by accident.</div></div>
+      <div class="chip"><div class="h"><span class="ic">✓</span>No cross-client sharing in v1</div><div class="d">"Anonymized learnings" are too easy to re-identify in a 16-client world. Pulled until there's a real redaction regime.</div></div>
+      <div class="chip"><div class="h"><span class="ic">✓</span>Backfill = claims, not gospel</div><div class="d">Imported history is tagged as unverified and can be superseded — a stale note can't poison the fleet permanently.</div></div>
+      <div class="chip"><div class="h"><span class="ic">✓</span>Reject bad data at the door</div><div class="d">Missing client scope or an unknown fact-type is refused on write, not discovered later.</div></div>
+      <div class="chip"><div class="h"><span class="ic">✓</span>Corrections are first-class</div><div class="d">You can say "that fact was wrong" and agents receive the correction — not just an ignored new note.</div></div>
+      <div class="chip"><div class="h"><span class="ic">✓</span>One transport, declared</div><div class="d">We name the canonical channel up front so we don't quietly build a second mesh beside the old one.</div></div>
+    </div>
+  </section>
+
   <div class="footer">
-    Code Architect · plan explainer · 2026-05-25 · STATUS: proposal — awaiting Alex's go on direction, then CA-internal DA → Codex review → phased build (Kai-led infra).
-    Companion design doc + Codex prompt to follow once direction is approved.
+    Code Architect · plan explainer · 2026-05-25 (v2, post-Codex) · STATUS: DA ✓ + Codex ✓ complete; design revised; isolation redesigned around enforced private inboxes.
+    Next: build Phase 0 on Alex's go. Design + DA + Codex results in docs/design-kameha-shared-layer-2026-05-25*.
   </div>
 
 </div>
