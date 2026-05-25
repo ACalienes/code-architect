@@ -12,6 +12,17 @@ are T2/T3. This doc is what Kai needs to deploy.
 - Dedicated `kameha-mesh.db` on the Mini (NOT extending conductor.db — blast radius + isolation).
 - Isolation is structural (delivery split) + physical (per-client files) + identity-enforced.
 
+## Trust boundary (the enforcement — Codex REVISE)
+
+JS cannot hide an export, so isolation/auth is NOT enforced by hiding functions — it is enforced by the
+**process boundary**: only the **trusted service process** holds the `kameha-mesh.db` handle and imports
+the core primitives (lenient `writeFact`/`subscribe`, the router, the projector). Agents run as
+**separate processes** and can reach the layer ONLY through the hardened door — they submit *signed*
+facts (`writeSignedFact`) and *authorized* subscriptions (`authorizeSubscribe`); they never get the db
+handle. The facade (`index.js`) is the agent-facing surface and exposes no lenient/raw write. The mesh
+adapter is the single legacy ingress and now **signs** (no unsigned path); claim promotion is
+schema-gated. Deploy must preserve this: do not hand an agent process the central db handle.
+
 ## 0. Pre-deploy gate (do first)
 
 - **Run the 7 Codex prompts** (`docs/codex-prompt-shared-layer-*.md`) against the PORTED code, not the

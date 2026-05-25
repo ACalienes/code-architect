@@ -52,6 +52,16 @@ const h = (s) => console.log(`\n\x1b[1m${s}\x1b[0m`);
     check('claim ingested + quarantined (invisible until promoted)', c.ok && sl.listClaims().length === 1);
   }
 
+  h('4. No bypass — the facade surface exposes only the hardened path (Codex REVISE guard)');
+  {
+    const sl = createSharedLayer({ db: openDb() });
+    check('no unsigned writeValidated on the facade', typeof sl.writeValidated === 'undefined');
+    check('no raw writeFact / subscribe on the facade', typeof sl.writeFact === 'undefined' && typeof sl.subscribe === 'undefined');
+    const mod = require('./index');
+    check('the module does not re-export raw primitive modules (core/identity/registry)', !mod.core && !mod.identity && !mod.registry && !mod.backfill);
+    check('only the sealed surface is exported', typeof mod.createSharedLayer === 'function' && typeof mod.openDb === 'function');
+  }
+
   h(failures === 0 ? '\x1b[32mFACADE HOLDS ✓\x1b[0m' : `\x1b[31m${failures} CHECK(S) FAILED\x1b[0m`);
   process.exit(failures === 0 ? 0 : 1);
 })();

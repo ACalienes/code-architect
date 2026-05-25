@@ -113,7 +113,7 @@ h('5. promotion preflight — an unknown fact_type stays quarantined, never beco
   });
   check('ingest accepts it (quarantine is permissive; review decides)', r.ok);
   const p = promoteClaim(db, r.claim_id, 'alex');
-  check('promotion rejected by the writeFact preflight', p.ok === false && /unknown fact_type/.test(p.error));
+  check('promotion rejected by the schema door (unknown fact_type)', p.ok === false && /unknown fact_type/.test(p.error));
   check('claim stays quarantined after a failed promotion', listClaims(db, { status: 'quarantined' }).length === 1);
   check('still zero deliveries (nothing leaked out)', countDeliveries(db) === 0);
 }
@@ -124,7 +124,7 @@ h('6. promotion preflight — client-confidential w/o client_id cannot be promot
   const db = openDb();
   const r = ingestClaim(db, {
     fact_type: 'client_feedback', subject_id: 'x', visibility: 'client', data_class: 'client_confidential',
-    source_ref: 'memory/z.md:1', payload: { sentiment: 'unknown client' },
+    source_ref: 'memory/z.md:1', payload: { sentiment: 'loved' }, // schema-valid → rejection is on the missing client_id, not the schema
   });
   const p = promoteClaim(db, r.claim_id, 'alex');
   check('promotion rejected: missing client_id', p.ok === false && /missing client_id/.test(p.error));

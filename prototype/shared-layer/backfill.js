@@ -22,6 +22,7 @@
 
 const { randomUUID, createHash } = require('node:crypto');
 const { writeFact } = require('./shared-layer');
+const { writeFactValidated, defaultRegistry } = require('./registry');
 
 const now = () => new Date().toISOString();
 
@@ -158,19 +159,23 @@ function listClaims(db, { status = 'quarantined' } = {}) {
  * and only on success does it become a real, routed fact. A failed promotion leaves the claim
  * quarantined with the reason — never a partial/leaky state.
  */
-function promoteClaim(db, claim_id, reviewer) {
+function promoteClaim(db, claim_id, reviewer, { registry = defaultRegistry } = {}) {
   ensureClaimsTable(db);
   const c = db.prepare('SELECT * FROM claims WHERE claim_id = ?').get(claim_id);
   if (!c) return { ok: false, error: 'no such claim' };
   if (c.status !== 'quarantined') return { ok: false, error: `claim is '${c.status}', not quarantined` };
 
-  const res = writeFact(db, {
+  // Promotion is NOT a raw write — it goes through the same schema door as any fact (Codex REVISE:
+  // a promoted claim must not bypass the registry). The promoter (reviewer) is the recorded authority;
+  // there's no signature because backfilled history has no signing agent — promotion is human-gated.
+  const factSpec = {
     fact_type: c.fact_type, client_id: c.client_id ?? undefined,
     subject_type: c.subject_type, subject_id: c.subject_id,
     visibility: c.visibility, data_class: c.data_class,
     source_agent: c.source_agent || 'backfill',
     payload: { ...JSON.parse(c.payload), _provenance: c.source_ref, _promoted_from_claim: claim_id },
-  });
+  };
+  const res = registry ? writeFactValidated(db, factSpec, registry) : writeFact(db, factSpec);
   if (!res.ok) {
     audit(db, 'claim_promotion_rejected', { claim_id, error: res.error });
     return { ok: false, error: `promotion rejected by preflight: ${res.error}` }; // claim stays quarantined

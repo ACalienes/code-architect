@@ -7,16 +7,16 @@
  * without changing ACD or Kai: it translates the legacy A2A v1.0 envelope ↔ a Shared Layer fact, and
  * honors the envelope's idempotency (idempotency_key === message_id) + expiry at the boundary.
  *
- * TRUST BOUNDARY (DA-recorded): ingestEnvelope writes UNSIGNED — it inherits the legacy mesh-api's
- * authentication of the sender (the live loop already authenticated through mesh-api). It deliberately
- * does NOT re-verify a Shared Layer identity, because legacy senders don't sign. This compat trust is
- * acceptable ONLY for the bridged loop and is removed at sunset, when those agents send signed facts
- * natively (writeSignedFact). Until then, the adapter is the single trusted ingress for legacy traffic.
+ * TRUST BOUNDARY (post-Codex-REVISE): ingestEnvelope is NOT unsigned. It SIGNS each translated fact as
+ * the enrolled bridge identity (`mesh-adapter`) and writes through the full door, so legacy traffic
+ * becomes authenticated facts attributed to the trusted bridge, with the original sender recorded in
+ * provenance (`_via_mesh_from`). The bridge inherits the legacy mesh-api's authentication of the sender
+ * (the live loop already authenticated there) and vouches for it by signing. The adapter is the single
+ * trusted ingress for legacy traffic; it is removed at sunset, when those agents sign facts natively.
  */
 
 const { randomUUID } = require('node:crypto');
-const { writeFact } = require('./shared-layer');
-const { writeFactValidated } = require('./registry');
+const { signFact, writeSignedFact } = require('./identity');
 
 const now = () => new Date().toISOString();
 
@@ -70,17 +70,26 @@ function envelopeFromFact(fact, { actionMap = DEFAULT_ACTION_MAP, to = null } = 
 
 /**
  * The single trusted ingress for legacy envelopes: dedupe by message_id, drop expired, map → fact,
- * then write (through the schema registry if supplied). Unsigned (see TRUST BOUNDARY above).
+ * then SIGN as the enrolled bridge identity and write through the full door (verify → authZ →
+ * schema). Legacy ingress thus becomes AUTHENTICATED facts (Codex REVISE: no unsigned path) — the
+ * translated fact is attributed to the bridge (`mesh-adapter`) with the original sender preserved in
+ * provenance (`_via_mesh_from`). `adapterIdentity` = { agent, privateKey } and MUST be enrolled;
+ * unsigned ingress is refused outright.
  */
-function ingestEnvelope(db, env, { actionMap, registry } = {}) {
+function ingestEnvelope(db, env, { actionMap, registry, adapterIdentity } = {}) {
   ensureSeenTable(db);
   if (!env || !env.message_id) return { ok: false, error: 'envelope missing message_id' };
+  if (!adapterIdentity || !adapterIdentity.agent || !adapterIdentity.privateKey)
+    return { ok: false, error: 'unsigned ingress refused: adapter has no enrolled signing identity' };
   if (db.prepare('SELECT 1 FROM mesh_seen WHERE message_id = ?').get(env.message_id)) return { ok: true, deduped: true };
   if (env.expires_at && Date.parse(env.expires_at) < Date.now()) return { ok: false, error: 'envelope expired' };
 
   const f = factFromEnvelope(env, { actionMap });
   if (!f.ok) return f;
-  const res = registry ? writeFactValidated(db, f.fact, registry) : writeFact(db, f.fact);
+  // re-attribute to the trusted bridge; keep the original sender in provenance
+  const fact = { ...f.fact, source_agent: adapterIdentity.agent,
+    payload: { ...f.fact.payload, _via_mesh_from: env.from, _mesh_message_id: env.message_id } };
+  const res = writeSignedFact(db, fact, signFact(adapterIdentity.privateKey, fact), { registry });
   if (res.ok) db.prepare('INSERT OR IGNORE INTO mesh_seen (message_id, ts) VALUES (?, ?)').run(env.message_id, now());
   return res.ok ? { ok: true, deduped: false, fact_id: res.fact_id, routed: res.routed } : res;
 }

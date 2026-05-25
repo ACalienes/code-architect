@@ -17,8 +17,9 @@ const bf = require('./backfill');
 const { createDrainer } = require('./runner');
 const notify = require('./notify');
 const hm = require('./health');
+const adapter = require('./adapter-mesh');
 
-function createSharedLayer({ db, registry = reg.defaultRegistry, projectionsDir = null } = {}) {
+function createSharedLayer({ db, registry = reg.defaultRegistry, projectionsDir = null, adapterIdentity = null } = {}) {
   if (!db) throw new Error('createSharedLayer requires { db }');
   const needDir = () => { if (!projectionsDir) throw new Error('projectionsDir not configured'); return projectionsDir; };
 
@@ -34,16 +35,18 @@ function createSharedLayer({ db, registry = reg.defaultRegistry, projectionsDir 
 
     // ── writes ──
     sign: id.signFact,
-    /** The production door: verify signature → authZ → schema → core write+route. */
+    /** The ONLY write the facade exposes: verify signature → authZ → schema → core write+route.
+     *  There is deliberately no unsigned/lenient write on this surface (Codex REVISE: no bypass). */
     write: (fact, signature) => id.writeSignedFact(db, fact, signature, { registry }),
-    /** Schema-only write for trusted internal producers / promoted claims (no signature). */
-    writeValidated: (fact) => reg.writeFactValidated(db, fact, registry),
     revoke: (factId, reason) => core.revoke(db, factId, reason),
 
-    // ── backfill (history → quarantined claims → human-gated promotion) ──
+    // ── legacy bridge (the one live loop) — signed ingress via the enrolled adapter identity ──
+    ingestEnvelope: (env, opts = {}) => adapter.ingestEnvelope(db, env, { registry, adapterIdentity, ...opts }),
+
+    // ── backfill (history → quarantined claims → human-gated promotion; promotion is schema-gated) ──
     ingestClaim: (claim) => bf.ingestClaim(db, claim),
     listClaims: (opts) => bf.listClaims(db, opts),
-    promoteClaim: (claimId, reviewer) => bf.promoteClaim(db, claimId, reviewer),
+    promoteClaim: (claimId, reviewer) => bf.promoteClaim(db, claimId, reviewer, { registry }),
     rejectClaim: (claimId, reviewer, reason) => bf.rejectClaim(db, claimId, reviewer, reason),
 
     // ── per-client physical projection ──
@@ -66,9 +69,14 @@ function createSharedLayer({ db, registry = reg.defaultRegistry, projectionsDir 
   };
 }
 
+// The facade is the agent-facing surface and exposes ONLY hardened operations. The raw module
+// primitives (lenient writeFact/subscribe, etc.) are intentionally NOT re-exported here — they exist
+// in their own modules for the TRUSTED service + tests. JS cannot truly hide an export, so the real
+// enforcement is the DEPLOYMENT process boundary: only the trusted service process holds the db handle
+// and imports the core; agents are separate processes that can reach the layer only through this door.
+// (Codex REVISE: don't advertise a bypass.)
 module.exports = {
   createSharedLayer,
-  // re-exports for direct/low-level use
-  openDb: core.openDb, defaultRegistry: reg.defaultRegistry,
-  core, registry: reg, identity: id, projection: proj, backfill: bf, notify, healthMod: hm,
+  openDb: core.openDb,            // db construction (not a write path)
+  defaultRegistry: reg.defaultRegistry,
 };
