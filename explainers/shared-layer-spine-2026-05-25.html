@@ -98,8 +98,8 @@
   and the <strong>filesystem-level wall</strong> between clients. All tested, all green, none deployed yet — exactly the right order.</p>
 
   <div class="stat-grid">
-    <div class="stat"><div class="label">Tests passing</div><div class="value green">139 / 139</div><div class="note">runner · backfill · projection · wake · health</div></div>
-    <div class="stat"><div class="label">Increments built today</div><div class="value blue">4 + wake</div><div class="note">runner · backfill · wall · event-wake · observability</div></div>
+    <div class="stat"><div class="label">Tests passing</div><div class="value green">164 / 164</div><div class="note">runner · backfill · projection · wake · health · vocab</div></div>
+    <div class="stat"><div class="label">Increments built today</div><div class="value blue">5 + wake</div><div class="note">runner · backfill · wall · wake · health · vocabulary</div></div>
     <div class="stat"><div class="label">Cross-client leaks</div><div class="value green">0</div><div class="note">now proven at the byte level</div></div>
     <div class="stat"><div class="label">Walls on client data</div><div class="value purple">2</div><div class="note">logical + physical</div></div>
   </div>
@@ -212,10 +212,10 @@ ALL PROJECTION INVARIANTS HOLD ✓</span>
         <li>#3 Physical per-client files — the filesystem wall</li>
         <li>+ Event-driven wake — low latency without faster polling</li>
         <li>#5 Observability — a live health dashboard, re-audited from the store</li>
+        <li>#6 Message-type contracts — typed payloads + versioning, checked at the door</li>
       </ul></div>
       <div class="col next"><h3>Still owed before production</h3><ul>
         <li>#4 Agent identity + signed messages</li>
-        <li>#6 Message-type schemas + versioning</li>
         <li>#7 The thin adapter for the live ACD↔Kai loop + mesh sunset</li>
         <li>#8 The real DAG → ACD/NAMI pilot, on the Mini</li>
         <li>Deploy hardening: cross-uid chown, ack-back, secret-scrub depth</li>
@@ -224,7 +224,7 @@ ALL PROJECTION INVARIANTS HOLD ✓</span>
   </section>
 
   <div class="footer">
-    Code Architect · Shared Layer reference spine · 2026-05-25 · 139/139 checks green ·
+    Code Architect · Shared Layer reference spine · 2026-05-25 · 164/164 checks green ·
     live ops view → <span class="mono">explainers/shared-layer-health-2026-05-25.html</span> ·
     <span class="mono">prototype/shared-layer/</span> · reference for Kai to adopt; committed locally, not pushed · Codex deferred to pre-deploy.
   </div>

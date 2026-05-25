@@ -57,6 +57,11 @@ rule + the deliveries split *is* the isolation boundary.
   drainer vs projector, liveness). `recordHeartbeat` (liveness only), `renderHealthText`/`renderHealthHtml`.
 - `health.test.js` — the runnable proof (28 checks). `health-dashboard.js` — emits a live dashboard
   HTML from a representative fleet state.
+- `registry.js` — **fact_type schema + versioning** (hardening roadmap #6): the action-vocabulary
+  registry, concrete. `defaultRegistry` (typed payload contract + version per fact_type), a JSON-Schema
+  -subset `validate`, `validatePayload`, and `writeFactValidated()` (validate → stamp version → core writeFact).
+- `registry.test.js` — the runnable proof (25 checks): validator subset, vocabulary accept/reject,
+  reject-at-the-door, version stamping, schema evolution (v1→v2), registry/core drift guard.
 
 ```bash
 node prototype/shared-layer/demo.js            # core invariants
@@ -65,9 +70,21 @@ node prototype/shared-layer/backfill.test.js   # backfill-as-claims
 node prototype/shared-layer/projection.test.js # physical per-client isolation
 node prototype/shared-layer/notify.test.js     # event-driven wake / low latency
 node prototype/shared-layer/health.test.js     # observability / alert synthesis
+node prototype/shared-layer/registry.test.js   # fact_type schemas + versioning
 node prototype/shared-layer/health-dashboard.js  # → writes a live health dashboard HTML
-# 139 checks total, all green.
+# 164 checks total, all green.
 ```
+
+## fact_type contracts (the action-vocabulary registry)
+
+The core preflight checks the type *name* is known; `registry.js` extends that to the payload: each
+fact_type has a typed contract + version, and `writeFactValidated()` rejects a non-conforming payload
+**at the door** (never persisted), stamps `payload._schema_ver`, then hands to the proven `writeFact()`.
+It's **additive and opt-in** — the lenient `writeFact()` is untouched (so all prior checks stay green);
+production routes writes through `writeFactValidated`. Versioning means a schema can gain a field (v1→v2)
+without stranding v1-stamped facts — a reader knows which contract produced each fact. DA-recorded
+limits: the validator is a JSON-Schema *subset* (production may swap in ajv behind `validatePayload`);
+cross-version payload *migration* and tightening the `_`-prefixed metadata allowlist are roadmap.
 
 ## Observability — re-audit, not telemetry-trust
 
