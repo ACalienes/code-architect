@@ -19,6 +19,10 @@
 
 const { writeFact, FACT_TYPES } = require('./shared-layer');
 
+// The ONLY reserved metadata keys allowed past additionalProperties:false. A named allowlist (not
+// "any _-prefixed key") so a sender can't smuggle e.g. `_api_key` through schema (Codex).
+const META_KEYS = new Set(['_schema_ver', '_provenance', '_promoted_from_claim', '_via_mesh_from', '_mesh_message_id']);
+
 // ── Minimal JSON-Schema-subset validator. Returns an array of human-readable errors ([] = valid).
 function validate(schema, value, p = '') {
   const errs = [];
@@ -36,8 +40,8 @@ function validate(schema, value, p = '') {
     for (const r of schema.required || []) if (!(r in value)) errs.push(`${p}${r}: required`);
     if (schema.additionalProperties === false)
       for (const k of Object.keys(value))
-        // '_'-prefixed keys are reserved layer metadata (_schema_ver, _provenance) and always allowed
-        if (!(k in props) && !k.startsWith('_')) errs.push(`${p}${k}: unexpected property`);
+        // only declared props + the named reserved-metadata allowlist pass; everything else is rejected
+        if (!(k in props) && !META_KEYS.has(k)) errs.push(`${p}${k}: unexpected property`);
     for (const k of Object.keys(props)) if (k in value) errs.push(...validate(props[k], value[k], `${p}${k}.`));
   }
   if (schema.type === 'array' && schema.items && Array.isArray(value))

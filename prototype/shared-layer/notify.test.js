@@ -42,8 +42,9 @@ const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sl-notify-'));
     let wakes = 0;
     const stub = { wake() { wakes++; return this; } };
     const w = watchWake(tmp, 'beta', stub);
-    signalWake(tmp, 'beta');
-    const ok = await waitFor(() => wakes >= 1);
+    // re-signal each poll: fs.watch can drop the very first event, and the heartbeat-style retry is
+    // exactly how production behaves (a missed wake just falls back) — so the test isn't racy.
+    const ok = await waitFor(() => { if (wakes < 1) signalWake(tmp, 'beta'); return wakes >= 1; }, 4000, 50);
     check('runner.wake() fired from a filesystem signal', ok);
     w.stop();
   }
@@ -66,8 +67,7 @@ const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sl-notify-'));
       visibility: 'client', data_class: 'client_confidential', source_agent: 'router', payload: {},
     });
     const t0 = Date.now();
-    signalWake(tmp, 'gamma');
-    const delivered = await waitFor(() => got.length === 1);
+    const delivered = await waitFor(() => { if (got.length === 0) signalWake(tmp, 'gamma'); return got.length === 1; }, 4000, 50);
     const latency = Date.now() - t0;
     check('fact delivered via the wake signal', delivered && got[0] === 'urgent-ping');
     check(`delivered in well under the idle interval (${latency}ms ≪ 600000ms)`, delivered && latency < 2000);

@@ -52,15 +52,21 @@ The prototype uses the built-in `node:sqlite` for zero-install demonstrability. 
   `ensureIdentitiesTable`/`ensureSeenTable` are lazy — they self-create on first use.
 - `schema_version: 1` is the migration anchor (per CLAUDE.md).
 
-## 3. Enrollment (identities) — privileged, T3
+## 3. Enrollment (identities) — privileged ADMIN surface, T3
 
-- For each agent (kai, acd, nami, framer, enso, cfo, conductor, lead-engine, code-architect, + client
-  repos DAGDC/TDB), generate an Ed25519 keypair.
-- `registerIdentity(db, {agent, publicKey, clientId, canProduce})` stores **public keys only**; client
-  repos get `clientId` set (bound), internal agents leave it null.
+- For each agent (kai, acd, nami, framer, enso, cfo, conductor, offer-architect, lead-engine,
+  code-architect, **mesh-adapter** (the legacy bridge), + client repos dag-repo/tdb-repo) generate an
+  Ed25519 keypair. `enroll.js` (`FLEET_ROSTER`) does all of this; `mesh-adapter` is included.
+- Enrollment runs via the **admin surface only** (`createAdminLayer(db)`), which is NOT exposed on the
+  agent-facing facade — an agent reaching the facade cannot register/replace an identity.
+- Enrollment is **insert-only**: re-registering an existing agent is REFUSED; replacing a key requires
+  an explicit `rotateIdentity` ceremony (audited). This stops silent key-takeover.
+- `registerIdentity` stores **public keys only**; client repos get `clientId` set (bound), internal
+  agents (incl. `mesh-adapter`) leave it null.
 - **Private-key custody (T3, needs Alex):** each agent holds its own private key (env/secret store),
-  NEVER in kameha-mesh.db or any log. Decide custody mechanism with Kai (per-agent secret).
-- Enrollment is a one-time privileged bootstrap run by Alex/Kai, not self-serve.
+  NEVER in kameha-mesh.db or any log. `mesh-adapter`'s key goes to the trusted bridge process. Decide
+  the custody mechanism with Kai; then `node enroll.js --db <kameha-mesh.db> --keys <keystore>` and
+  distribute + delete the keystore.
 
 ## 4. Subscriptions
 
@@ -74,12 +80,19 @@ The prototype uses the built-in `node:sqlite` for zero-install demonstrability. 
 - Wire `onTick → recordHeartbeat` for liveness (the facade's `drainer()` does this).
 - `signalWake` from the router/projector after delivery → near-immediate latency; ~60s is the heartbeat.
 
-## 6. Per-client physical projections + chown (the cross-uid step)
+## 6. Per-client physical projections + ownership (the cross-uid step)
 
-- The projector writes `<projections>/<agent>/inbox.db` per client repo and `chmod 0600/0700`.
-- **chown each `<agent>/` dir to that client repo's dedicated unix user** so a different uid is denied
-  by the OS (the in-process prototype can't exercise this — it's THE deploy step that turns content
-  isolation into cross-user denial). Requires the client repos to run as distinct users — confirm with Kai.
+- The projector creates `<projections>/<agent>/` **private up front** (mode set before the db file is
+  created — closed the temporary read window Codex flagged), writes `inbox.db`, then chmods.
+- **Ownership model (Codex):** a `0600/0700` client-OWNED file isn't writable by the projector next
+  cycle. So: each `<agent>/` dir is **owned by the trusted projector user, group = that client's group**,
+  modes **dir `0750` / file `0640`**, and `chown -R projector:<client-group>`. Result: the projector
+  (owner) rewrites each cycle; the client (its group) reads its own; **other** has no access and another
+  client's group isn't a member → cross-client read denied by the OS. Pass these modes to
+  `projectClient({mode:0o640, dirMode:0o750})` at deploy.
+- This cross-uid denial is THE step that turns content isolation into OS-enforced isolation; the
+  in-process prototype proves content + timing + the refusal guard, not cross-uid. Confirm the client
+  repos run as distinct unix users/groups with Kai.
 
 ## 7. The live ACD↔Kai loop (compat adapter, #7)
 

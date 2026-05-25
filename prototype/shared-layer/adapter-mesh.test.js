@@ -90,12 +90,12 @@ h('6. round-trip — fact → envelope → fact preserves type + payload');
   check('payload preserved', factFromEnvelope(env).fact.payload.sentiment === 'loved');
 }
 
-// ── 7. Schema enforced on ingress ──
-h('7. schema — a malformed legacy payload is rejected at ingress (registry supplied)');
+// ── 7. Schema enforced on ingress BY DEFAULT (no registry passed → bypass closed) ──
+h('7. schema — a malformed legacy payload is rejected even when no registry is passed (default on)');
 {
   const { db, adapterIdentity } = setup();
-  const r = ingestEnvelope(db, envelope({ message_id: 'm-bad', payload: { sentiment: 'ecstatic' } }), { adapterIdentity, registry: defaultRegistry });
-  check('bad payload rejected by schema even via the signed bridge', !r.ok && /schema/.test(r.error));
+  const r = ingestEnvelope(db, envelope({ message_id: 'm-bad', payload: { sentiment: 'ecstatic' } }), { adapterIdentity });
+  check('bad payload rejected by the default schema (no registry arg needed)', !r.ok && /schema/.test(r.error));
   check('nothing persisted', db.prepare('SELECT COUNT(*) AS n FROM facts').get().n === 0);
 }
 

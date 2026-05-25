@@ -19,7 +19,7 @@
  */
 
 const { randomUUID } = require('node:crypto');
-const { openDatabase } = require('./db');
+const { openDatabase, withTx } = require('./db');
 
 // Controlled vocabulary (the action-vocabulary registry, concrete). Unknown → rejected.
 const FACT_TYPES = new Set([
@@ -119,16 +119,19 @@ function writeFact(db, f) {
   }
 
   const fact_id = randomUUID();
-  db.prepare(`INSERT INTO facts
-    (fact_id, fact_type, client_id, subject_type, subject_id, visibility, data_class, payload, source_agent, observed_at, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
-    fact_id, f.fact_type, f.client_id ?? null, f.subject_type ?? null, f.subject_id ?? null,
-    f.visibility, f.data_class, JSON.stringify(f.payload ?? {}), f.source_agent,
-    f.observed_at ?? now(), now()
-  );
-  audit(db, 'fact_written', { fact_id, fact_type: f.fact_type, client_id: f.client_id, source: f.source_agent });
-
-  const routed = route(db, fact_id);
+  // Atomic (Codex): the fact INSERT + its routing commit together, so a crash can't leave an
+  // unrouted orphan fact. Re-entrant — nests under promoteClaim / the adapter's outer transaction.
+  const routed = withTx(db, () => {
+    db.prepare(`INSERT INTO facts
+      (fact_id, fact_type, client_id, subject_type, subject_id, visibility, data_class, payload, source_agent, observed_at, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+      fact_id, f.fact_type, f.client_id ?? null, f.subject_type ?? null, f.subject_id ?? null,
+      f.visibility, f.data_class, JSON.stringify(f.payload ?? {}), f.source_agent,
+      f.observed_at ?? now(), now()
+    );
+    audit(db, 'fact_written', { fact_id, fact_type: f.fact_type, client_id: f.client_id, source: f.source_agent });
+    return route(db, fact_id);
+  });
   return { ok: true, fact_id, routed };
 }
 
@@ -243,19 +246,21 @@ function pendingStats(db, agent) {
 
 /** Retraction/correction (Codex G19): revoke a fact + issue corrections to its recipients. */
 function revoke(db, fact_id, reason) {
-  db.prepare('UPDATE facts SET revoked_at = ? WHERE fact_id = ?').run(now(), fact_id);
-  const recips = db.prepare(
-    `SELECT DISTINCT recipient_agent, scope FROM deliveries WHERE fact_id = ? AND kind = 'fact'`
-  ).all(fact_id);
-  for (const r of recips) {
-    db.prepare(`INSERT OR IGNORE INTO deliveries
-      (delivery_id, fact_id, recipient_agent, scope, kind, status, created_at)
-      VALUES (?, ?, ?, ?, 'correction', 'pending', ?)`).run(
-      randomUUID(), fact_id, r.recipient_agent, r.scope, now()
-    );
-  }
-  audit(db, 'revoked', { fact_id, reason, corrections: recips.length });
-  return recips.length;
+  return withTx(db, () => {
+    db.prepare('UPDATE facts SET revoked_at = ? WHERE fact_id = ?').run(now(), fact_id);
+    const recips = db.prepare(
+      `SELECT DISTINCT recipient_agent, scope FROM deliveries WHERE fact_id = ? AND kind = 'fact'`
+    ).all(fact_id);
+    for (const r of recips) {
+      db.prepare(`INSERT OR IGNORE INTO deliveries
+        (delivery_id, fact_id, recipient_agent, scope, kind, status, created_at)
+        VALUES (?, ?, ?, ?, 'correction', 'pending', ?)`).run(
+        randomUUID(), fact_id, r.recipient_agent, r.scope, now()
+      );
+    }
+    audit(db, 'revoked', { fact_id, reason, corrections: recips.length });
+    return recips.length;
+  });
 }
 
 module.exports = { openDb, applySchema, subscribe, writeFact, drain, revoke, FACT_TYPES, peek, ack, deadLetterDelivery, pendingStats };

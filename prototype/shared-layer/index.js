@@ -26,9 +26,9 @@ function createSharedLayer({ db, registry = reg.defaultRegistry, projectionsDir 
   return {
     db, registry,
 
-    // ── enrollment (privileged) ──
-    generateIdentity: id.generateIdentity,
-    registerIdentity: (spec) => id.registerIdentity(db, spec),
+    // NOTE: enrollment (generate/register/rotate identity) is NOT here — it's a privileged admin
+    // operation on createAdminLayer(), so an agent reaching this facade can't replace another agent's
+    // key (Codex critical). This surface is agent-facing: subscribe (authorized), write (signed), etc.
 
     // ── subscriptions (authorized: client-bound identities can't cross the client boundary) ──
     authorizeSubscribe: (agent, factType, scope) => id.authorizeSubscribe(db, agent, factType, scope),
@@ -69,14 +69,29 @@ function createSharedLayer({ db, registry = reg.defaultRegistry, projectionsDir 
   };
 }
 
-// The facade is the agent-facing surface and exposes ONLY hardened operations. The raw module
-// primitives (lenient writeFact/subscribe, etc.) are intentionally NOT re-exported here — they exist
-// in their own modules for the TRUSTED service + tests. JS cannot truly hide an export, so the real
-// enforcement is the DEPLOYMENT process boundary: only the trusted service process holds the db handle
-// and imports the core; agents are separate processes that can reach the layer only through this door.
-// (Codex REVISE: don't advertise a bypass.)
+/**
+ * The ADMIN surface — privileged bootstrap/enrollment, SEPARATE from the agent-facing facade. Only the
+ * trusted operator/bootstrap process constructs this (it must never be exposed to an agent RPC).
+ * Enrollment is insert-only; replacing an existing identity requires an explicit `rotate` ceremony.
+ */
+function createAdminLayer({ db } = {}) {
+  if (!db) throw new Error('createAdminLayer requires { db }');
+  return {
+    generateIdentity: id.generateIdentity,
+    registerIdentity: (spec) => id.registerIdentity(db, spec),                 // insert-only
+    rotateIdentity: (spec) => id.registerIdentity(db, { ...spec, rotate: true }), // explicit rotation
+    enrollFleet: (roster, opts) => require('./enroll').enrollFleet(db, roster, opts),
+  };
+}
+
+// The agent-facing facade exposes ONLY hardened operations and NO enrollment. The raw module primitives
+// (lenient writeFact/subscribe) are intentionally NOT re-exported — they live in their modules for the
+// TRUSTED service + tests. JS cannot truly hide an export, so the real enforcement is the DEPLOYMENT
+// process boundary: only the trusted service process holds the db handle + imports the core/admin;
+// agents are separate processes that reach the layer only through createSharedLayer's door. (Codex.)
 module.exports = {
   createSharedLayer,
+  createAdminLayer,
   openDb: core.openDb,            // db construction (not a write path)
   defaultRegistry: reg.defaultRegistry,
 };

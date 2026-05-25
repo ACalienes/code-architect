@@ -17,6 +17,8 @@
 
 const { randomUUID } = require('node:crypto');
 const { signFact, writeSignedFact } = require('./identity');
+const { defaultRegistry } = require('./registry');
+const { withTx } = require('./db');
 
 const now = () => new Date().toISOString();
 
@@ -76,7 +78,7 @@ function envelopeFromFact(fact, { actionMap = DEFAULT_ACTION_MAP, to = null } = 
  * provenance (`_via_mesh_from`). `adapterIdentity` = { agent, privateKey } and MUST be enrolled;
  * unsigned ingress is refused outright.
  */
-function ingestEnvelope(db, env, { actionMap, registry, adapterIdentity } = {}) {
+function ingestEnvelope(db, env, { actionMap, registry = defaultRegistry, adapterIdentity } = {}) {
   ensureSeenTable(db);
   if (!env || !env.message_id) return { ok: false, error: 'envelope missing message_id' };
   if (!adapterIdentity || !adapterIdentity.agent || !adapterIdentity.privateKey)
@@ -89,8 +91,13 @@ function ingestEnvelope(db, env, { actionMap, registry, adapterIdentity } = {}) 
   // re-attribute to the trusted bridge; keep the original sender in provenance
   const fact = { ...f.fact, source_agent: adapterIdentity.agent,
     payload: { ...f.fact.payload, _via_mesh_from: env.from, _mesh_message_id: env.message_id } };
-  const res = writeSignedFact(db, fact, signFact(adapterIdentity.privateKey, fact), { registry });
-  if (res.ok) db.prepare('INSERT OR IGNORE INTO mesh_seen (message_id, ts) VALUES (?, ?)').run(env.message_id, now());
+  // Atomic (Codex): the signed write AND the mesh_seen record commit together, so a crash can't
+  // persist a fact that then gets replayed (or record seen for a fact that didn't land).
+  let res;
+  withTx(db, () => {
+    res = writeSignedFact(db, fact, signFact(adapterIdentity.privateKey, fact), { registry });
+    if (res.ok) db.prepare('INSERT OR IGNORE INTO mesh_seen (message_id, ts) VALUES (?, ?)').run(env.message_id, now());
+  });
   return res.ok ? { ok: true, deduped: false, fact_id: res.fact_id, routed: res.routed } : res;
 }
 

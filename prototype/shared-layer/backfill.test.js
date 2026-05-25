@@ -44,6 +44,12 @@ h('1. scrub — secrets and PII are redacted to typed tags; only counts are kept
   check('credit-card-shaped number redacted', !r2.clean.includes('4111 1111 1111 1111') && /\[REDACTED:credit_card\]/.test(r2.clean));
   const pem = scrubString('-----BEGIN RSA PRIVATE KEY-----\nMIIBfakekeymaterial==\n-----END RSA PRIVATE KEY-----');
   check('PEM private key block redacted', !pem.clean.includes('fakekeymaterial') && /\[REDACTED:private_key\]/.test(pem.clean));
+
+  // Field-name scrubbing (Codex): a secret under a sensitive key name, even if the value looks benign.
+  const { scrubPayload } = require('./backfill');
+  const sp = scrubPayload({ password: 'hunter2supersecret', client_secret: 'plainlooking', note: 'fine' });
+  check('value under a sensitive field NAME is redacted', sp.clean.password === '[REDACTED:sensitive_field]' && sp.clean.client_secret === '[REDACTED:sensitive_field]');
+  check('non-sensitive fields are left intact', sp.clean.note === 'fine');
 }
 
 // ── 2. Ingest quarantines a claim and NEVER routes it ──

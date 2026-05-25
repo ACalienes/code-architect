@@ -27,6 +27,7 @@ const FLEET_ROSTER = [
   { agent: 'offer-architect', clientId: null },
   { agent: 'lead-engine', clientId: null },
   { agent: 'code-architect', clientId: null },
+  { agent: 'mesh-adapter', clientId: null }, // the legacy bridge identity (signs ingested envelopes)
   { agent: 'dag-repo', clientId: 'dagdc' },
   { agent: 'tdb-repo', clientId: 'tdb' },
 ];

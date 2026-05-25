@@ -95,14 +95,21 @@ function scrubString(s) {
   return { clean, redactions };
 }
 
-/** Deep-scrub all string values in an object; merge redaction counts. */
+// A key whose NAME implies a secret → its value is redacted regardless of shape (Codex: value-pattern
+// scrubbing missed `{ password: "hunter2supersecret" }`).
+const SENSITIVE_KEY = /^(pass(word|wd)?|secret|client[_-]?secret|api[_-]?key|access[_-]?token|token|authorization|auth|private[_-]?key|credentials?)$/i;
+
+/** Deep-scrub an object: redact by value-pattern AND by sensitive field name; merge redaction counts. */
 function scrubPayload(payload) {
   const redactions = {};
   const bump = (r) => { for (const k of Object.keys(r)) redactions[k] = (redactions[k] || 0) + r[k]; };
-  const walk = (v) => {
-    if (typeof v === 'string') { const { clean, redactions: r } = scrubString(v); bump(r); return clean; }
-    if (Array.isArray(v)) return v.map(walk);
-    if (v && typeof v === 'object') { const o = {}; for (const k of Object.keys(v)) o[k] = walk(v[k]); return o; }
+  const walk = (v, keyName) => {
+    if (typeof v === 'string') {
+      if (keyName && SENSITIVE_KEY.test(keyName)) { redactions.sensitive_field = (redactions.sensitive_field || 0) + 1; return '[REDACTED:sensitive_field]'; }
+      const { clean, redactions: r } = scrubString(v); bump(r); return clean;
+    }
+    if (Array.isArray(v)) return v.map((x) => walk(x));
+    if (v && typeof v === 'object') { const o = {}; for (const k of Object.keys(v)) o[k] = walk(v[k], k); return o; }
     return v;
   };
   return { clean: walk(payload), redactions };

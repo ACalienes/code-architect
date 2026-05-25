@@ -29,7 +29,8 @@ h('1. validator — type / required / enum / additionalProperties / nested');
   check('non-integer fails integer', validate(schema, { a: 'x', n: 1.5 }).some(e => /expected integer/.test(e)));
   check('unexpected property fails (additionalProperties:false)', validate(schema, { a: 'x', bogus: 1 }).some(e => /unexpected property/.test(e)));
   check('nested error is path-qualified', validate(schema, { a: 'x', sub: { z: 'no' } }).some(e => /sub\.z: expected boolean/.test(e)));
-  check('_-prefixed metadata keys are always allowed', validate(schema, { a: 'x', _schema_ver: '1', _provenance: 'f.md:1' }).length === 0);
+  check('named reserved-metadata keys are allowed', validate(schema, { a: 'x', _schema_ver: '1', _provenance: 'f.md:1' }).length === 0);
+  check('an arbitrary _-key (e.g. _api_key) is REJECTED, not waved through', validate(schema, { a: 'x', _api_key: 'sk-leak' }).some(e => /_api_key: unexpected property/.test(e)));
 }
 
 // ── 2. The starter vocabulary — accept good, reject bad ──

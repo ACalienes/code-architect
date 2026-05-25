@@ -23,4 +23,18 @@ function openDatabase(path = ':memory:', { driver } = {}) {
   return new DatabaseSync(path);
 }
 
-module.exports = { openDatabase };
+// Re-entrant transaction wrapper (Codex: multi-step durable writes must be atomic). Runs fn inside a
+// single BEGIN/COMMIT; rolls back on throw. If the db is already mid-transaction (a nested call like
+// promoteClaim → writeFactValidated → writeFact), it runs inline under the OUTER transaction — so the
+// whole compound write commits or rolls back as one. Works on both node:sqlite and better-sqlite3.
+const _inTx = new WeakSet();
+function withTx(db, fn) {
+  if (_inTx.has(db)) return fn();
+  _inTx.add(db);
+  db.exec('BEGIN');
+  try { const r = fn(); db.exec('COMMIT'); return r; }
+  catch (e) { try { db.exec('ROLLBACK'); } catch (_) { /* already rolled back */ } throw e; }
+  finally { _inTx.delete(db); }
+}
+
+module.exports = { openDatabase, withTx };

@@ -80,7 +80,10 @@ function upsertFact(pdb, fact) {
 function projectClient(centralDb, { dir, agent, clientId, mode = 0o600, dirMode = 0o700 }) {
   if (!dir || !agent || !clientId) throw new Error('projectClient requires { dir, agent, clientId }');
   const clientDir = path.join(dir, agent);
-  fs.mkdirSync(clientDir, { recursive: true });
+  // Lock the directory down BEFORE the db file is created (Codex: chmod-after-populate left a temporary
+  // read window on a multi-uid host). The inbox.db is then born inside an already-private dir.
+  fs.mkdirSync(clientDir, { recursive: true, mode: dirMode });
+  fs.chmodSync(clientDir, dirMode); // enforce mode despite umask, before any file exists
   const file = path.join(clientDir, 'inbox.db');
   const pdb = openProjectionDb(file);
 

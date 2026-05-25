@@ -27,7 +27,7 @@
 
 const { generateKeyPairSync, sign, verify, createPublicKey } = require('node:crypto');
 const { writeFact, subscribe } = require('./shared-layer');
-const { writeFactValidated } = require('./registry');
+const { writeFactValidated, defaultRegistry } = require('./registry');
 
 const now = () => new Date().toISOString();
 
@@ -54,12 +54,23 @@ function generateIdentity() {
   return { publicKey: publicKey.export({ type: 'spki', format: 'pem' }).toString(), privateKey };
 }
 
-/** Privileged enrollment (trust root). Stores the agent's PUBLIC key + its authz binding. */
-function registerIdentity(db, { agent, publicKey, clientId = null, canProduce = null }) {
+/**
+ * Privileged enrollment (trust root — admin surface only, NOT the agent facade). INSERT-ONLY by
+ * default: enrolling an agent that already exists is REFUSED unless `rotate: true` is passed (an
+ * explicit rotation ceremony). This stops a caller from silently replacing dag-repo's key with its
+ * own (Codex critical). Stores the PUBLIC key + authz binding only.
+ */
+function registerIdentity(db, { agent, publicKey, clientId = null, canProduce = null, rotate = false }) {
   ensureIdentitiesTable(db);
+  const exists = db.prepare('SELECT 1 FROM identities WHERE agent = ?').get(agent);
+  if (exists && !rotate) {
+    audit(db, 'identity_register_refused', { agent, reason: 'already_enrolled' });
+    return { ok: false, error: `identity '${agent}' already enrolled — replacement requires an explicit rotate ceremony` };
+  }
   db.prepare(`INSERT OR REPLACE INTO identities (agent, public_key, client_id, can_produce, created_at)
     VALUES (?, ?, ?, ?, ?)`).run(agent, publicKey, clientId, canProduce ? JSON.stringify(canProduce) : null, now());
-  audit(db, 'identity_registered', { agent, clientId, canProduce });
+  audit(db, exists ? 'identity_rotated' : 'identity_registered', { agent, clientId, canProduce });
+  return { ok: true, rotated: !!exists };
 }
 
 // Deterministic serialization of the identity-bound fields — sorted keys so re-serialization (any
@@ -108,11 +119,12 @@ function authzProduce(identity, fact) {
 }
 
 /**
- * The authenticated write door: verify the signature, enforce authZ, then write (through the
- * registry's schema check if one is supplied — verify-identity → authZ → schema → core writeFact).
+ * The authenticated write door: verify the signature, enforce authZ, then schema-validate + write —
+ * verify-identity → authZ → schema → core writeFact. Schema is ON BY DEFAULT (defaultRegistry); pass
+ * `registry: null` only for test/trusted paths (Codex: a direct call must not skip schema).
  * Rejected at the door → nothing persists, audited (without key/sig).
  */
-function writeSignedFact(db, fact, signatureB64, { registry } = {}) {
+function writeSignedFact(db, fact, signatureB64, { registry = defaultRegistry } = {}) {
   const v = verifyFact(db, fact, signatureB64);
   if (!v.ok) { audit(db, 'write_rejected_unauthenticated', { source_agent: fact.source_agent, reason: v.reason }); return { ok: false, error: `unauthenticated: ${v.reason}` }; }
   const az = authzProduce(v.identity, fact);

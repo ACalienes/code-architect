@@ -6,27 +6,33 @@ plus `docs/shared-layer-deployment-plan-2026-05-25.md` and
 
 ---
 
-This is a **RE-REVIEW after your prior REVISE verdict.** Your three findings were: (1) the hardened
-path was bypassable via raw exports / trusted-call assumptions; (2) the mesh adapter wrote unsigned;
-(3) backfill promotion bypassed the schema. **Your first job: verify those are actually closed** (don't
-take the response doc's word — read the code). **Your second job: re-assess the system and the residual
-the response doc defers** (replay protection, enrollment trust root / rotation, hand-rolled validators)
-— say which of those are must-fix-before-the-Mini-cutover vs. roadmap.
+This is a **RE-REVIEW (round 3).** Round 1 (3 findings) and round 2 (6 Must-Fix) are both claimed
+closed — see `docs/codex-review-shared-layer-MASTER-2026-05-25-response.md` and
+`docs/codex-review-shared-layer-2026-05-25-round2-response.md`. **Your first job: verify the round-2
+Must-Fix are actually closed (read the code, not the digests).** **Your second job: rule on the residual**
+(replay protection, enrollment rotation history, ajv-vs-subset, health expected-roster, audit
+retention/migration) — must-fix-before-the-Mini-cutover vs. roadmap — and find anything new.
 
 You are reviewing a cross-agent information-sharing system for ~16 autonomous agents on one Mac Mini,
-where **per-client data isolation is the highest-stakes invariant**. Now **13 modules + 241 passing
-tests, green on BOTH node:sqlite and better-sqlite3** (the port landed). Review it as a SYSTEM,
-objectively and adversarially — assume flaws and find them.
+where **per-client data isolation is the highest-stakes invariant**. Now **248 tests across 12 suites,
+green on BOTH node:sqlite and better-sqlite3.** Review it as a SYSTEM, adversarially.
 
-What changed since the REVISE (verify each in code):
-- `index.js` (facade) no longer re-exports raw primitive modules and dropped the unsigned
-  `writeValidated`; `index.test.js` §4 guards "no bypass". The *real* enforcement is now documented as
-  the deployment **process boundary** (only the trusted service holds the db handle) — assess whether
-  that argument is sound given JS can't hide exports.
-- `adapter-mesh.js` now SIGNS as an enrolled `mesh-adapter` identity through the full door (unsigned
-  ingress refused); original sender kept in provenance (`_via_mesh_from`).
-- `backfill.promoteClaim` now goes through `writeFactValidated` (schema-gated), promoter recorded.
-- New: `db.js` (driver shim, node:sqlite ↔ better-sqlite3), `enroll.js` (fleet identity bootstrap).
+Round-2 Must-Fix to verify in code:
+- Enrollment is now ADMIN-ONLY (`createAdminLayer`, not on `createSharedLayer`) and INSERT-ONLY
+  (`registerIdentity` refuses overwrite; `rotateIdentity` is the explicit ceremony). Confirm an agent
+  reaching the facade cannot register/replace a key.
+- Projection dir is locked **before** the db file is created (no temp read window); runbook §6 has a
+  concrete ownership model (projector-owns / client-group-reads, `0750`/`0640`, chown). Assess it.
+- Schema is ON BY DEFAULT in `writeSignedFact` and the adapter (no registry arg needed); a malformed
+  payload is refused via the bridge with no registry passed.
+- Validators tightened: registry `_`-keys are a NAMED allowlist (`_api_key` rejected); scrub redacts by
+  sensitive field NAME (`{password: "..."}`) in addition to value patterns.
+- Multi-step writes are atomic via a re-entrant `withTx` (db.js): `writeFact` (insert+route), `revoke`,
+  `promoteClaim`, and the adapter (`writeSignedFact`+`mesh_seen`). Probe crash-atomicity + the nesting.
+- `mesh-adapter` is in the enrollment roster.
+
+Earlier rounds (also verify): signed adapter (`_via_mesh_from` provenance), schema-gated promotion,
+sealed facade / process-boundary enforcement, the better-sqlite3 port (`db.js`).
 
 Modules: `shared-layer.js` (core), `db.js` (driver shim), `runner.js` (drainer + wake + onTick),
 `notify.js` (fs wake), `backfill.js` (claims → schema-gated promote), `projection.js` (per-client
