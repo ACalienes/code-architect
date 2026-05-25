@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<!-- Phase 0 kickoff — the Shared Layer. Status + the 3 go-aheads. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phase 0 — we've started · the Shared Layer · 2026-05-25</title>
+<style>
+  :root {
+    --bg:#0a0d12; --bg-2:#0f131a; --card:#141a23; --card-2:#1a212c; --brief-bg:#11161e;
+    --border:#232c3a; --border-bright:#2f3a4a; --text:#e6edf3; --text-2:#b8c5d3; --muted:#7d8a99; --dim:#5a6573;
+    --accent:#6ea8fe; --accent-glow:rgba(110,168,254,0.4); --green:#4ade80; --green-glow:rgba(74,222,128,0.35);
+    --yellow:#facc15; --orange:#fb923c; --red:#f87171; --purple:#c084fc; --teal:#5eead4;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html,body { background:var(--bg); color:var(--text);
+    font-family:-apple-system,"SF Pro Display","SF Pro Text",BlinkMacSystemFont,"Segoe UI",sans-serif;
+    line-height:1.6; font-feature-settings:"ss01","ss02","cv11"; min-height:100vh; }
+  body::before { content:""; position:fixed; inset:0;
+    background:
+      radial-gradient(ellipse 1200px 600px at 20% -10%, rgba(110,168,254,0.06), transparent 50%),
+      radial-gradient(ellipse 800px 400px at 90% 10%, rgba(192,132,252,0.05), transparent 50%),
+      radial-gradient(ellipse 1000px 500px at 50% 120%, rgba(94,234,212,0.04), transparent 50%);
+    pointer-events:none; z-index:0; }
+  .container { position:relative; max-width:1040px; margin:0 auto; padding:48px 28px 80px; z-index:1; }
+  code { font-family:"JetBrains Mono","SF Mono",Menlo,monospace; font-size:0.86em; background:var(--brief-bg); border:1px solid var(--border); border-radius:5px; padding:1px 6px; color:var(--teal); }
+
+  .eyebrow { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:2px; color:var(--green);
+    margin-bottom:16px; display:flex; align-items:center; gap:12px; }
+  .eyebrow::before { content:""; width:24px; height:1px; background:var(--green); box-shadow:0 0 8px var(--green-glow); }
+  h1.title { font-size:44px; font-weight:700; letter-spacing:-1.3px; line-height:1.06; margin-bottom:14px;
+    background:linear-gradient(180deg,#fff 0%,#b8c5d3 100%); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .subtitle { font-size:17px; color:var(--text-2); max-width:820px; margin-bottom:30px; }
+
+  .stat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:46px; }
+  @media (max-width:880px){ .stat-grid{ grid-template-columns:repeat(2,1fr);} }
+  .stat { background:linear-gradient(180deg,var(--card) 0%,var(--bg-2) 100%); border:1px solid var(--border);
+    border-radius:12px; padding:16px 18px; position:relative; overflow:hidden; }
+  .stat::before { content:""; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,var(--border-bright),transparent); }
+  .stat .label { font-size:10px; text-transform:uppercase; letter-spacing:1px; color:var(--muted); margin-bottom:8px; font-weight:600; }
+  .stat .value { font-size:18px; font-weight:700; letter-spacing:-0.3px; line-height:1.15; margin-bottom:4px; }
+  .stat .value.green{ color:var(--green);} .stat .value.blue{ color:var(--accent);} .stat .value.yellow{ color:var(--yellow);}
+  .stat .note { font-size:11px; color:var(--muted); }
+
+  section { margin-bottom:44px; }
+  h2.sec { font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:var(--text-2);
+    margin-bottom:18px; padding-bottom:10px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; }
+  h2.sec .num { color:var(--accent); font-family:"JetBrains Mono",monospace; }
+  p.lead { font-size:15px; color:var(--text-2); margin-bottom:18px; max-width:820px; }
+
+  .work { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  @media (max-width:780px){ .work{ grid-template-columns:1fr;} }
+  .w { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:18px 20px; }
+  .w .tag { font-family:"JetBrains Mono",monospace; font-size:11px; font-weight:700; color:var(--bg); background:var(--accent); border-radius:6px; padding:3px 9px; }
+  .w.first .tag { background:var(--green); }
+  .w h3 { font-size:15px; margin:10px 0 6px; } .w p { font-size:13px; color:var(--muted); }
+  .w .when { font-size:10.5px; text-transform:uppercase; letter-spacing:0.5px; color:var(--dim); margin-top:10px; }
+
+  .spot { background:linear-gradient(180deg,var(--card) 0%,var(--bg-2) 100%); border:1px solid var(--green); border-radius:14px; padding:24px; box-shadow:0 0 24px var(--green-glow); }
+  .spot h3 { font-size:19px; margin-bottom:6px; } .spot .meta { font-size:13px; color:var(--muted); margin-bottom:16px; font-style:italic; }
+  .spot ul { list-style:none; } .spot li { font-size:14px; color:var(--text-2); padding:6px 0 6px 24px; position:relative; }
+  .spot li::before { content:"→"; position:absolute; left:0; color:var(--green); }
+  .spot .guard { margin-top:16px; background:var(--brief-bg); border-left:3px solid var(--purple); border-radius:6px; padding:12px 16px; font-size:13.5px; color:var(--text-2); }
+  .spot .guard strong { color:var(--purple); }
+
+  .kai { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:20px 22px; }
+  .kai .q { font-size:14px; color:var(--text-2); padding:7px 0 7px 22px; position:relative; }
+  .kai .q::before { content:"›"; position:absolute; left:4px; color:var(--accent); font-weight:700; }
+  .kai .big { margin-top:14px; background:var(--brief-bg); border:1px solid var(--accent); border-radius:8px; padding:12px 16px; font-size:13.5px; color:var(--text); }
+  .kai .big strong { color:var(--accent); }
+
+  .gos { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  @media (max-width:780px){ .gos{ grid-template-columns:1fr;} }
+  .go { background:linear-gradient(180deg,var(--card) 0%,var(--bg-2) 100%); border:1px solid var(--border-bright); border-radius:12px; padding:20px; }
+  .go .n { font-size:24px; font-weight:700; color:var(--accent); font-family:"JetBrains Mono",monospace; line-height:1; margin-bottom:10px; }
+  .go h4 { font-size:15px; margin-bottom:6px; } .go p { font-size:13px; color:var(--muted); }
+  .go .easy { font-size:11px; color:var(--green); margin-top:10px; font-weight:600; }
+
+  .footer { margin-top:56px; padding-top:24px; border-top:1px solid var(--border); font-size:12px; color:var(--dim); }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="eyebrow">Code Architect · we've started</div>
+  <h1 class="title">Phase 0 — give the fleet its voice back</h1>
+  <p class="subtitle">Make today's messaging actually work so the fleet stops losing information <em>now</em> — while we
+  build the real Shared Layer behind it. First move is ready to fire.</p>
+
+  <div class="stat-grid">
+    <div class="stat"><div class="label">Name</div><div class="value green">"the Shared Layer"</div><div class="note">dropped the confusing one</div></div>
+    <div class="stat"><div class="label">Decision</div><div class="value blue">Option B, phased</div><div class="note">build new, retire old gradually</div></div>
+    <div class="stat"><div class="label">Review gate</div><div class="value green">DA ✓ · Codex ✓</div><div class="note">both passed, fixes folded</div></div>
+    <div class="stat"><div class="label">First move</div><div class="value yellow">ready</div><div class="note">give CA its routes</div></div>
+  </div>
+
+  <!-- WORKSTREAMS -->
+  <section>
+    <h2 class="sec"><span class="num">01</span> What Phase 0 does (3 pieces, safest first)</h2>
+    <p class="lead">None of it is wasted under Option B — the "who can talk to whom" map and the "check often" habit
+    carry straight into the new Shared Layer. Only the old plumbing eventually retires.</p>
+    <div class="work">
+      <div class="w first"><span class="tag">0a · FIRST</span><h3>Wire agents into the routes</h3><p>Give each agent permission to message the others — starting with CA, which has none today.</p><div class="when">▸ ready now · can't break anything</div></div>
+      <div class="w"><span class="tag">0b · NEXT</span><h3>Turn on the inbox-checkers</h3><p>Several agents have a "check for messages" job that was written but never scheduled — so mail rots. Put them on a timer.</p><div class="when">after 0a</div></div>
+      <div class="w"><span class="tag">0c · THEN</span><h3>Close the accidental side-door</h3><p>Retire the stray relay path that bypasses the rules — carefully, only after its traffic is rerouted properly.</p><div class="when">last · needs care</div></div>
+    </div>
+  </section>
+
+  <!-- FIRST MOVE -->
+  <section>
+    <h2 class="sec"><span class="num">02</span> The first move — give CA its voice</h2>
+    <div class="spot">
+      <h3>CA has zero mesh routes. That's why "tell Nami I'm done" had to be hand-delivered.</h3>
+      <div class="meta">Adding routes to an agent that has none can't break a single existing route — the safest possible first step.</div>
+      <ul>
+        <li>Add CA's <strong>9 outbound routes</strong> (Nami is the urgent one; the rest complete what CA's meant to reach)</li>
+        <li>Start them at <strong>"queue for approval"</strong> — nothing CA sends auto-fires on anyone until trust is earned</li>
+        <li>Uses a mechanism that <strong>already exists</strong> — no rebuild, reversible in seconds</li>
+      </ul>
+      <div class="guard"><strong>The nice irony:</strong> the mesh deliberately won't let an agent grant its <em>own</em> routes — only you or Kai can. That guardrail is exactly right, and it's literally why CA was mute. So by design, <strong>this one's authorized by you.</strong> I can run it as your hands, or hand you a one-liner to paste.</div>
+    </div>
+  </section>
+
+  <!-- KAI -->
+  <section>
+    <h2 class="sec"><span class="num">03</span> Kicking off Kai (it's Kai's plumbing)</h2>
+    <p class="lead">There's a ready-to-paste note for you to send Kai. It confirms the plan and asks Kai to:</p>
+    <div class="kai">
+      <div class="q">Confirm CA's routes can be added + made durable</div>
+      <div class="q">Find which agents' inbox-checkers aren't scheduled, so we can turn them on</div>
+      <div class="q">Plan to retire the side-door after its traffic is rerouted</div>
+      <div class="big"><strong>The one real decision for Kai:</strong> does the Shared Layer sit <em>on top of</em> the old mesh during the transition, or do we formally sunset the old mesh with a date? My lean: Shared Layer becomes the one system, old mesh retired gradually. Kai confirms the plumbing reality; you make the final call.</div>
+    </div>
+  </section>
+
+  <!-- GO-AHEADS -->
+  <section>
+    <h2 class="sec"><span class="num">04</span> What I need from you — 3 go-aheads</h2>
+    <div class="gos">
+      <div class="go"><div class="n">1</div><h4>Run CA's route-adds</h4><p>I execute the 9 route grants on your behalf (reversible, can't break anything). Or I hand you a one-liner.</p><div class="easy">→ "go" and CA can talk in ~10 seconds</div></div>
+      <div class="go"><div class="n">2</div><h4>Commit the Phase 0 plan</h4><p>Save the plan + the "Shared Layer" rename into CA's repo so it's on the record.</p><div class="easy">→ CA's own repo, low-risk</div></div>
+      <div class="go"><div class="n">3</div><h4>Relay the note to Kai</h4><p>You paste the prepared block to Kai — that starts the plumbing coordination + the one decision.</p><div class="easy">→ copy-paste, in the Phase 0 doc</div></div>
+    </div>
+  </section>
+
+  <div class="footer">
+    Code Architect · Phase 0 kickoff · 2026-05-25 · plan: docs/phase-0-shared-layer-2026-05-25.md · design: docs/design-kameha-shared-layer-2026-05-25.md ·
+    say "go" to 1/2/3 (or all three) and CA gets its voice.
+  </div>
+
+</div>
+</body>
+</html>

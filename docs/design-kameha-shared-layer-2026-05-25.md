@@ -1,4 +1,4 @@
-# Design — The Kameha Shared Layer (cross-agent information sharing)
+# Design — The Shared Layer (cross-agent information sharing)
 
 **Author:** Code Architect · 2026-05-25
 **Status:** PROPOSAL **v2 (post-Codex)** — CA-internal DA ✓ + Codex review ✓ done; isolation model redesigned per Codex verdict. Phase 0 ready; Phase 1 builds after this v2 is confirmed.

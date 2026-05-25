@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<!-- Decision explainer — canonical transport (Codex S14). The one call owed before Phase 1 code. -->
+<!-- Visual language inherited from plan-kameha-shared-layer + nudge explainers (Kai-derived). -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>One decision before Phase 1 · canonical transport · 2026-05-25</title>
+<style>
+  :root {
+    --bg:#0a0d12; --bg-2:#0f131a; --card:#141a23; --card-2:#1a212c; --brief-bg:#11161e;
+    --border:#232c3a; --border-bright:#2f3a4a; --text:#e6edf3; --text-2:#b8c5d3; --muted:#7d8a99; --dim:#5a6573;
+    --accent:#6ea8fe; --accent-glow:rgba(110,168,254,0.4); --green:#4ade80; --green-glow:rgba(74,222,128,0.35);
+    --yellow:#facc15; --orange:#fb923c; --red:#f87171; --red-glow:rgba(248,113,113,0.35);
+    --purple:#c084fc; --pink:#f472b6; --teal:#5eead4;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html,body { background:var(--bg); color:var(--text);
+    font-family:-apple-system,"SF Pro Display","SF Pro Text",BlinkMacSystemFont,"Segoe UI",sans-serif;
+    line-height:1.6; font-feature-settings:"ss01","ss02","cv11"; min-height:100vh; }
+  body::before { content:""; position:fixed; inset:0;
+    background:
+      radial-gradient(ellipse 1200px 600px at 20% -10%, rgba(110,168,254,0.06), transparent 50%),
+      radial-gradient(ellipse 800px 400px at 90% 10%, rgba(192,132,252,0.05), transparent 50%),
+      radial-gradient(ellipse 1000px 500px at 50% 120%, rgba(94,234,212,0.04), transparent 50%);
+    pointer-events:none; z-index:0; }
+  .container { position:relative; max-width:1040px; margin:0 auto; padding:48px 28px 80px; z-index:1; }
+  code { font-family:"JetBrains Mono","SF Mono",Menlo,monospace; font-size:0.88em; background:var(--brief-bg); border:1px solid var(--border); border-radius:5px; padding:1px 6px; color:var(--teal); }
+
+  .eyebrow { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:2px; color:var(--accent);
+    margin-bottom:16px; display:flex; align-items:center; gap:12px; }
+  .eyebrow::before { content:""; width:24px; height:1px; background:var(--accent); box-shadow:0 0 8px var(--accent-glow); }
+  h1.title { font-size:42px; font-weight:700; letter-spacing:-1.2px; line-height:1.08; margin-bottom:14px;
+    background:linear-gradient(180deg,#fff 0%,#b8c5d3 100%); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .subtitle { font-size:17px; color:var(--text-2); max-width:820px; margin-bottom:30px; }
+
+  .tldr { background:linear-gradient(180deg,var(--card) 0%,var(--bg-2) 100%); border:1px solid var(--border-bright);
+    border-radius:12px; padding:22px 24px; margin-bottom:44px; }
+  .tldr .h { font-size:11px; text-transform:uppercase; letter-spacing:1.5px; color:var(--accent); font-weight:700; margin-bottom:10px; }
+  .tldr p { font-size:15px; color:var(--text-2); }
+  .tldr strong { color:var(--text); }
+
+  section { margin-bottom:46px; }
+  h2.sec { font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:var(--text-2);
+    margin-bottom:18px; padding-bottom:10px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; }
+  h2.sec .num { color:var(--accent); font-family:"JetBrains Mono",monospace; }
+  p.lead { font-size:15px; color:var(--text-2); margin-bottom:18px; max-width:820px; }
+
+  /* today picture */
+  .today { display:flex; gap:14px; align-items:stretch; flex-wrap:wrap; }
+  .box { flex:1; min-width:220px; background:var(--card); border:1px solid var(--border); border-radius:11px; padding:18px 20px; }
+  .box .t { font-weight:700; font-size:15px; margin-bottom:8px; } .box .t .d { font-size:11px; font-weight:600; color:var(--muted); margin-left:8px; }
+  .box ul { list-style:none; margin-top:8px; } .box li { font-size:13px; color:var(--text-2); padding:4px 0 4px 18px; position:relative; }
+  .box li::before { content:"·"; position:absolute; left:4px; color:var(--dim); }
+  .box.old { border-color:rgba(125,138,153,0.4); } .box.old .t { color:var(--text-2); }
+  .box.new { border-color:var(--accent); } .box.new .t { color:var(--accent); }
+
+  /* options */
+  .opts { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+  @media (max-width:780px){ .opts{ grid-template-columns:1fr;} }
+  .opt { border-radius:14px; padding:24px; background:linear-gradient(180deg,var(--card) 0%,var(--bg-2) 100%); border:1px solid var(--border); position:relative; }
+  .opt.rec { border-color:var(--green); box-shadow:0 0 24px var(--green-glow); }
+  .opt .badge { position:absolute; top:-11px; right:18px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px;
+    background:var(--green); color:var(--bg); border-radius:20px; padding:4px 12px; }
+  .opt .label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--muted); margin-bottom:6px; }
+  .opt h3 { font-size:20px; font-weight:700; letter-spacing:-0.5px; margin-bottom:6px; }
+  .opt .meta { font-size:13px; color:var(--muted); margin-bottom:16px; font-style:italic; }
+  .opt .analogy { font-size:14px; color:var(--text-2); background:var(--brief-bg); border-left:3px solid var(--border-bright); border-radius:6px; padding:10px 14px; margin-bottom:16px; }
+  .opt .ph { font-size:11px; text-transform:uppercase; letter-spacing:0.5px; font-weight:700; margin:14px 0 6px; }
+  .opt .ph.pro { color:var(--green); } .opt .ph.con { color:var(--red); }
+  .opt ul { list-style:none; } .opt li { font-size:13px; color:var(--text-2); padding:4px 0 4px 20px; position:relative; }
+  .opt .pro li::before { content:"✓"; position:absolute; left:0; color:var(--green); }
+  .opt .con li::before { content:"✕"; position:absolute; left:0; color:var(--red); }
+
+  .trap { margin-top:18px; background:rgba(248,113,113,0.07); border:1px solid var(--red); border-left:3px solid var(--red);
+    border-radius:8px; padding:14px 18px; font-size:14px; color:var(--text-2); }
+  .trap strong { color:var(--red); }
+
+  .stakes { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+  @media (max-width:780px){ .stakes{ grid-template-columns:1fr;} }
+  .stake { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:16px; }
+  .stake .h { font-size:13.5px; font-weight:700; margin-bottom:5px; } .stake .h .ic{ color:var(--yellow); margin-right:7px;} .stake .d { font-size:12.5px; color:var(--muted); }
+
+  .rec-box { background:linear-gradient(180deg,var(--card) 0%,var(--bg-2) 100%); border:1px solid var(--green);
+    border-radius:12px; padding:22px 24px; }
+  .rec-box .h { font-size:12px; text-transform:uppercase; letter-spacing:1px; color:var(--green); font-weight:700; margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+  .rec-box p { font-size:14.5px; color:var(--text-2); margin-bottom:10px; } .rec-box p:last-child{ margin-bottom:0;} .rec-box strong{ color:var(--text);}
+
+  .kai { margin-top:16px; font-size:13.5px; color:var(--muted); background:var(--brief-bg); border:1px solid var(--border); border-radius:8px; padding:12px 16px; }
+  .kai strong { color:var(--purple); }
+
+  .footer { margin-top:56px; padding-top:24px; border-top:1px solid var(--border); font-size:12px; color:var(--dim); }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="eyebrow">Code Architect · decision you need to make</div>
+  <h1 class="title">Build on the old system, or replace it?</h1>
+  <p class="subtitle">Before we build the shared "brain," one call shapes everything after it: does the new Kameha
+  layer sit <em>on top of</em> the message system we already have — or do we stand up the new one and retire the old?</p>
+
+  <div class="tldr">
+    <div class="h">⏱ The 30-second version</div>
+    <p>We already have a basic "postal service" between agents (called <code>mesh-api</code>) — it works but was never
+    fully switched on. The new plan adds smart, durable shared memory on top. <strong>The question:</strong> do we
+    <strong>keep the old postal service and build the new features onto it</strong>, or <strong>build one clean new system
+    and shut the old one down</strong>? The danger we must avoid is the third path — <strong>running both forever</strong>,
+    which is exactly the tangle we're in today.</p>
+  </div>
+
+  <!-- TODAY -->
+  <section>
+    <h2 class="sec"><span class="num">01</span> What's on the table</h2>
+    <div class="today">
+      <div class="box old"><div class="t">mesh-api <span class="d">the old postal service</span></div>
+        <ul>
+          <li>Already exists, running on the Mini</li>
+          <li>Knows who's allowed to message whom + keeps an audit trail</li>
+          <li>But: under-operated, a buggy reply path, and some agents (like CA) were never even added</li>
+        </ul>
+      </div>
+      <div class="box new"><div class="t">Kameha Shared Layer <span class="d">the new brain</span></div>
+        <ul>
+          <li>Durable, typed shared memory + private per-agent inboxes</li>
+          <li>The strict client-data isolation Codex made us redesign</li>
+          <li>Needs a home — and that's the decision</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- OPTIONS -->
+  <section>
+    <h2 class="sec"><span class="num">02</span> Your two real choices</h2>
+    <div class="opts">
+      <div class="opt">
+        <div class="label">Option A</div>
+        <h3>Upgrade in place</h3>
+        <div class="meta">Keep mesh-api; build the new features onto it.</div>
+        <div class="analogy">🏚️ Like renovating the existing house — you keep living in it while you add rooms.</div>
+        <div class="ph pro">Faster to start</div>
+        <ul class="pro"><li>Reuse the routing + audit that already work</li><li>Less to build up front; more incremental</li></ul>
+        <div class="ph con">But</div>
+        <ul class="con">
+          <li>You're building on a foundation with known cracks</li>
+          <li>The strict isolation model doesn't fit cleanly onto the old message design — risk of bolting it on</li>
+          <li>Easy to end up quietly maintaining two overlapping systems</li>
+        </ul>
+      </div>
+      <div class="opt rec">
+        <div class="badge">CA recommends</div>
+        <div class="label">Option B</div>
+        <h3>Build new, retire old</h3>
+        <div class="meta">Kameha becomes the one system; mesh-api is phased out.</div>
+        <div class="analogy">🏗️ Like building the new house next door, moving in room by room, then selling the old one.</div>
+        <div class="ph pro">One clean system at the end</div>
+        <ul class="pro">
+          <li>Isolation + private inboxes are <em>native</em>, not bolted on — the thing that nearly bit us is built in</li>
+          <li>One source of truth — no "which channel?" confusion ever again</li>
+          <li>We're already rebuilding the good parts (routing/audit) anyway</li>
+        </ul>
+        <div class="ph con">Costs</div>
+        <ul class="con"><li>More work up front</li><li>Have to migrate every agent over carefully</li></ul>
+      </div>
+    </div>
+    <div class="trap"><strong>The path we must NOT take:</strong> keep both running indefinitely and let them drift. That's
+    how we got the current mess — multiple half-wired channels, messages rotting, CA with no route at all. Whatever we pick,
+    we <strong>commit to one canonical system</strong>.</div>
+  </section>
+
+  <!-- WHY IT MATTERS -->
+  <section>
+    <h2 class="sec"><span class="num">03</span> Why this is the call that matters</h2>
+    <div class="stakes">
+      <div class="stake"><div class="h"><span class="ic">◆</span>One system or two</div><div class="d">Decides whether we maintain a single clean pipe or babysit two overlapping ones forever.</div></div>
+      <div class="stake"><div class="h"><span class="ic">◆</span>Migration risk</div><div class="d">How much careful moving-of-agents we take on — and when.</div></div>
+      <div class="stake"><div class="h"><span class="ic">◆</span>Is isolation native?</div><div class="d">The client-data boundary Codex flagged is either built into the foundation, or awkwardly stapled to the old one.</div></div>
+    </div>
+  </section>
+
+  <!-- RECOMMENDATION -->
+  <section>
+    <h2 class="sec"><span class="num">04</span> My recommendation</h2>
+    <div class="rec-box">
+      <div class="h">✓ Option B — but phased gently, not a big-bang switch</div>
+      <p><strong>Make Kameha the one canonical system, and retire mesh-api gradually</strong> — move agents over one at a time,
+      with the old and new running side by side only during each handoff, then formally shut the old one down on a set date.</p>
+      <p><strong>Why:</strong> the strict client-isolation that Codex made us redesign is natural in the new model and clumsy to
+      graft onto the old one. One source of truth is the entire point of this project. And since we're already re-creating
+      mesh-api's good parts (who-can-talk-to-whom + the audit trail) in the new store regardless, "upgrade in place" saves
+      less than it looks.</p>
+      <p><strong>The gentle part matters:</strong> no risky overnight cutover. Each agent moves when its new path is proven,
+      so nothing drops mid-flight.</p>
+    </div>
+    <div class="kai"><strong>One note:</strong> the messaging plumbing is Kai's domain, so this is a call we make <strong>with Kai</strong>
+    at the start of Phase 0 — I bring the recommendation, Kai confirms the infra reality, you make the final call. Nothing gets
+    built until that's settled.</div>
+  </section>
+
+  <!-- WHAT I NEED -->
+  <section>
+    <h2 class="sec"><span class="num">05</span> What I need from you</h2>
+    <p class="lead">Just a direction — you don't need to work out the how:</p>
+    <div class="stakes">
+      <div class="stake" style="border-color:var(--green);"><div class="h" style="color:var(--green);">Go with B (recommended)</div><div class="d">I take "build new, retire old gradually" to Kai as the plan and bring back the Phase 0 details.</div></div>
+      <div class="stake"><div class="h">Prefer A</div><div class="d">You'd rather we upgrade in place — I'll re-plan around that and flag the trade-offs.</div></div>
+      <div class="stake"><div class="h">Talk it through with Kai first</div><div class="d">I get Kai's read on the infra before you decide, then bring you both options with Kai's input.</div></div>
+    </div>
+  </section>
+
+  <div class="footer">
+    Code Architect · decision explainer · 2026-05-25 · the one call owed before Phase 1 code (Codex finding S14: "declare the canonical transport").
+    Context: docs/design-kameha-shared-layer-2026-05-25.md · companion: plan-kameha-shared-layer explainer.
+  </div>
+
+</div>
+</body>
+</html>
