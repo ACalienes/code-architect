@@ -36,11 +36,35 @@ rule + the deliveries split *is* the isolation boundary.
 - `runner.js` — the **drainer runner** (hardening roadmap #1): the always-on ~60s loop every agent
   rides. `createDrainer({db, agent, handler, ...})` → `.start()/.stop()/.tickOnce()/.getStats()`.
 - `runner.test.js` — the runnable proof of the runner (23 checks, deterministic via injected clock + fake scheduler).
+- `backfill.js` — **backfill-as-claims ingest** (hardening roadmap #2): seeds accumulated context as
+  scrubbed, quarantined, provenance-stamped **claims** that are NEVER routed until a human-gated
+  `promoteClaim()`. `ingestClaim`/`listClaims`/`promoteClaim`/`rejectClaim`/`scrub*`.
+- `backfill.test.js` — the runnable proof of backfill (35 checks): claims never route, secrets/PII
+  scrubbed at the door, only known fact_types promote, promotion routes the real fact, idempotent
+  re-ingest, terminal rejection.
 
 ```bash
-node prototype/shared-layer/demo.js          # core invariants
-node prototype/shared-layer/runner.test.js   # drainer-runner invariants
+node prototype/shared-layer/demo.js            # core invariants (18)
+node prototype/shared-layer/runner.test.js     # drainer-runner invariants (23)
+node prototype/shared-layer/backfill.test.js   # backfill-as-claims invariants (35)
 ```
+
+## Backfill-as-claims — what it guarantees, and its limits
+
+Backfilled context enters as **claims, not facts**: a claim is scrubbed of secrets/PII at ingest,
+stored in a `claims` table that **no agent can read**, and **never creates a delivery**. The only
+path to a routed fact is `promoteClaim()` — human-gated, and run through the same proven
+`writeFact()` preflight (an unknown `fact_type` or a client-confidential claim with no `client_id`
+**cannot** be promoted; it stays quarantined). Re-ingest is idempotent (provenance+content hash).
+
+**DA-recorded limitation (the headline one):** `scrub()` is **best-effort regex**, not exhaustive.
+It covers known-shape secrets (provider API keys, PEM/JWT/connection-string/credit-card, `key=value`
+secrets) and emails/phones, and records a redaction *summary* (type→count, never the value). Secrets
+of unrecognized shape — or free-text PII like names/addresses/SSNs — can survive into the (trusted,
+access-controlled) claims store and would ride along on promotion. The mitigations are structural:
+claims are quarantined, never routed, and a human reviews each one (with its redaction summary)
+before promotion. Hardening follow-ups: entropy-based detection for high-entropy tokens, dedicated
+PII handling, and re-scrub-on-promotion so later pattern improvements apply to old claims.
 
 ## The drainer runner — what it guarantees, and its v1 assumptions
 
