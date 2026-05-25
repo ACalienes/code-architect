@@ -17,5 +17,8 @@
   },
   "author": "Alex Calienes",
   "license": "UNLICENSED",
-  "private": true
+  "private": true,
+  "optionalDependencies": {
+    "better-sqlite3": "^12.10.0"
+  }
 }

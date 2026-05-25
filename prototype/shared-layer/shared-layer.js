@@ -18,8 +18,8 @@
  * (identical prepare().run()/.get()/.all() surface).
  */
 
-const { DatabaseSync } = require('node:sqlite');
 const { randomUUID } = require('node:crypto');
+const { openDatabase } = require('./db');
 
 // Controlled vocabulary (the action-vocabulary registry, concrete). Unknown → rejected.
 const FACT_TYPES = new Set([
@@ -81,8 +81,8 @@ function applySchema(db) {
   return db;
 }
 
-function openDb(path = ':memory:') {
-  const db = new DatabaseSync(path);
+function openDb(path = ':memory:', opts = {}) {
+  const db = openDatabase(path, opts);
   db.exec('PRAGMA journal_mode = WAL;');
   return applySchema(db);
 }

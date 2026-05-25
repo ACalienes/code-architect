@@ -35,10 +35,10 @@
  * client-repo guarantee ("client X's process must never read client Y").
  */
 
-const { DatabaseSync } = require('node:sqlite');
 const fs = require('node:fs');
 const path = require('node:path');
 const { applySchema } = require('./shared-layer');
+const { openDatabase } = require('./db');
 
 const now = () => new Date().toISOString();
 
@@ -49,8 +49,8 @@ function audit(db, event, detail) {
 
 /** Open a per-client projection db: identical schema to central, but DELETE journal so the
  *  single .db file holds all bytes (no persistent WAL sidecar). The client's runner uses this. */
-function openProjectionDb(file) {
-  const db = new DatabaseSync(file);
+function openProjectionDb(file, opts = {}) {
+  const db = openDatabase(file, opts);
   db.exec('PRAGMA journal_mode = DELETE;');
   return applySchema(db);
 }
