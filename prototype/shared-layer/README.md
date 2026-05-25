@@ -78,9 +78,26 @@ node prototype/shared-layer/notify.test.js     # event-driven wake / low latency
 node prototype/shared-layer/health.test.js     # observability / alert synthesis
 node prototype/shared-layer/registry.test.js   # fact_type schemas + versioning
 node prototype/shared-layer/identity.test.js   # agent identity + signed source claims
+node prototype/shared-layer/integration.test.js  # full-system capstone (all modules composed)
+node prototype/shared-layer/index.test.js        # the createSharedLayer() facade
+node prototype/shared-layer/adapter-mesh.test.js # legacy A2A envelope ↔ fact bridge (#7)
 node prototype/shared-layer/health-dashboard.js  # → writes a live health dashboard HTML
-# 183 checks total, all green.
+# 222 checks total across 11 suites, all green.
 ```
+
+## Adopting it — one entry point
+
+`index.js` exposes `createSharedLayer({ db, registry, projectionsDir })` — the cohesive API Kai
+imports instead of wiring 9 modules by hand. It pre-assembles the production write door
+(verify-identity → authZ → schema → core), heartbeat-wired drainers, projection, claims, wake, and
+health. `integration.test.js` is the capstone: the real DAG→ACD/NAMI flow through every module at once
+(the #8 pilot rehearsed in-process), including the adversarial cases the system must catch.
+
+`adapter-mesh.js` (#7) bridges the legacy A2A v1.0 envelope ↔ a fact so the one live ACD↔Kai loop can
+ride the layer during the cutover (trusted, unsigned ingress — inherits mesh-api auth; removed at sunset).
+
+Going live is a separate, gated effort — see **`docs/shared-layer-deployment-plan-2026-05-25.md`** (port
+to better-sqlite3, enrollment, per-client chown, the adapter, mesh-api sunset, the pre-deploy Codex round).
 
 ## Identity & authorization (signed source claims)
 

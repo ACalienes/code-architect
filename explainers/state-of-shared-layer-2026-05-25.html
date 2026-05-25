@@ -108,8 +108,8 @@
   runnable reference code Kai can adopt, proven green, committed locally — nothing pushed, nothing live yet.</p>
 
   <div class="stat-grid">
-    <div class="stat"><div class="label">Increments</div><div class="value blue">7</div><div class="note">one session</div></div>
-    <div class="stat"><div class="label">Tests passing</div><div class="value green">183/183</div><div class="note">8 suites, deterministic</div></div>
+    <div class="stat"><div class="label">Increments</div><div class="value blue">7</div><div class="note">+ composed into one system</div></div>
+    <div class="stat"><div class="label">Tests passing</div><div class="value green">222/222</div><div class="note">11 suites, deterministic</div></div>
     <div class="stat"><div class="label">Cross-client leaks</div><div class="value green">0</div><div class="note">proven at the byte level</div></div>
     <div class="stat"><div class="label">Walls on client data</div><div class="value purple">2</div><div class="note">logical + physical</div></div>
     <div class="stat"><div class="label">Pushed to live</div><div class="value">0</div><div class="note">human gate intact</div></div>
@@ -187,11 +187,17 @@
         <li>#6 Message contracts — typed payloads + versioning</li>
         <li>#4 Agent identity — signed source claims; cross-client writes/subscribes refused</li>
       </ul></div>
-      <div class="col next"><h3>Still owed before production</h3><ul>
-        <li>#7 Thin adapter for the live ACD↔Kai loop + mesh sunset</li>
-        <li>#8 The real DAG → ACD/NAMI pilot, on the Mini</li>
-        <li>Deploy hardening: cross-uid chown · ack-back · deeper scrub</li>
-        <li>One Codex round against the ported code, pre-deploy</li>
+      <div class="col now"><h3 style="color:var(--teal)">Made deployable</h3><ul style="list-style:none">
+        <li style="padding-left:22px;position:relative"><span style="position:absolute;left:0;color:var(--teal)">✓</span>Full-system capstone — all modules composed (the pilot, rehearsed)</li>
+        <li style="padding-left:22px;position:relative"><span style="position:absolute;left:0;color:var(--teal)">✓</span>One facade — <span class="mono" style="font-size:11px">createSharedLayer()</span> — the surface Kai adopts</li>
+        <li style="padding-left:22px;position:relative"><span style="position:absolute;left:0;color:var(--teal)">✓</span>#7 compat adapter — the live ACD↔Kai loop bridged (reference)</li>
+        <li style="padding-left:22px;position:relative"><span style="position:absolute;left:0;color:var(--teal)">✓</span>Deployment runbook — the Mini cutover, step by step</li>
+      </ul></div>
+      <div class="col next"><h3>Needs you / Kai (gated)</h3><ul>
+        <li>Push these commits to the remote</li>
+        <li>Run the Codex round against the ported code</li>
+        <li>Port to better-sqlite3 + stand up kameha-mesh.db</li>
+        <li>Enroll keys · per-client chown · #8 live pilot on the Mini</li>
       </ul></div>
     </div>
   </section>
@@ -199,15 +205,16 @@
   <section>
     <h2 class="sec"><span class="num">05</span> See it yourself</h2>
     <div class="pointer">
-      <span>node prototype/shared-layer/health-dashboard.js</span>
-      <span>explainers/shared-layer-health-2026-05-25.html — live ops view</span>
-      <span>prototype/shared-layer/ — 7 test suites, 164 checks</span>
+      <span>prototype/shared-layer/index.js — createSharedLayer() (adopt this)</span>
+      <span>node prototype/shared-layer/integration.test.js — the pilot, rehearsed</span>
+      <span>docs/shared-layer-deployment-plan-2026-05-25.md — the Mini runbook</span>
+      <span>prototype/shared-layer/ — 11 suites, 222 checks</span>
     </div>
   </section>
 
   <div class="footer">
-    Code Architect · State of the Shared Layer · session 6 · 2026-05-25 · 7 increments · 183/183 green ·
-    local commits only (not pushed) · reference for Kai to adopt; production hardening tracked per increment.
+    Code Architect · State of the Shared Layer · session 6 · 2026-05-25 · 7 increments · composed + 222/222 green ·
+    local commits only (not pushed) · reference complete; the Mini cutover is planned + gated on go-ahead.
   </div>
 
 </div>
