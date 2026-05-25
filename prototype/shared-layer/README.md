@@ -34,8 +34,12 @@ rule + the deliveries split *is* the isolation boundary.
   At-least-once read path (added for the runner): `peek`, `ack`, `deadLetterDelivery`, `pendingStats`.
 - `demo.js` — the runnable proof of the core invariants (asserts every one).
 - `runner.js` — the **drainer runner** (hardening roadmap #1): the always-on ~60s loop every agent
-  rides. `createDrainer({db, agent, handler, ...})` → `.start()/.stop()/.tickOnce()/.getStats()`.
-- `runner.test.js` — the runnable proof of the runner (23 checks, deterministic via injected clock + fake scheduler).
+  rides. `createDrainer({db, agent, handler, ...})` → `.start()/.stop()/.tickOnce()/.wake()/.getStats()`.
+- `runner.test.js` — the runnable proof of the runner (30 checks, deterministic via injected clock + fake scheduler).
+- `notify.js` — **event-driven wake** (the "priority cadence" half of #1): `signalWake(dir,agent)` (producer
+  pokes an agent) + `watchWake(dir,agent,runner)` (consumer turns the poke into `runner.wake()`). Low
+  latency without a tighter poll; the ~60s interval stays the safety-net heartbeat.
+- `notify.test.js` — the runnable proof (5 checks), incl. an end-to-end: a 600s-idle drainer delivers in ~20ms on signal.
 - `backfill.js` — **backfill-as-claims ingest** (hardening roadmap #2): seeds accumulated context as
   scrubbed, quarantined, provenance-stamped **claims** that are NEVER routed until a human-gated
   `promoteClaim()`. `ingestClaim`/`listClaims`/`promoteClaim`/`rejectClaim`/`scrub*`.
@@ -54,7 +58,19 @@ node prototype/shared-layer/demo.js            # core invariants (18)
 node prototype/shared-layer/runner.test.js     # drainer-runner invariants (23)
 node prototype/shared-layer/backfill.test.js   # backfill-as-claims invariants (35)
 node prototype/shared-layer/projection.test.js # physical per-client isolation (19)
+node prototype/shared-layer/notify.test.js     # event-driven wake / low latency (5)
 ```
+
+## Why ~60s, and why not tighter
+
+The interval governs only the **idle heartbeat**, not the loaded path: backpressure already drains a
+backlog immediately and only relaxes to ~60s when the inbox is empty. So ~60s is the worst-case
+latency for the *first* fact after a quiet spell — and it matches the fleet's existing mesh-poller
+cadence (human-timescale facts; sub-minute latency is invisible downstream). Shrinking the number
+optimizes the empty case (no payoff) while taxing one Mac Mini: empty-poll waste (~16 agents × 60/min
+of nothing at 1s), SQLite/WAL contention, and per-client projection write-amplification. The correct
+lever for low latency is `notify.js` — wake the relevant drainer **on delivery** instead of polling
+faster: near-immediate (~20ms measured) with zero extra empty polls, heartbeat as the safe fallback.
 
 ## Physical per-client projections — defense in depth, and the deploy line
 

@@ -60,11 +60,13 @@ function createDrainer(o) {
 
   const attempts = new Map(); // delivery_id -> consecutive failure count (in-memory; resets on restart)
   const stats = {
-    agent, running: false, ticks: 0,
+    agent, running: false, ticks: 0, wakes: 0,
     lastTickAt: null, lastDrainCount: 0,
     totalHandled: 0, totalFailed: 0, totalDeadLettered: 0,
   };
   let timer = null;
+  let inTick = false;       // true only while a drain pass is awaiting its handler
+  let wakePending = false;  // a wake() arrived mid-tick → drain again immediately when it finishes
 
   // ±jitterRatio around intervalMs, or 0 when catching up on a backlog.
   function nextDelay(immediate) {
@@ -115,13 +117,19 @@ function createDrainer(o) {
 
   async function run() {
     let drainedFull = false;
+    inTick = true;
     try {
       ({ drainedFull } = await tick());
     } catch (err) {
       // peek/pendingStats DB error — surface it, keep the loop alive.
       if (onError) { try { onError(err, null, 0); } catch (_) {} }
+    } finally {
+      inTick = false;
     }
-    schedule(drainedFull);
+    // A wake() that arrived mid-tick (e.g. a delivery landed while we were handling) drains now.
+    const immediate = drainedFull || wakePending;
+    wakePending = false;
+    schedule(immediate);
   }
 
   return {
@@ -134,6 +142,22 @@ function createDrainer(o) {
     stop() {
       stats.running = false;
       if (timer) { scheduler.clearTimer(timer); timer = null; }
+      return this;
+    },
+    /**
+     * Event-driven kick: drain ASAP instead of waiting out the idle interval. The producer
+     * (router/projector) calls this after delivering to this agent — giving near-immediate
+     * latency with zero extra empty polls, while the jittered interval stays the safety-net
+     * heartbeat. Coalesced: many wakes between ticks collapse to one immediate drain; a wake
+     * during an in-flight tick re-drains right after it (so a delivery that lands mid-handle
+     * isn't missed). No-op when stopped.
+     */
+    wake() {
+      if (!stats.running) return this;
+      stats.wakes++;
+      if (inTick) { wakePending = true; return this; } // run() will reschedule immediate
+      if (timer) { scheduler.clearTimer(timer); timer = null; }
+      schedule(true);
       return this;
     },
     /** Run exactly one drain pass now (tests / manual one-shot / cron-style invocation). */

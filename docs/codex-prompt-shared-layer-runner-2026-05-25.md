@@ -52,3 +52,27 @@ Review **objectively and adversarially** — assume it has flaws and find them. 
 
 Give a verdict (READY / REVISE / REJECT) with specific file:line findings ranked by severity.
 Distinguish "must fix before this increment ships" from "fine as a documented roadmap follow-up."
+
+---
+
+## Addendum — event-driven wake (`runner.wake()` + `notify.js`)
+
+Also review the wake mechanism added to close the latency question (why ~60s and not tighter). The
+runner gains `wake()`: a coalesced, in-tick-safe kick that collapses the idle wait to an immediate
+drain. `notify.js` is the cross-process glue — `signalWake(dir,agent)` touches `<dir>/<agent>/.wake`;
+`watchWake(dir,agent,runner)` uses `fs.watch` to call `runner.wake()`. Open `notify.js` /
+`notify.test.js`. Probe:
+
+7. **wake() correctness.** Trace `inTick`/`wakePending` in `run()`/`wake()`. Is there any interleaving
+   (the gap between `inTick=false` and `schedule()`, multiple overlapping wakes, wake racing `stop()`)
+   where a wake is lost or causes a double-tick / two outstanding timers? Is coalescing correct under
+   a burst?
+8. **fs.watch trust.** `fs.watch` misses events, fires duplicates, and behaves differently per OS. The
+   design leans on the ~60s heartbeat as the backstop — is that argument sound, and is the worst-case
+   latency really bounded by one interval? Any fd/watcher leak if `stop()` isn't called?
+9. **Wake as an abuse vector.** The `.wake` file is a local timestamp carrying no payload. Can a local
+   actor use it for anything beyond forcing spurious empty drains (a mild DoS)? Confirm it can't inject
+   or influence which facts are delivered.
+10. **Wiring.** Producers (router/projector) must call `signalWake` after delivering. Is leaving that
+    to the integrator right, or should `projectClient`/`writeFact` call it directly? Any ordering hazard
+    (signal before the delivery row is committed → wake finds nothing, then the heartbeat catches it)?

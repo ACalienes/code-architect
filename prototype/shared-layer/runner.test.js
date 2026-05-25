@@ -27,6 +27,7 @@ function makeFakeScheduler() {
     get pending() { return queue.length; },
     lastDelay() { return queue.length ? queue[queue.length - 1].ms : null; },
     async fire() { const t = queue.shift(); if (!t) return null; await t.fn(); return t.ms; },
+    take() { return queue.shift(); }, // grab the pending timer WITHOUT invoking (drive it by hand)
   };
 }
 
@@ -167,6 +168,48 @@ const feedback = (client_id, subject_id) => ({
     const s = d.getStats();
     check('pending count surfaced', s.pending === 1);
     check('lagMs ≈ 5000 (now - oldest pending created_at)', s.lagMs === 5000);
+  }
+
+  // ── 8. wake() — event-driven kick collapses the idle wait to an immediate drain ──
+  h('8. wake() — a delivery signal drains ASAP instead of waiting out the idle interval');
+  {
+    const db = openDb();
+    subscribe(db, 'acd', 'client_feedback', '*');
+    const sched = makeFakeScheduler();
+    const d = createDrainer({ db, agent: 'acd', handler: async () => {}, intervalMs: 1000, jitterRatio: 0.1, rng: () => 0.5, scheduler: sched });
+    d.start();
+    await sched.fire(); // empty first tick → idle reschedule
+    check('idle reschedule sits at the interval (1000)', sched.lastDelay() === 1000);
+    d.wake();
+    check('wake() collapses it to an immediate drain (delay 0)', sched.lastDelay() === 0);
+    check('two more wakes coalesce — still exactly one pending timer', (d.wake(), d.wake(), sched.pending === 1));
+    check('wakes counted in stats', d.getStats().wakes === 3);
+    d.stop();
+  }
+
+  // ── 9. wake() while stopped is a no-op; wake() mid-tick re-drains right after ──
+  h('9. wake() — no-op when stopped; honored after an in-flight tick');
+  {
+    const stopped = createDrainer({ db: openDb(), agent: 'acd', handler: async () => {}, scheduler: makeFakeScheduler() });
+    stopped.wake();
+    check('wake() before start is a no-op (not counted)', stopped.getStats().wakes === 0);
+
+    const db = openDb();
+    subscribe(db, 'acd', 'client_feedback', '*');
+    writeFact(db, feedback('dagdc', 'mid-tick'));
+    const sched = makeFakeScheduler();
+    let release; let calls = 0;
+    const handler = async () => { calls++; if (calls === 1) return new Promise((r) => { release = r; }); };
+    const d = createDrainer({ db, agent: 'acd', handler, intervalMs: 1000, jitterRatio: 0.1, rng: () => 0.5, scheduler: sched });
+    d.start();
+    const t = sched.take();   // grab the first (immediate) timer without awaiting
+    const p = t.fn();         // run() starts; tick peeks the fact; handler suspends (gate open)
+    d.wake();                 // arrives MID-tick → must be remembered, not lost
+    check('a mid-tick wake is recorded', d.getStats().wakes === 1);
+    release();                // let the handler finish
+    await p;                  // run() completes and reschedules
+    check('mid-tick wake forces an immediate re-drain (delay 0), not the idle interval', sched.lastDelay() === 0);
+    d.stop();
   }
 
   // ── result ──

@@ -98,8 +98,8 @@
   and the <strong>filesystem-level wall</strong> between clients. All tested, all green, none deployed yet — exactly the right order.</p>
 
   <div class="stat-grid">
-    <div class="stat"><div class="label">Tests passing</div><div class="value green">95 / 95</div><div class="note">core 18 · runner 23 · backfill 35 · projection 19</div></div>
-    <div class="stat"><div class="label">Increments built today</div><div class="value blue">3</div><div class="note">runner · backfill · physical isolation</div></div>
+    <div class="stat"><div class="label">Tests passing</div><div class="value green">107 / 107</div><div class="note">core 18 · runner 30 · backfill 35 · projection 19 · wake 5</div></div>
+    <div class="stat"><div class="label">Increments built today</div><div class="value blue">3 + wake</div><div class="note">runner · backfill · physical wall · event-wake</div></div>
     <div class="stat"><div class="label">Cross-client leaks</div><div class="value green">0</div><div class="note">now proven at the byte level</div></div>
     <div class="stat"><div class="label">Walls on client data</div><div class="value purple">2</div><div class="note">logical + physical</div></div>
   </div>
@@ -178,15 +178,39 @@ ALL PROJECTION INVARIANTS HOLD ✓</span>
     </div>
   </section>
 
+  <!-- LATENCY / WAKE -->
+  <section>
+    <h2 class="sec"><span class="num">04</span> Latency without the cost — why ~60s, and the wake signal</h2>
+    <p class="lead">A fair question: why a 60-second loop, and why not faster? The honest answer is that
+    the interval only governs the <em>idle</em> wait. When messages are actually waiting, the loop already
+    drains them back-to-back immediately — so 60s is the worst case for the <em>first</em> message after a
+    quiet spell, nothing more. It also matches the cadence the fleet already runs at.</p>
+    <div class="twocol">
+      <div class="col next" style="border-color:rgba(248,113,113,0.3)"><h3 style="color:var(--red)">Why NOT just poll faster</h3><ul style="list-style:none">
+        <li style="padding-left:22px;position:relative"><span style="position:absolute;left:0;color:var(--red)">✕</span> Mostly empty checks — at 1s, ~16 agents do ~1,000 useless reads/min</li>
+        <li style="padding-left:22px;position:relative"><span style="position:absolute;left:0;color:var(--red)">✕</span> Contention on one shared database file on one Mac Mini</li>
+        <li style="padding-left:22px;position:relative"><span style="position:absolute;left:0;color:var(--red)">✕</span> Rewrites every client's private file far more often (disk churn)</li>
+        <li style="padding-left:22px;position:relative"><span style="position:absolute;left:0;color:var(--red)">✕</span> Steals cycles from the 16 other processes on the Mini — for no real gain</li>
+      </ul></div>
+      <div class="col now"><h3>The right lever — wake on delivery</h3><ul>
+        <li>The sender pokes just the agent that got a message</li>
+        <li>That agent drains <b>immediately</b> — measured ~20ms, not up to 60s</li>
+        <li>Zero extra empty checks; the 60s loop stays as a safe fallback</li>
+        <li>Proven end-to-end: a drainer set to a 10-minute idle still delivered in 21ms on signal</li>
+      </ul></div>
+    </div>
+  </section>
+
   <!-- NOW / NEXT -->
   <section>
-    <h2 class="sec"><span class="num">04</span> Where the roadmap stands</h2>
+    <h2 class="sec"><span class="num">05</span> Where the roadmap stands</h2>
     <div class="twocol">
       <div class="col now"><h3>Proven now (the spine)</h3><ul>
         <li>Core: type once → the right agents get it, walled, audited</li>
         <li>#1 Drainer runner — the loop every agent rides</li>
         <li>#2 Backfill — history in safely, human-gated</li>
         <li>#3 Physical per-client files — the filesystem wall</li>
+        <li>+ Event-driven wake — low latency without faster polling</li>
       </ul></div>
       <div class="col next"><h3>Still owed before production</h3><ul>
         <li>#4 Agent identity + signed messages</li>
@@ -199,7 +223,7 @@ ALL PROJECTION INVARIANTS HOLD ✓</span>
   </section>
 
   <div class="footer">
-    Code Architect · Shared Layer reference spine · 2026-05-25 · 95/95 checks green ·
+    Code Architect · Shared Layer reference spine · 2026-05-25 · 107/107 checks green ·
     <span class="mono">prototype/shared-layer/</span> · reference for Kai to adopt; committed locally, not pushed · Codex deferred to pre-deploy.
   </div>
 
