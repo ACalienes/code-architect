@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<!-- Plan explainer — Kameha Shared Layer (cross-agent information sharing). -->
+<!-- Visual language inherited from explainers/patch-nami-pending-nudge + crew-manifest (Kai-derived). -->
+<!-- STATUS: PROPOSAL — for Alex review → CA-internal DA → Codex review → THEN implement. Not yet built. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Kameha Shared Layer · the plan · 2026-05-25</title>
+<style>
+  :root {
+    --bg:#0a0d12; --bg-2:#0f131a; --card:#141a23; --card-2:#1a212c; --brief-bg:#11161e;
+    --border:#232c3a; --border-bright:#2f3a4a; --text:#e6edf3; --text-2:#b8c5d3; --muted:#7d8a99; --dim:#5a6573;
+    --accent:#6ea8fe; --accent-glow:rgba(110,168,254,0.4); --green:#4ade80; --green-glow:rgba(74,222,128,0.35);
+    --yellow:#facc15; --orange:#fb923c; --red:#f87171; --red-glow:rgba(248,113,113,0.35);
+    --purple:#c084fc; --pink:#f472b6; --teal:#5eead4;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html,body { background:var(--bg); color:var(--text);
+    font-family:-apple-system,"SF Pro Display","SF Pro Text",BlinkMacSystemFont,"Segoe UI",sans-serif;
+    line-height:1.6; font-feature-settings:"ss01","ss02","cv11"; min-height:100vh; }
+  body::before { content:""; position:fixed; inset:0;
+    background:
+      radial-gradient(ellipse 1200px 600px at 20% -10%, rgba(110,168,254,0.06), transparent 50%),
+      radial-gradient(ellipse 800px 400px at 90% 10%, rgba(192,132,252,0.05), transparent 50%),
+      radial-gradient(ellipse 1000px 500px at 50% 120%, rgba(94,234,212,0.04), transparent 50%);
+    pointer-events:none; z-index:0; }
+  .container { position:relative; max-width:1080px; margin:0 auto; padding:48px 28px 80px; z-index:1; }
+  code,.mono { font-family:"JetBrains Mono","SF Mono",Menlo,monospace; font-size:0.9em; }
+  code { background:var(--brief-bg); border:1px solid var(--border); border-radius:5px; padding:1px 6px; color:var(--teal); }
+
+  .eyebrow { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:2px; color:var(--accent);
+    margin-bottom:16px; display:flex; align-items:center; gap:12px; }
+  .eyebrow::before { content:""; width:24px; height:1px; background:var(--accent); box-shadow:0 0 8px var(--accent-glow); }
+  h1.title { font-size:46px; font-weight:700; letter-spacing:-1.5px; line-height:1.05; margin-bottom:14px;
+    background:linear-gradient(180deg,#fff 0%,#b8c5d3 100%); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .subtitle { font-size:17px; color:var(--text-2); max-width:840px; margin-bottom:22px; }
+  .status-pill { display:inline-flex; align-items:center; gap:8px; font-size:11px; font-weight:700; text-transform:uppercase;
+    letter-spacing:1px; color:var(--yellow); border:1px solid rgba(250,204,21,0.4); border-radius:30px; padding:6px 14px; margin-bottom:24px; }
+  .meta-row { font-size:12px; color:var(--muted); display:flex; gap:20px; flex-wrap:wrap; margin-bottom:44px; }
+  .meta-row span::before { content:"·"; color:var(--dim); margin-right:16px; }
+  .meta-row span:first-child::before { content:""; margin:0; }
+
+  .stat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:52px; }
+  @media (max-width:880px){ .stat-grid{ grid-template-columns:repeat(2,1fr);} }
+  .stat { background:linear-gradient(180deg,var(--card) 0%,var(--bg-2) 100%); border:1px solid var(--border);
+    border-radius:12px; padding:18px 20px; position:relative; overflow:hidden; }
+  .stat::before { content:""; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,var(--border-bright),transparent); }
+  .stat .label { font-size:10px; text-transform:uppercase; letter-spacing:1px; color:var(--muted); margin-bottom:10px; font-weight:600; }
+  .stat .value { font-size:26px; font-weight:700; letter-spacing:-1px; line-height:1; margin-bottom:6px; font-family:"JetBrains Mono","SF Mono",monospace; }
+  .stat .value.blue{ color:var(--accent); text-shadow:0 0 20px var(--accent-glow);} .stat .value.green{ color:var(--green); text-shadow:0 0 16px var(--green-glow);}
+  .stat .value.red{ color:var(--red);} .stat .value.purple{ color:var(--purple);}
+  .stat .note { font-size:11px; color:var(--muted); }
+
+  section { margin-bottom:52px; }
+  h2.sec { font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:var(--text-2);
+    margin-bottom:20px; padding-bottom:10px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; }
+  h2.sec .num { color:var(--accent); font-family:"JetBrains Mono",monospace; }
+  p.lead { font-size:15px; color:var(--text-2); margin-bottom:20px; max-width:840px; }
+
+  /* problem: silo picture */
+  .silo-row { display:flex; gap:14px; align-items:center; justify-content:center; flex-wrap:wrap; margin-bottom:18px; }
+  .silo { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:16px 18px; text-align:center; min-width:120px; }
+  .silo .s-name { font-weight:700; font-size:14px; } .silo .s-sub { font-size:10.5px; color:var(--muted); margin-top:3px; }
+  .silo.src { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent-glow); }
+  .brokenarrow { color:var(--red); font-size:22px; position:relative; }
+  .brokenarrow::after { content:"✕"; position:absolute; top:-14px; left:50%; transform:translateX(-50%); font-size:13px; }
+  .callout { background:rgba(248,113,113,0.07); border:1px solid var(--red); border-left:3px solid var(--red);
+    border-radius:8px; padding:14px 18px; font-size:14px; color:var(--text-2); }
+  .callout.live { background:rgba(250,204,21,0.07); border-color:var(--yellow); border-left-color:var(--yellow); margin-top:14px; }
+  .callout strong { color:var(--red); } .callout.live strong { color:var(--yellow); }
+
+  /* principles chips */
+  .chips { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+  @media (max-width:760px){ .chips{ grid-template-columns:1fr;} }
+  .chip { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:14px 16px; }
+  .chip .h { font-size:13.5px; font-weight:700; margin-bottom:5px; color:var(--text); }
+  .chip .d { font-size:12.5px; color:var(--muted); }
+  .chip .h .ic { color:var(--teal); margin-right:7px; }
+
+  /* architecture hub */
+  .hub { background:var(--brief-bg); border:1px solid var(--border-bright); border-radius:14px; padding:28px; }
+  .hub .core { background:linear-gradient(180deg,var(--card-2),var(--bg-2)); border:1px solid var(--accent);
+    box-shadow:0 0 28px var(--accent-glow); border-radius:12px; padding:18px 22px; text-align:center; max-width:520px; margin:0 auto 8px; }
+  .hub .core .t { font-weight:700; font-size:16px; color:var(--accent); } .hub .core .s { font-size:12px; color:var(--text-2); margin-top:4px; }
+  .hub .core .tables { font-family:"JetBrains Mono",monospace; font-size:11px; color:var(--teal); margin-top:10px; }
+  .spokes { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:18px; }
+  @media (max-width:760px){ .spokes{ grid-template-columns:repeat(2,1fr);} }
+  .spoke { background:var(--card); border:1px solid var(--border); border-radius:9px; padding:12px 10px; text-align:center; }
+  .spoke .n { font-weight:700; font-size:12.5px; } .spoke .d { font-size:10px; color:var(--muted); margin-top:3px; }
+  .spoke .drain { font-size:9px; color:var(--green); margin-top:6px; text-transform:uppercase; letter-spacing:0.5px; }
+
+  /* walkthrough steps */
+  .steps { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+  @media (max-width:880px){ .steps{ grid-template-columns:repeat(2,1fr);} }
+  .step { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:18px; }
+  .step .n { font-family:"JetBrains Mono",monospace; font-size:11px; color:var(--accent); font-weight:700; margin-bottom:8px; }
+  .step h4 { font-size:14px; margin-bottom:7px; } .step p { font-size:12.5px; color:var(--muted); }
+
+  /* phases timeline */
+  .phase { display:flex; gap:16px; align-items:flex-start; padding:14px 0; border-bottom:1px solid var(--border); }
+  .phase:last-child { border-bottom:none; }
+  .phase .tag { font-family:"JetBrains Mono",monospace; font-size:11px; font-weight:700; color:var(--bg); background:var(--accent);
+    border-radius:6px; padding:4px 10px; white-space:nowrap; align-self:center; }
+  .phase.p0 .tag{ background:var(--green);} .phase.p1 .tag{ background:var(--accent);} .phase.p2 .tag{ background:var(--purple);} .phase.p3 .tag{ background:var(--teal);}
+  .phase .body h4 { font-size:14.5px; margin-bottom:4px; } .phase .body p { font-size:13px; color:var(--text-2); }
+
+  /* keep vs kill */
+  .kk { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:760px){ .kk{ grid-template-columns:1fr;} }
+  .kk .col { border-radius:12px; padding:20px 22px; border:1px solid var(--border); background:var(--card); }
+  .kk .keep { border-color:rgba(74,222,128,0.4);} .kk .kill { border-color:rgba(248,113,113,0.4);}
+  .kk h3 { font-size:15px; margin-bottom:12px; } .kk .keep h3{ color:var(--green);} .kk .kill h3{ color:var(--red);}
+  .kk ul{ list-style:none;} .kk li{ font-size:13px; color:var(--text-2); padding:5px 0 5px 20px; position:relative;}
+  .kk .keep li::before{ content:"✓"; position:absolute; left:0; color:var(--green);} .kk .kill li::before{ content:"✕"; position:absolute; left:0; color:var(--red);}
+
+  /* review gate */
+  .gate { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .gate .g { flex:1; min-width:130px; background:var(--card); border:1px solid var(--border); border-radius:10px; padding:16px; text-align:center; }
+  .gate .g .n { font-size:13.5px; font-weight:700; } .gate .g .d { font-size:11px; color:var(--muted); margin-top:4px; }
+  .gate .g.now { border-color:var(--yellow); box-shadow:0 0 0 1px rgba(250,204,21,0.25);} .gate .g.now .n{ color:var(--yellow);}
+  .gate .g.build { border-color:var(--green);} .gate .g.build .n{ color:var(--green);}
+  .gate .arr { color:var(--dim); font-size:18px; }
+
+  .risk { background:var(--card); border:1px solid var(--border); border-left:3px solid var(--orange); border-radius:8px; padding:13px 18px; margin-bottom:10px; font-size:13.5px; color:var(--text-2); }
+  .risk strong { color:var(--orange); }
+
+  .footer { margin-top:60px; padding-top:24px; border-top:1px solid var(--border); font-size:12px; color:var(--dim); }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="eyebrow">Code Architect · architecture plan</div>
+  <h1 class="title">The Kameha Shared Layer</h1>
+  <p class="subtitle">One nervous system for the fleet: type a fact once, anywhere, and it reaches the agents who
+  need it within about a minute — while every agent stays in its own repo, doing its own job.</p>
+  <div class="status-pill">● Proposal — review gate before any code</div>
+  <div class="meta-row">
+    <span>Goal: fast, durable cross-agent info sharing</span>
+    <span>Kai-led infra · CA designs + builds + coordinates</span>
+    <span>Pilot: DAG → ACD/NAMI feedback</span>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat"><div class="label">Transports today</div><div class="value red">3</div><div class="note">mesh-api + filesystem + an accidental relay</div></div>
+    <div class="stat"><div class="label">CA's mesh routes</div><div class="value red">0</div><div class="note">it can't reach any agent — live proof</div></div>
+    <div class="stat"><div class="label">Target speed</div><div class="value green">~60s</div><div class="note">fact entered → relevant agents know</div></div>
+    <div class="stat"><div class="label">Cost per message</div><div class="value blue">~$0</div><div class="note">database I/O, not LLM calls</div></div>
+  </div>
+
+  <!-- PROBLEM -->
+  <section>
+    <h2 class="sec"><span class="num">01</span> The problem you named</h2>
+    <p class="lead">You told the DAG agent "Dan loved the Memorial Day posts." That fact matters to <strong style="color:var(--purple)">ACD</strong>
+    (who designed the concept) and <strong style="color:var(--purple)">NAMI</strong> (who captioned and shipped it). But it's trapped in DAG's repo,
+    because that's where you typed it. Today there's no path to fan it out.</p>
+    <div class="silo-row">
+      <div class="silo src"><div class="s-name">DAG</div><div class="s-sub">you typed it here</div></div>
+      <div class="brokenarrow">→</div>
+      <div class="silo"><div class="s-name">ACD</div><div class="s-sub">never hears it</div></div>
+      <div class="brokenarrow">→</div>
+      <div class="silo"><div class="s-name">NAMI</div><div class="s-sub">never hears it</div></div>
+    </div>
+    <div class="callout"><strong>Why it's stuck:</strong> each agent lives in its own repo (good for focus), but there's no shared place
+    they all read. Information dies where it's born.</div>
+    <div class="callout live"><strong>Live proof, today:</strong> when I finished NAMI's nudge job and tried to tell NAMI through the
+    "official" mesh, I found <strong style="color:var(--yellow)">code-architect has zero routes — it can't reach any agent.</strong> I had to hand-deliver a
+    file into NAMI's repo. The mesh was built but never fully wired. That's this problem, happening in real time.</div>
+  </section>
+
+  <!-- PRINCIPLES -->
+  <section>
+    <h2 class="sec"><span class="num">02</span> The rules the design follows</h2>
+    <div class="chips">
+      <div class="chip"><div class="h"><span class="ic">◆</span>Repos stay separate</div><div class="d">No merging. Each agent keeps its own codebase and autonomy — that's why they're good at their jobs.</div></div>
+      <div class="chip"><div class="h"><span class="ic">◆</span>One shared channel</div><div class="d">Exactly one place everyone reads and writes. Kill the accidental extra paths that cause confusion.</div></div>
+      <div class="chip"><div class="h"><span class="ic">◆</span>Durable by default</div><div class="d">Written to disk the instant it's created. Survives a sleeping/waking fleet — nothing rots in a queue.</div></div>
+      <div class="chip"><div class="h"><span class="ic">◆</span>Everyone checks often</div><div class="d">Each agent re-reads the shared channel on a fast schedule (~60s). This is where "speed is of the essence" lives.</div></div>
+      <div class="chip"><div class="h"><span class="ic">◆</span>Governed</div><div class="d">Keep the good parts of today's mesh — who's allowed to talk to whom, and an audit trail of every message.</div></div>
+      <div class="chip"><div class="h"><span class="ic">◆</span>Typed memory</div><div class="d">Not just messages — structured facts ("client approved X") that stay queryable later. The shared brain.</div></div>
+    </div>
+  </section>
+
+  <!-- ARCHITECTURE -->
+  <section>
+    <h2 class="sec"><span class="num">03</span> The shape — a shared brain + scheduled drainers</h2>
+    <p class="lead">One shared store on the Mac Mini that every agent reads and writes. Each agent runs a tiny scheduled
+    job — a <em>drainer</em> — that checks the store for anything addressed to it and acts. Governance (who-can-talk-to-whom +
+    audit) is a shared rulebook that runs inside that read/write, not a separate service that can be down.</p>
+    <div class="hub">
+      <div class="core">
+        <div class="t">⬢ The Shared Store (the "brain")</div>
+        <div class="s">durable SQLite on the Mini · one source of truth</div>
+        <div class="tables">messages · decision_log · client_facts · route_permissions + audit</div>
+      </div>
+      <div class="spokes">
+        <div class="spoke"><div class="n">DAG</div><div class="d">writes facts</div><div class="drain">drains ~60s</div></div>
+        <div class="spoke"><div class="n">ACD</div><div class="d">concept</div><div class="drain">drains ~60s</div></div>
+        <div class="spoke"><div class="n">NAMI</div><div class="d">captions/ships</div><div class="drain">drains ~60s</div></div>
+        <div class="spoke"><div class="n">CA · CFO · …</div><div class="d">all wired in</div><div class="drain">drains ~60s</div></div>
+      </div>
+    </div>
+    <p class="lead" style="margin-top:18px;"><strong style="color:var(--green)">Why this is the optimized choice:</strong> durable (survives sleep/wake), fast
+    (60s, tunable), nearly free (it's database I/O, not AI calls — fits the cost discipline), keeps repos separate, and turns
+    transient messages into permanent, queryable memory. One source of truth instead of three competing pipes.</p>
+  </section>
+
+  <!-- WALKTHROUGH -->
+  <section>
+    <h2 class="sec"><span class="num">04</span> Your DAG example, end to end</h2>
+    <div class="steps">
+      <div class="step"><div class="n">1 · YOU</div><h4>Type it once</h4><p>You tell DAG: "Dan loved the Memorial Day posts." Same as today — one place, your words.</p></div>
+      <div class="step"><div class="n">2 · DAG</div><h4>Drops a fact</h4><p>DAG writes a typed fact — <code>client_feedback</code>: Dan, Memorial Day, "loved" — tagged for ACD + NAMI. Saved to disk instantly.</p></div>
+      <div class="step"><div class="n">3 · ~60s</div><h4>They pick it up</h4><p>ACD's and NAMI's drainers see it on their next check. ACD logs "concept validated"; NAMI marks the campaign delivered.</p></div>
+      <div class="step"><div class="n">4 · LATER</div><h4>It's remembered</h4><p>The fact lives in <code>decision_log</code> / <code>client_facts</code> — any agent can look it up months later. Shared memory, not a lost message.</p></div>
+    </div>
+    <p class="lead" style="margin-top:16px;">You typed once. Everyone who needed it knew within a minute. No repo got merged. Nothing was hand-delivered.</p>
+  </section>
+
+  <!-- KEEP / KILL -->
+  <section>
+    <h2 class="sec"><span class="num">05</span> What we keep, what we retire</h2>
+    <div class="kk">
+      <div class="col keep"><h3>Keep (the mesh got these right)</h3><ul>
+        <li>Route permissions — who's allowed to message whom, with tiers</li>
+        <li>The audit trail — every message logged</li>
+        <li>The durable filesystem drop as the storage backbone</li>
+        <li>Idempotency — the same fact can't be processed twice</li>
+      </ul></div>
+      <div class="col kill"><h3>Retire (sources of the mess)</h3><ul>
+        <li>The accidental dashboard relay path (a third pipe nobody chose)</li>
+        <li>Drainers that exist but were never put on a schedule</li>
+        <li>Governance as a separate HTTP service that can be down → make it a shared rulebook instead</li>
+        <li>Agents (like CA) silently left out of the routing table</li>
+      </ul></div>
+    </div>
+  </section>
+
+  <!-- PHASES -->
+  <section>
+    <h2 class="sec"><span class="num">06</span> How we roll it out (de-risked, in stages)</h2>
+    <div class="phase p0"><div class="tag">PHASE 0</div><div class="body"><h4>Stop the bleeding</h4><p>Wire every agent (incl. CA) into the routing table, put the existing drainers on a schedule, and retire the accidental relay. Small, immediate, high-relief.</p></div></div>
+    <div class="phase p1"><div class="tag">PHASE 1</div><div class="body"><h4>The shared store + the pilot</h4><p>Stand up the typed fact tables + the governance rulebook, and prove the whole loop on ONE real flow: the DAG → ACD/NAMI feedback you just lived. Small enough to verify, real enough to trust.</p></div></div>
+    <div class="phase p2"><div class="tag">PHASE 2</div><div class="body"><h4>Everyone on the bus</h4><p>Migrate all agents to read/write the shared store; add topic subscriptions so an agent gets everything about, say, a campaign — not just direct messages.</p></div></div>
+    <div class="phase p3"><div class="tag">PHASE 3</div><div class="body"><h4>The brain answers questions</h4><p>Agents query the shared memory on demand ("what did the client say about X?"). The fact store becomes the fleet's long-term knowledge.</p></div></div>
+  </section>
+
+  <!-- REVIEW GATE -->
+  <section>
+    <h2 class="sec"><span class="num">07</span> The gate before we build a single line</h2>
+    <p class="lead">You're right that this is essential — so it goes through the full review before implementation, exactly like the patches did.</p>
+    <div class="gate">
+      <div class="g build"><div class="n">1 · You approve ◐</div><div class="d">direction (you're here)</div></div>
+      <div class="arr">→</div>
+      <div class="g build"><div class="n">2 · CA-internal DA ✓</div><div class="d">done — REVISE, 4 fixes folded</div></div>
+      <div class="arr">→</div>
+      <div class="g now"><div class="n">3 · Codex review ▸</div><div class="d">prompt ready to run</div></div>
+      <div class="arr">→</div>
+      <div class="g"><div class="n">4 · Implement</div><div class="d">phase by phase, with Kai</div></div>
+    </div>
+  </section>
+
+  <!-- DECISIONS (this round) -->
+  <section>
+    <h2 class="sec"><span class="num">08</span> Decisions you made this round</h2>
+    <div class="chips">
+      <div class="chip"><div class="h"><span class="ic">✓</span>How facts find the right agents</div><div class="d">Not discipline, not broadcast. Typed facts + each agent subscribes to what it cares about + a routing map fans out by fact-type. <em>Push what's relevant, pull what's needed.</em></div></div>
+      <div class="chip"><div class="h"><span class="ic">✓</span>Backfill our history</div><div class="d">A one-time ingest seeds the store from weeks of logs, intakes, memory + decisions — so the fleet starts with shared history, not blank.</div></div>
+      <div class="chip"><div class="h"><span class="ic">✓</span>Client repos are in</div><div class="d">DAG, TDB et al. contribute and learn — but each sees only its OWN client's data. Cross-client wisdom flows only as anonymized "learnings."</div></div>
+    </div>
+  </section>
+
+  <!-- DA FINDINGS -->
+  <section>
+    <h2 class="sec"><span class="num">09</span> What the adversarial review flagged (DA: REVISE)</h2>
+    <p class="lead">The CA-internal DA passed the architecture but demanded <strong style="color:var(--orange)">4 things be hardened</strong> before we build. These are folded into the design; Codex will stress them next.</p>
+    <div class="risk"><strong>R1 · No silent drops.</strong> A fact that can't be routed must hit a dead-letter queue that alerts you — never vanish. (Our oldest enemy: silent failure.)</div>
+    <div class="risk"><strong>R2 · Client isolation is sacred.</strong> Default-deny reads (an agent only ever sees its authorized clients) + a human gate on any cross-client share. No auto-sharing on trust.</div>
+    <div class="risk"><strong>R3 · Backfill is quarantined.</strong> Imported history is scrubbed for secrets/PII and reviewed before any agent can act on it.</div>
+    <div class="risk"><strong>R4 · One store, not two.</strong> Extend the existing shared database rather than build a parallel one — or we recreate the very mess we're killing.</div>
+    <div class="risk" style="border-left-color:var(--dim);"><strong>Also watching:</strong> single-point-of-failure backup story, drainer cost (cheap triage before any AI call), out-of-order delivery, SQLite contention. Carried into build.</div>
+  </section>
+
+  <div class="footer">
+    Code Architect · plan explainer · 2026-05-25 · STATUS: proposal — awaiting Alex's go on direction, then CA-internal DA → Codex review → phased build (Kai-led infra).
+    Companion design doc + Codex prompt to follow once direction is approved.
+  </div>
+
+</div>
+</body>
+</html>
