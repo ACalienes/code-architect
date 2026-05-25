@@ -1,23 +1,38 @@
-# Codex review — Shared Layer, WHOLE SYSTEM (master prompt, pre-deploy gate)
+# Codex RE-REVIEW — Shared Layer, WHOLE SYSTEM (after REVISE, pre-deploy gate)
 
 Paste into the Codex VS Code plugin with the `prototype/shared-layer/` directory open (all modules)
-plus `docs/shared-layer-deployment-plan-2026-05-25.md`. This is the holistic pre-deploy review before
-the Mac Mini cutover. (Per-module prompts also exist as `docs/codex-prompt-shared-layer-<module>-*.md`
-if you want to go deeper on any one — this master prompt is the single-pass review.)
+plus `docs/shared-layer-deployment-plan-2026-05-25.md` and
+`docs/codex-review-shared-layer-MASTER-2026-05-25-response.md` (what changed since your REVISE).
 
 ---
 
-You are reviewing a complete reference implementation of a cross-agent information-sharing system for
-a fleet of ~16 autonomous agents on one Mac Mini, where **per-client data isolation is the highest-
-stakes invariant**. It is about to be ported to better-sqlite3 and deployed. Built as 11 modules +
-222 passing tests; review it as a SYSTEM, objectively and adversarially — assume flaws and find them.
+This is a **RE-REVIEW after your prior REVISE verdict.** Your three findings were: (1) the hardened
+path was bypassable via raw exports / trusted-call assumptions; (2) the mesh adapter wrote unsigned;
+(3) backfill promotion bypassed the schema. **Your first job: verify those are actually closed** (don't
+take the response doc's word — read the code). **Your second job: re-assess the system and the residual
+the response doc defers** (replay protection, enrollment trust root / rotation, hand-rolled validators)
+— say which of those are must-fix-before-the-Mini-cutover vs. roadmap.
 
-Modules: `shared-layer.js` (core: facts/deliveries/route/drain/revoke, preflight, dead-letter),
-`runner.js` (at-least-once drainer + wake + onTick), `notify.js` (fs wake), `backfill.js` (history →
-quarantined scrubbed claims → human-gated promote), `projection.js` (per-client OS-permissioned files),
-`registry.js` (fact_type JSON-Schema-subset + versioning), `identity.js` (Ed25519 signed source claims
-+ authZ), `health.js` (re-audit + alerts), `adapter-mesh.js` (legacy A2A envelope bridge), `index.js`
-(facade), `integration.test.js` (full-system capstone).
+You are reviewing a cross-agent information-sharing system for ~16 autonomous agents on one Mac Mini,
+where **per-client data isolation is the highest-stakes invariant**. Now **13 modules + 241 passing
+tests, green on BOTH node:sqlite and better-sqlite3** (the port landed). Review it as a SYSTEM,
+objectively and adversarially — assume flaws and find them.
+
+What changed since the REVISE (verify each in code):
+- `index.js` (facade) no longer re-exports raw primitive modules and dropped the unsigned
+  `writeValidated`; `index.test.js` §4 guards "no bypass". The *real* enforcement is now documented as
+  the deployment **process boundary** (only the trusted service holds the db handle) — assess whether
+  that argument is sound given JS can't hide exports.
+- `adapter-mesh.js` now SIGNS as an enrolled `mesh-adapter` identity through the full door (unsigned
+  ingress refused); original sender kept in provenance (`_via_mesh_from`).
+- `backfill.promoteClaim` now goes through `writeFactValidated` (schema-gated), promoter recorded.
+- New: `db.js` (driver shim, node:sqlite ↔ better-sqlite3), `enroll.js` (fleet identity bootstrap).
+
+Modules: `shared-layer.js` (core), `db.js` (driver shim), `runner.js` (drainer + wake + onTick),
+`notify.js` (fs wake), `backfill.js` (claims → schema-gated promote), `projection.js` (per-client
+files), `registry.js` (fact_type schema + versioning), `identity.js` (Ed25519 + authZ), `health.js`
+(re-audit + alerts), `adapter-mesh.js` (SIGNED legacy bridge), `enroll.js` (identity bootstrap),
+`index.js` (sealed facade), `integration.test.js` (full-system capstone).
 
 Focus your review, in priority order:
 
