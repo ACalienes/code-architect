@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<!-- Shared Layer — the reusable spine is built: runner + backfill + physical isolation. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The spine is built · the Shared Layer · 2026-05-25</title>
+<style>
+  :root {
+    --bg:#0a0d12; --bg-2:#0f131a; --card:#141a23; --card-2:#1a212c; --brief-bg:#0c1016;
+    --border:#232c3a; --border-bright:#2f3a4a; --text:#e6edf3; --text-2:#b8c5d3; --muted:#7d8a99; --dim:#5a6573;
+    --accent:#6ea8fe; --accent-glow:rgba(110,168,254,0.4); --green:#4ade80; --green-glow:rgba(74,222,128,0.35);
+    --yellow:#facc15; --orange:#fb923c; --red:#f87171; --red-glow:rgba(248,113,113,0.35); --purple:#c084fc; --teal:#5eead4;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html,body { background:var(--bg); color:var(--text);
+    font-family:-apple-system,"SF Pro Display","SF Pro Text",BlinkMacSystemFont,"Segoe UI",sans-serif;
+    line-height:1.6; font-feature-settings:"ss01","ss02","cv11"; min-height:100vh; }
+  body::before { content:""; position:fixed; inset:0;
+    background:
+      radial-gradient(ellipse 1200px 600px at 20% -10%, rgba(74,222,128,0.06), transparent 50%),
+      radial-gradient(ellipse 800px 400px at 90% 10%, rgba(110,168,254,0.05), transparent 50%),
+      radial-gradient(ellipse 1000px 500px at 50% 120%, rgba(94,234,212,0.04), transparent 50%);
+    pointer-events:none; z-index:0; }
+  .container { position:relative; max-width:1020px; margin:0 auto; padding:48px 28px 80px; z-index:1; }
+  .mono { font-family:"JetBrains Mono","SF Mono",Menlo,monospace; }
+  code { font-family:"JetBrains Mono","SF Mono",Menlo,monospace; font-size:0.85em; background:var(--brief-bg); border:1px solid var(--border); border-radius:5px; padding:1px 6px; color:var(--teal); }
+
+  .eyebrow { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:2px; color:var(--green);
+    margin-bottom:16px; display:flex; align-items:center; gap:12px; }
+  .eyebrow::before { content:""; width:24px; height:1px; background:var(--green); box-shadow:0 0 8px var(--green-glow); }
+  h1.title { font-size:44px; font-weight:700; letter-spacing:-1.3px; line-height:1.06; margin-bottom:14px;
+    background:linear-gradient(180deg,#fff 0%,#b8c5d3 100%); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .subtitle { font-size:17px; color:var(--text-2); max-width:840px; margin-bottom:30px; }
+
+  .stat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:44px; }
+  @media (max-width:880px){ .stat-grid{ grid-template-columns:repeat(2,1fr);} }
+  .stat { background:linear-gradient(180deg,var(--card) 0%,var(--bg-2) 100%); border:1px solid var(--border);
+    border-radius:12px; padding:16px 18px; position:relative; overflow:hidden; }
+  .stat::before { content:""; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,var(--border-bright),transparent); }
+  .stat .label { font-size:10px; text-transform:uppercase; letter-spacing:1px; color:var(--muted); margin-bottom:8px; font-weight:600; }
+  .stat .value { font-size:26px; font-weight:700; letter-spacing:-1px; line-height:1; margin-bottom:5px; font-family:"JetBrains Mono",monospace; }
+  .stat .value.green{ color:var(--green); text-shadow:0 0 16px var(--green-glow);} .stat .value.blue{ color:var(--accent);} .stat .value.purple{ color:var(--purple);}
+  .stat .note { font-size:11px; color:var(--muted); }
+
+  section { margin-bottom:42px; }
+  h2.sec { font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:var(--text-2);
+    margin-bottom:18px; padding-bottom:10px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; }
+  h2.sec .num { color:var(--green); font-family:"JetBrains Mono",monospace; }
+  p.lead { font-size:15px; color:var(--text-2); margin-bottom:18px; max-width:840px; }
+
+  /* increment cards */
+  .builds { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  @media (max-width:840px){ .builds{ grid-template-columns:1fr;} }
+  .build { border-radius:12px; padding:20px; border:1px solid var(--border); background:linear-gradient(180deg,var(--card) 0%,var(--bg-2) 100%); position:relative; overflow:hidden; }
+  .build::before { content:""; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--green),var(--teal)); opacity:0.7; }
+  .build .tag { font-family:"JetBrains Mono",monospace; font-size:10px; color:var(--green); letter-spacing:1px; text-transform:uppercase; }
+  .build h3 { font-size:16px; margin:6px 0 8px; letter-spacing:-0.3px; }
+  .build p { font-size:13px; color:var(--text-2); margin-bottom:12px; }
+  .build .checks { font-family:"JetBrains Mono",monospace; font-size:12px; color:var(--green); font-weight:700; }
+  .build .file { font-family:"JetBrains Mono",monospace; font-size:11px; color:var(--dim); margin-top:4px; }
+
+  /* terminal */
+  .term { background:var(--brief-bg); border:1px solid var(--border-bright); border-radius:12px; overflow:hidden; box-shadow:0 8px 40px rgba(0,0,0,0.4); }
+  .term .bar { background:#11161e; padding:9px 14px; display:flex; align-items:center; gap:7px; border-bottom:1px solid var(--border); }
+  .term .bar .dot { width:11px; height:11px; border-radius:50%; } .term .bar .r{background:#ff5f56;} .term .bar .y{background:#ffbd2e;} .term .bar .g{background:#27c93f;}
+  .term .bar .ttl { font-family:"JetBrains Mono",monospace; font-size:11px; color:var(--muted); margin-left:8px; }
+  .term .body { padding:16px 18px; font-family:"JetBrains Mono","SF Mono",monospace; font-size:12.5px; line-height:1.7; overflow-x:auto; }
+  .term .body .step { color:#fff; font-weight:700; display:block; margin-top:10px; }
+  .term .body .ok { color:var(--green); } .term .body .dim { color:var(--dim); }
+  .term .body .pass { color:var(--green); font-weight:700; }
+
+  .twocol { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:760px){ .twocol{ grid-template-columns:1fr;} }
+  .col { border-radius:12px; padding:20px 22px; border:1px solid var(--border); background:var(--card); }
+  .col h3 { font-size:15px; margin-bottom:10px; } .col.now h3{ color:var(--green);} .col.next h3{ color:var(--accent);}
+  .col ul { list-style:none; } .col li { font-size:13px; color:var(--text-2); padding:5px 0 5px 22px; position:relative; }
+  .col.now li::before { content:"✓"; position:absolute; left:0; color:var(--green); }
+  .col.next li::before { content:"▸"; position:absolute; left:0; color:var(--accent); }
+
+  /* honest box */
+  .honest { border:1px solid rgba(250,204,21,0.35); background:rgba(250,204,21,0.04); border-radius:12px; padding:20px 22px; }
+  .honest h3 { font-size:14px; color:var(--yellow); margin-bottom:12px; }
+  .honest ul { list-style:none; } .honest li { font-size:13px; color:var(--text-2); padding:5px 0 5px 22px; position:relative; }
+  .honest li::before { content:"!"; position:absolute; left:2px; color:var(--yellow); font-weight:700; }
+  .honest li b { color:var(--text); }
+
+  .footer { margin-top:54px; padding-top:24px; border-top:1px solid var(--border); font-size:12px; color:var(--dim); }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="eyebrow">Code Architect · building the Shared Layer</div>
+  <h1 class="title">The spine is built</h1>
+  <p class="subtitle">Session 5 proved the core idea works. Today we built the three pieces that turn it from a clever demo
+  into something every agent can actually ride: the <strong>always-on inbox checker</strong>, the <strong>safe way to pour in our history</strong>,
+  and the <strong>filesystem-level wall</strong> between clients. All tested, all green, none deployed yet — exactly the right order.</p>
+
+  <div class="stat-grid">
+    <div class="stat"><div class="label">Tests passing</div><div class="value green">95 / 95</div><div class="note">core 18 · runner 23 · backfill 35 · projection 19</div></div>
+    <div class="stat"><div class="label">Increments built today</div><div class="value blue">3</div><div class="note">runner · backfill · physical isolation</div></div>
+    <div class="stat"><div class="label">Cross-client leaks</div><div class="value green">0</div><div class="note">now proven at the byte level</div></div>
+    <div class="stat"><div class="label">Walls on client data</div><div class="value purple">2</div><div class="note">logical + physical</div></div>
+  </div>
+
+  <!-- WHAT GOT BUILT -->
+  <section>
+    <h2 class="sec"><span class="num">01</span> What got built today</h2>
+    <p class="lead">Three increments, each built the same disciplined way: written as tested reference code, run against an
+    adversarial test, reviewed by the internal Devil's Advocate, and committed locally (nothing pushed to live).</p>
+    <div class="builds">
+      <div class="build">
+        <div class="tag">Increment #1</div>
+        <h3>The drainer runner</h3>
+        <p>The always-on ~60s loop every agent rides to check its inbox. <b>At-least-once</b>: if handling crashes, the
+        message comes back next round instead of vanishing. A message that keeps failing gets parked so it can't jam the queue.</p>
+        <div class="checks">✓ 23 checks green</div>
+        <div class="file">runner.js</div>
+      </div>
+      <div class="build">
+        <div class="tag">Increment #2</div>
+        <h3>Backfill as claims</h3>
+        <p>Pours our accumulated history into the system as <b>quarantined claims, never facts</b> — scrubbed of secrets/PII
+        at the door, invisible to every agent, and only turned into a real, routed fact by a human-gated promotion.</p>
+        <div class="checks">✓ 35 checks green</div>
+        <div class="file">backfill.js</div>
+      </div>
+      <div class="build">
+        <div class="tag">Increment #3</div>
+        <h3>Physical client wall</h3>
+        <p>Each client repo gets <b>its own permissioned file</b> with only its own data in it. Even raw file access can't
+        reach another client — their bytes simply aren't there. A second guard refuses cross-client copies if anything upstream slips.</p>
+        <div class="checks">✓ 19 checks green</div>
+        <div class="file">projection.js</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- THE WALL -->
+  <section>
+    <h2 class="sec"><span class="num">02</span> The wall that matters — now two layers deep</h2>
+    <p class="lead">The highest-stakes rule is "one client can never see another's data." Session 5 made it <em>logical</em>
+    (you only get messages addressed to you). Today's #3 makes it <em>physical</em> too — and the test proves it by reading
+    one client's raw file and confirming the other client's secret is nowhere in it.</p>
+    <div class="term">
+      <div class="bar"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="ttl">node prototype/shared-layer/projection.test.js</span></div>
+      <div class="body mono">
+<span class="step">1. Physical isolation — read DAG's raw file bytes; TDB's data is simply not there</span>
+<span class="ok">  ✓</span> DAG file contains its own subject (memorial-day)
+<span class="ok">  ✓</span> DAG file has ZERO trace of TDB subject (tdb-secret-launch)
+<span class="ok">  ✓</span> DAG file has ZERO trace of the TDB confidential payload
+<span class="ok">  ✓</span> TDB file has ZERO trace of DAG data
+<span class="step">2. Permissions — file 0600, dir 0700 applied</span>
+<span class="ok">  ✓</span> inbox.db is owner-read/write only
+<span class="step">3. Runner drop-in — the same loop drains the private file, not the shared store</span>
+<span class="ok">  ✓</span> client drained its fact from its own permissioned file
+<span class="step">4. Second guard — a mis-addressed cross-client message is refused</span>
+<span class="ok">  ✓</span> projector refused it; DAG file STILL has zero TDB bytes
+<span class="pass">
+ALL PROJECTION INVARIANTS HOLD ✓</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- HONEST LIMITS -->
+  <section>
+    <h2 class="sec"><span class="num">03</span> What I'm <em>not</em> claiming (the honest limits)</h2>
+    <p class="lead">Each increment's Devil's Advocate pass found real holes. None block a tested reference, but they're written
+    down — not hidden — and tracked for the hardening before this touches live data.</p>
+    <div class="honest">
+      <ul>
+        <li><b>The runner is at-least-once, not exactly-once</b> — handlers must be safe to run twice; one-runner-per-agent and crash-proof retry counts are the deploy hardening.</li>
+        <li><b>Secret scrubbing is best-effort</b> — it catches known shapes (API keys, PEM/JWT/connection strings, emails); unusual or free-text secrets can slip. The real safety net is that claims are quarantined and a human reviews each before it ever routes.</li>
+        <li><b>The physical wall is proven by content + permissions, not by cross-user denial yet</b> — that last step needs each client file owned by its own OS user on the Mac Mini. That's the deployment test, documented, not faked.</li>
+        <li><b>Codex review is intentionally deferred</b> to just before deployment — three scoped prompts are drafted and ready, to run against the real ported code, not throwaway prototype specifics.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- NOW / NEXT -->
+  <section>
+    <h2 class="sec"><span class="num">04</span> Where the roadmap stands</h2>
+    <div class="twocol">
+      <div class="col now"><h3>Proven now (the spine)</h3><ul>
+        <li>Core: type once → the right agents get it, walled, audited</li>
+        <li>#1 Drainer runner — the loop every agent rides</li>
+        <li>#2 Backfill — history in safely, human-gated</li>
+        <li>#3 Physical per-client files — the filesystem wall</li>
+      </ul></div>
+      <div class="col next"><h3>Still owed before production</h3><ul>
+        <li>#4 Agent identity + signed messages</li>
+        <li>#5 Live monitoring (lag, dead-letters, blocked attempts)</li>
+        <li>#6 Message-type schemas + versioning</li>
+        <li>#7 The thin adapter for the live ACD↔Kai loop + mesh sunset</li>
+        <li>#8 The real DAG → ACD/NAMI pilot, on the Mini</li>
+      </ul></div>
+    </div>
+  </section>
+
+  <div class="footer">
+    Code Architect · Shared Layer reference spine · 2026-05-25 · 95/95 checks green ·
+    <span class="mono">prototype/shared-layer/</span> · reference for Kai to adopt; committed locally, not pushed · Codex deferred to pre-deploy.
+  </div>
+
+</div>
+</body>
+</html>

@@ -74,11 +74,17 @@ CREATE TABLE IF NOT EXISTS dead_letter (
 
 const now = () => new Date().toISOString();
 
+/** Apply the canonical schema to any db handle. Shared by central (openDb) and the
+ *  per-client physical projections so both speak the identical table surface. */
+function applySchema(db) {
+  db.exec(SCHEMA);
+  return db;
+}
+
 function openDb(path = ':memory:') {
   const db = new DatabaseSync(path);
   db.exec('PRAGMA journal_mode = WAL;');
-  db.exec(SCHEMA);
-  return db;
+  return applySchema(db);
 }
 
 function audit(db, event, detail) {
@@ -252,4 +258,4 @@ function revoke(db, fact_id, reason) {
   return recips.length;
 }
 
-module.exports = { openDb, subscribe, writeFact, drain, revoke, FACT_TYPES, peek, ack, deadLetterDelivery, pendingStats };
+module.exports = { openDb, applySchema, subscribe, writeFact, drain, revoke, FACT_TYPES, peek, ack, deadLetterDelivery, pendingStats };

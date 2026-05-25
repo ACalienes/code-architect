@@ -43,11 +43,37 @@ rule + the deliveries split *is* the isolation boundary.
   scrubbed at the door, only known fact_types promote, promotion routes the real fact, idempotent
   re-ingest, terminal rejection.
 
+- `projection.js` — **physical per-client projections** (hardening roadmap #3): a trusted
+  `projectClient()` materializes each client repo's deliveries into its own OS-permissioned
+  `<dir>/<agent>/inbox.db`, so a client process can't even open another client's bytes.
+- `projection.test.js` — the runnable proof (19 checks): the decisive one reads a client's RAW
+  FILE BYTES and asserts another client's data is physically absent.
+
 ```bash
 node prototype/shared-layer/demo.js            # core invariants (18)
 node prototype/shared-layer/runner.test.js     # drainer-runner invariants (23)
 node prototype/shared-layer/backfill.test.js   # backfill-as-claims invariants (35)
+node prototype/shared-layer/projection.test.js # physical per-client isolation (19)
 ```
+
+## Physical per-client projections — defense in depth, and the deploy line
+
+Logical isolation (the delivery split) holds only while a client repo behaves — uses `drain()`/
+`peek()` and never opens the central db directly. Physical projection removes that trust: the
+trusted projector writes each client's deliveries into **its own file**, and the runner (#1) rides
+that file unchanged (per-client SQLite, `journal_mode=DELETE` so no `-wal` sidecar leaks bytes).
+The projector is a **second guard** — it refuses to copy any delivery whose `fact.client_id` ≠ the
+projection's client, catching a hypothetical `route()` bug at the physical boundary too.
+
+**What's proven vs. what deploy owes (DA-recorded):**
+- *Proven in-process:* content isolation (a client's file has zero bytes of any other client —
+  tested by reading raw file bytes), restrictive modes applied (0600 file / 0700 dir), the
+  cross-client refusal guard, runner drop-in, idempotency, and revocation propagation.
+- *Owed at deploy (Mini):* `chmod` only restricts by owner — true cross-client denial needs each
+  `<dir>/<agent>/` **`chown`ed to that client's dedicated unix user**, so a *different* uid is
+  denied by the OS. In-process (single uid) that can't be exercised; it's the documented
+  deployment integration test, not faked here. Also roadmap: ack-back sync (central learns the
+  client actually read), and the projector's cadence pairs with the drainer runner's.
 
 ## Backfill-as-claims — what it guarantees, and its limits
 
