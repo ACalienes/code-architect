@@ -152,12 +152,12 @@ function seedTwoClients() {
     const { db } = seedTwoClients();
     const { file } = projectClient(db, { dir: freshDir(), agent: 'dag-repo', clientId: 'dagdc' });
     const projDb = openProjectionDb(file); openHandles.push(projDb);
-    const ackStore = openDb(); // stands in for the client-owned ack file
+    const ackFile = path.join(path.dirname(file), 'ack.db'); // client-owned ack file (ATTACHed by the runner)
     const got = [];
-    const d = createDrainer({ db: projDb, agent: 'dag-repo', handler: async (f) => got.push(f.subject_id), ackStore });
+    const d = createDrainer({ db: projDb, agent: 'dag-repo', handler: async (f) => got.push(f.subject_id), ackStore: ackFile });
     await d.tickOnce();
     check('client drained its fact from the read-only projection', got.length === 1 && got[0] === 'memorial-day');
-    check('ack was recorded in the CLIENT ack-store, not the projection', ackStore.prepare('SELECT COUNT(*) AS n FROM acked').get().n === 1);
+    check('ack was recorded in the CLIENT ack-store, not the projection', openProjectionDb(ackFile).prepare('SELECT COUNT(*) AS n FROM acked').get().n === 1);
     check('the projection delivery is STILL pending (client never wrote it)', projDb.prepare("SELECT status FROM deliveries").get().status === 'pending');
     await d.tickOnce();
     check('re-tick does NOT re-handle (filtered by the ack-store)', got.length === 1);

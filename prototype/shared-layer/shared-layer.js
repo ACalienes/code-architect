@@ -70,6 +70,8 @@ CREATE TABLE IF NOT EXISTS dead_letter (
   reason  TEXT NOT NULL,
   ts      TEXT NOT NULL
 );
+-- the hot read path: peek/drain and the client unacked-join filter by (recipient_agent, status).
+CREATE INDEX IF NOT EXISTS idx_deliveries_recipient_status ON deliveries(recipient_agent, status);
 `;
 
 const now = () => new Date().toISOString();

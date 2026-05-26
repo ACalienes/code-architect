@@ -67,7 +67,7 @@ function createSharedLayer({ db, registry = reg.defaultRegistry, projectionsDir 
     clientDrainer: (agent, file, handler, opts = {}) => {
       const { ackFile, ...rest } = opts;
       if (!ackFile) throw new Error('clientDrainer requires { ackFile } — the client acks into its own store, never the read-only projection');
-      return createDrainer({ ...rest, db: proj.openProjectionDb(file), agent, handler, ackStore: core.openDb(ackFile) });
+      return createDrainer({ ...rest, db: proj.openProjectionDb(file), agent, handler, ackStore: ackFile });
     },
 
     // ── event-driven wake ──

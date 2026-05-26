@@ -62,16 +62,33 @@ function createDrainer(o) {
   }
 
   // When riding a read-only projection, ack-state lives in the client's OWN store, never the
-  // projection — so the projection directory needn't be client-writable (no symlink/replace attack).
-  if (ackStore) ackStore.exec('CREATE TABLE IF NOT EXISTS acked (delivery_id TEXT PRIMARY KEY, ts TEXT); CREATE TABLE IF NOT EXISTS dead_letter (fact_id TEXT, reason TEXT, ts TEXT);');
-  const isAcked = (id) => ackStore && ackStore.prepare('SELECT 1 FROM acked WHERE delivery_id = ?').get(id);
+  // projection — so the projection dir needn't be client-writable (no symlink/replace attack).
+  // `ackStore` is a FILE PATH; we ATTACH it to this connection so the unacked filter is a single
+  // INDEXED SQL join (NOT EXISTS against ackstore.acked's PK) instead of an O(pending) JS scan.
+  if (ackStore) {
+    db.exec(`ATTACH DATABASE '${String(ackStore).replace(/'/g, "''")}' AS ackstore`);
+    db.exec("CREATE TABLE IF NOT EXISTS ackstore.acked (delivery_id TEXT PRIMARY KEY, ts TEXT); CREATE TABLE IF NOT EXISTS ackstore.dead_letter (fact_id TEXT, reason TEXT, ts TEXT);");
+  }
+  // The unacked read for the projection path: indexed, batchSize-limited, no full scan, no starvation.
+  function peekUnacked(limit) {
+    return db.prepare(
+      `SELECT d.delivery_id, d.kind, d.scope, f.fact_id, f.fact_type, f.client_id, f.subject_id, f.payload, f.revoked_at
+         FROM deliveries d JOIN facts f ON f.fact_id = d.fact_id
+        WHERE d.recipient_agent = ? AND d.status = 'pending'
+          AND NOT EXISTS (SELECT 1 FROM ackstore.acked a WHERE a.delivery_id = d.delivery_id)
+        ORDER BY d.created_at LIMIT ?`
+    ).all(agent, limit).map(r => ({
+      delivery_id: r.delivery_id, kind: r.kind, fact_id: r.fact_id, fact_type: r.fact_type,
+      client_id: r.client_id, subject_id: r.subject_id, payload: JSON.parse(r.payload), revoked: !!r.revoked_at,
+    }));
+  }
   const commitAck = (id) => ackStore
-    ? ackStore.prepare('INSERT OR IGNORE INTO acked (delivery_id, ts) VALUES (?, ?)').run(id, new Date().toISOString())
+    ? db.prepare('INSERT OR IGNORE INTO ackstore.acked (delivery_id, ts) VALUES (?, ?)').run(id, new Date().toISOString())
     : ack(db, id);
   const parkPoison = (fact, n, err) => {
     if (ackStore) {
-      ackStore.prepare('INSERT OR IGNORE INTO acked (delivery_id, ts) VALUES (?, ?)').run(fact.delivery_id, new Date().toISOString());
-      ackStore.prepare('INSERT INTO dead_letter (fact_id, reason, ts) VALUES (?, ?, ?)').run(fact.fact_id, `handler_failed_${n}x: ${err && err.message}`, new Date().toISOString());
+      db.prepare('INSERT OR IGNORE INTO ackstore.acked (delivery_id, ts) VALUES (?, ?)').run(fact.delivery_id, new Date().toISOString());
+      db.prepare('INSERT INTO ackstore.dead_letter (fact_id, reason, ts) VALUES (?, ?, ?)').run(fact.fact_id, `handler_failed_${n}x: ${err && err.message}`, new Date().toISOString());
     } else deadLetterDelivery(db, fact.delivery_id, `handler_failed_${n}x: ${err && err.message}`);
   };
 
@@ -88,13 +105,19 @@ function createDrainer(o) {
   // A point-in-time view of this runner: durable backlog/lag (re-read from the db) + the
   // process-local counters. getStats() returns it; onTick/heartbeat publish it.
   function snapshot() {
+    if (ackStore) {
+      // unacked pending + oldest unacked, computed in SQL via the attached ack-store (indexed).
+      const row = db.prepare(
+        `SELECT COUNT(*) AS n, MIN(d.created_at) AS oldest FROM deliveries d
+          WHERE d.recipient_agent = ? AND d.status = 'pending'
+            AND NOT EXISTS (SELECT 1 FROM ackstore.acked a WHERE a.delivery_id = d.delivery_id)`
+      ).get(agent);
+      const lagMs = row.oldest ? Math.max(0, clock() - Date.parse(row.oldest)) : 0;
+      return { ...stats, pending: row.n, lagMs, at: clock() };
+    }
     const p = pendingStats(db, agent);
-    // with an ackStore the projection's rows stay 'pending' forever (client never writes them);
-    // true pending = delivered − acked-in-the-client-store.
-    const ackedN = ackStore ? ackStore.prepare('SELECT COUNT(*) AS n FROM acked').get().n : 0;
-    const pending = Math.max(0, p.pending - ackedN);
-    const lagMs = p.oldest && pending > 0 ? Math.max(0, clock() - Date.parse(p.oldest)) : 0;
-    return { ...stats, pending, lagMs, at: clock() };
+    const lagMs = p.oldest ? Math.max(0, clock() - Date.parse(p.oldest)) : 0;
+    return { ...stats, pending: p.pending, lagMs, at: clock() };
   }
 
   // ±jitterRatio around intervalMs, or 0 when catching up on a backlog.
@@ -108,12 +131,10 @@ function createDrainer(o) {
   async function tick() {
     stats.ticks++;
     stats.lastTickAt = clock();
-    // A read-only projection's rows never flip to 'read', so we must consider ALL pending and filter
-    // out what's already acked in the client store — a fixed window would starve newer deliveries once
-    // enough historical rows are acked (Codex round 5). (O(pending) scan per tick; for pilot scale this
-    // is fine — an index / ATTACH-join is the documented optimization.) Non-ackStore path is unchanged.
-    let batch = peek(db, agent, ackStore ? Number.MAX_SAFE_INTEGER : batchSize);
-    if (ackStore) batch = batch.filter(f => !isAcked(f.delivery_id)).slice(0, batchSize);
+    // Read-only projection: rows never flip to 'read', so we read the UNACKED set via the attached
+    // ack-store (indexed SQL NOT EXISTS) — batchSize-limited, no full scan, no window starvation.
+    // Non-ackStore (central) path is the unchanged at-most/least-once peek.
+    const batch = ackStore ? peekUnacked(batchSize) : peek(db, agent, batchSize);
     stats.lastDrainCount = batch.length;
     let handled = 0;
 
