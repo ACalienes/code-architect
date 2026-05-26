@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<!-- Session wrap — Shared Layer hardened, posture decided, handed off to Kai. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Session wrap · Shared Layer → handed to Kai · 2026-05-26</title>
+<style>
+  :root{
+    --bg:#0a0d12;--bg-2:#0f131a;--card:#141a23;--brief-bg:#0c1016;--border:#232c3a;--border-bright:#2f3a4a;
+    --text:#e6edf3;--text-2:#b8c5d3;--muted:#7d8a99;--dim:#5a6573;--accent:#6ea8fe;--green:#4ade80;
+    --green-glow:rgba(74,222,128,0.35);--yellow:#facc15;--purple:#c084fc;--teal:#5eead4;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);font-family:-apple-system,"SF Pro Display","SF Pro Text",BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.6;min-height:100vh}
+  body::before{content:"";position:fixed;inset:0;background:
+      radial-gradient(ellipse 1100px 560px at 16% -10%,rgba(74,222,128,0.06),transparent 50%),
+      radial-gradient(ellipse 820px 420px at 92% 6%,rgba(110,168,254,0.05),transparent 50%),
+      radial-gradient(ellipse 1000px 500px at 50% 120%,rgba(192,132,252,0.04),transparent 50%);pointer-events:none;z-index:0}
+  .container{position:relative;max-width:1020px;margin:0 auto;padding:48px 28px 90px;z-index:1}
+  .mono{font-family:"JetBrains Mono","SF Mono",Menlo,monospace}
+  code{font-family:"JetBrains Mono","SF Mono",Menlo,monospace;font-size:0.85em;background:var(--brief-bg);border:1px solid var(--border);border-radius:5px;padding:1px 6px;color:var(--teal)}
+  .eyebrow{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:var(--green);margin-bottom:16px;display:flex;align-items:center;gap:12px}
+  .eyebrow::before{content:"";width:24px;height:1px;background:var(--green);box-shadow:0 0 8px var(--green-glow)}
+  h1.title{font-size:43px;font-weight:700;letter-spacing:-1.3px;line-height:1.05;margin-bottom:14px;background:linear-gradient(180deg,#fff 0%,#b8c5d3 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .subtitle{font-size:17px;color:var(--text-2);max-width:850px;margin-bottom:30px}
+  .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin-bottom:42px}
+  @media (max-width:880px){.stat-grid{grid-template-columns:repeat(2,1fr)}}
+  .stat{background:linear-gradient(180deg,var(--card) 0%,var(--bg-2) 100%);border:1px solid var(--border);border-radius:12px;padding:15px 16px;position:relative;overflow:hidden}
+  .stat::before{content:"";position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--border-bright),transparent)}
+  .stat .label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:8px;font-weight:600}
+  .stat .value{font-size:24px;font-weight:700;letter-spacing:-1px;line-height:1;margin-bottom:5px;font-family:"JetBrains Mono",monospace}
+  .stat .value.green{color:var(--green);text-shadow:0 0 16px var(--green-glow)}.stat .value.blue{color:var(--accent)}.stat .value.purple{color:var(--purple)}
+  section{margin-bottom:40px}
+  h2.sec{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-2);margin-bottom:18px;padding-bottom:10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+  h2.sec .num{color:var(--green);font-family:"JetBrains Mono",monospace}
+  /* timeline */
+  .tl{position:relative;padding-left:24px}
+  .tl::before{content:"";position:absolute;left:6px;top:6px;bottom:6px;width:2px;background:linear-gradient(180deg,var(--green),var(--purple))}
+  .tl .step{position:relative;margin-bottom:15px}
+  .tl .step::before{content:"";position:absolute;left:-22px;top:5px;width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green-glow)}
+  .tl .step b{font-size:14px} .tl .step p{font-size:12.5px;color:var(--muted)}
+  /* mesh loop */
+  .loop{background:var(--brief-bg);border:1px solid var(--border-bright);border-radius:12px;padding:18px 20px;font-family:"JetBrains Mono",monospace;font-size:13px;color:var(--text-2);line-height:1.9}
+  .loop .ca{color:var(--accent)}.loop .kai{color:var(--purple)}.loop .ok{color:var(--green)}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media (max-width:760px){.two{grid-template-columns:1fr}}
+  .col{border-radius:12px;padding:20px 22px;border:1px solid var(--border);background:var(--card)}
+  .col.done{border-color:rgba(74,222,128,0.4)}.col.next{border-color:rgba(250,204,21,0.35)}
+  .col h3{font-size:15px;margin-bottom:12px}.col.done h3{color:var(--green)}.col.next h3{color:var(--yellow)}
+  .col ul{list-style:none}.col li{font-size:13px;color:var(--text-2);padding:5px 0 5px 22px;position:relative}
+  .col.done li::before{content:"✓";position:absolute;left:0;color:var(--green)}
+  .col.next li::before{content:"▸";position:absolute;left:0;color:var(--yellow)}
+  .col .who{font-size:11px;color:var(--dim);margin-top:10px}
+  .footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);font-size:12px;color:var(--dim)}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="eyebrow">Code Architect · session wrap · 2026-05-26</div>
+  <h1 class="title">Hardened, decided, handed off.</h1>
+  <p class="subtitle">The Shared Layer went from working prototype to a deployment-ready, adversarially-
+  hardened reference — then we settled the honest isolation posture for a single-user Mini and handed the
+  pilot to Kai over the live mesh. CA's side is complete; the ball is now hers.</p>
+
+  <div class="stat-grid">
+    <div class="stat"><div class="label">Commits, pushed</div><div class="value blue">19</div><div class="note">9e9536c → 744d7de</div></div>
+    <div class="stat"><div class="label">Codex rounds folded</div><div class="value green">5</div><div class="note">+ a proactive optimization</div></div>
+    <div class="stat"><div class="label">Test drivers green</div><div class="value green">2 / 2</div><div class="note">node:sqlite + better-sqlite3</div></div>
+    <div class="stat"><div class="label">Mesh msgs to Kai</div><div class="value purple">2 / 2</div><div class="note">re-audited to consumed</div></div>
+  </div>
+
+  <section>
+    <h2 class="sec"><span class="num">01</span> The arc</h2>
+    <div class="tl">
+      <div class="step"><b>Built the spine</b><p>runner · backfill-as-claims · physical projections · event-wake · observability · fact_type schema · signed identity → composed + facade + adapter + better-sqlite3 port.</p></div>
+      <div class="step"><b>Hardened through 5 Codex rounds</b><p>bypass-sealing, signed adapter, atomicity, the symlink critical, ack-store accounting — each folded and re-proven; core stayed verified-closed.</p></div>
+      <div class="step"><b>Proved the mesh is live (correction)</b><p>An earlier "orphaned" read was wrong — a live probe showed every agent polling and a CA→Kai message flowing end to end. It works; it's just poll-paced, not instant.</p></div>
+      <div class="step"><b>Settled the single-user posture</b><p>Kai verified the Mini is single-user → named the pilot's real boundary (logical scoping + signed integrity, first-party-trusted) and deferred the physical/hard-identity wall to a separate project.</p></div>
+      <div class="step"><b>Handed the pilot to Kai</b><p>Posture confirmed + the 3 decisions adopted into the runbook + relayed to Kai over the mesh (consumed). CA's side complete.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec"><span class="num">02</span> The handoff — verified, not trusted</h2>
+    <div class="loop">
+<span class="ca">code-architect</span> → mesh → <span class="kai">kai</span>  · "Shared Layer ready"        → <span class="ok">consumed (processing, 16s)</span>
+<span class="ca">code-architect</span> → mesh → <span class="kai">kai</span>  · "posture confirmed + steps"  → <span class="ok">consumed (processing, 16s)</span>
+    </div>
+    <p style="font-size:13px;color:var(--muted);margin-top:12px">Both verified by re-auditing the message status on the Mini — CA never trusts "queued."</p>
+  </section>
+
+  <section>
+    <h2 class="sec"><span class="num">03</span> Done vs. next</h2>
+    <div class="two">
+      <div class="col done"><h3>Done (CA)</h3><ul>
+        <li>Built, hardened (5 rounds), ported, pushed — 19 commits</li>
+        <li>Single-user posture decided + written into the runbook</li>
+        <li>Kai updated + confirmed over the live mesh (both consumed)</li>
+        <li>Pilot trimmed: logical scoping + signed integrity; physical layer deferred (chown-ready)</li>
+      </ul><div class="who">Code Architect — laptop, complete</div></div>
+      <div class="col next"><h3>Next (Kai, gated)</h3><ul>
+        <li>Stand up <code>~/.kameha/mesh/kameha-mesh.db</code></li>
+        <li><code>enroll.js</code> → keys + public-key registration + subscriptions</li>
+        <li>Wire the DAG → ACD/NAMI logical delivery-split</li>
+        <li>Run the pilot → CA re-audits the receivers</li>
+      </ul><div class="who">Kai — on the Mini · each step = an Alex go-ahead</div></div>
+    </div>
+  </section>
+
+  <div class="footer">
+    Code Architect · session wrap 2026-05-26 · Shared Layer reference complete + hardened (5 Codex rounds) ·
+    pilot = logical scoping + signed integrity (single-user, first-party-trusted) · physical + hard-identity wall = the multi-user-Mini project ·
+    pickup: drive the pilot once Kai stands up the Mini side.
+  </div>
+
+</div>
+</body>
+</html>
