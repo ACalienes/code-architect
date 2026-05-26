@@ -86,6 +86,12 @@ function stableStringify(v) {
     throw new Error('non-canonical value in signed payload (non-finite number)');
   if (v === null || typeof v !== 'object') return JSON.stringify(v);
   if (Array.isArray(v)) return '[' + v.map(stableStringify).join(',') + ']';
+  // Only PLAIN objects are canonicalizable. A Date/RegExp/class instance serializes to `{}` here but
+  // JSON.stringify stores it as a string (Codex round 4: a signature over one Date verifies for
+  // another). Reject non-plain objects so the canonical form can't diverge from what's persisted.
+  const proto = Object.getPrototypeOf(v);
+  if (proto !== Object.prototype && proto !== null)
+    throw new Error('non-canonical value in signed payload (non-plain object)');
   return '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + stableStringify(v[k])).join(',') + '}';
 }
 function canonicalFact(f) {

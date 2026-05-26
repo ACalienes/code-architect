@@ -65,6 +65,9 @@ const h = (s) => console.log(`\n\x1b[1m${s}\x1b[0m`);
     const mod = require('./index');
     check('the module does not re-export raw primitive modules (core/identity/registry)', !mod.core && !mod.identity && !mod.registry && !mod.backfill);
     check('the sealed surface + the admin surface are the only exports', typeof mod.createSharedLayer === 'function' && typeof mod.createAdminLayer === 'function' && typeof mod.openDb === 'function');
+    let refused = false;
+    try { createSharedLayer({ db: openDb(), registry: null }); } catch (_) { refused = true; }
+    check('the facade REFUSES registry:null (cannot silently disable schema)', refused);
   }
 
   h('5. Enrollment is insert-only — replacing an identity needs an explicit rotate ceremony');

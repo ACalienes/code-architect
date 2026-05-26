@@ -53,11 +53,27 @@ function createDrainer(o) {
     rng = Math.random,
     onError = null,
     onTick = null,
+    ackStore = null, // a SEPARATE client-owned db for ack-state — used when `db` is a READ-ONLY
+                     // projection the client must not (and cannot) write (Codex round 4 critical).
   } = o || {};
 
   if (!db || !agent || typeof handler !== 'function') {
     throw new Error('createDrainer requires { db, agent, handler }');
   }
+
+  // When riding a read-only projection, ack-state lives in the client's OWN store, never the
+  // projection — so the projection directory needn't be client-writable (no symlink/replace attack).
+  if (ackStore) ackStore.exec('CREATE TABLE IF NOT EXISTS acked (delivery_id TEXT PRIMARY KEY, ts TEXT); CREATE TABLE IF NOT EXISTS dead_letter (fact_id TEXT, reason TEXT, ts TEXT);');
+  const isAcked = (id) => ackStore && ackStore.prepare('SELECT 1 FROM acked WHERE delivery_id = ?').get(id);
+  const commitAck = (id) => ackStore
+    ? ackStore.prepare('INSERT OR IGNORE INTO acked (delivery_id, ts) VALUES (?, ?)').run(id, new Date().toISOString())
+    : ack(db, id);
+  const parkPoison = (fact, n, err) => {
+    if (ackStore) {
+      ackStore.prepare('INSERT OR IGNORE INTO acked (delivery_id, ts) VALUES (?, ?)').run(fact.delivery_id, new Date().toISOString());
+      ackStore.prepare('INSERT INTO dead_letter (fact_id, reason, ts) VALUES (?, ?, ?)').run(fact.fact_id, `handler_failed_${n}x: ${err && err.message}`, new Date().toISOString());
+    } else deadLetterDelivery(db, fact.delivery_id, `handler_failed_${n}x: ${err && err.message}`);
+  };
 
   const attempts = new Map(); // delivery_id -> consecutive failure count (in-memory; resets on restart)
   const stats = {
@@ -73,8 +89,12 @@ function createDrainer(o) {
   // process-local counters. getStats() returns it; onTick/heartbeat publish it.
   function snapshot() {
     const p = pendingStats(db, agent);
-    const lagMs = p.oldest ? Math.max(0, clock() - Date.parse(p.oldest)) : 0;
-    return { ...stats, pending: p.pending, lagMs, at: clock() };
+    // with an ackStore the projection's rows stay 'pending' forever (client never writes them);
+    // true pending = delivered − acked-in-the-client-store.
+    const ackedN = ackStore ? ackStore.prepare('SELECT COUNT(*) AS n FROM acked').get().n : 0;
+    const pending = Math.max(0, p.pending - ackedN);
+    const lagMs = p.oldest && pending > 0 ? Math.max(0, clock() - Date.parse(p.oldest)) : 0;
+    return { ...stats, pending, lagMs, at: clock() };
   }
 
   // ±jitterRatio around intervalMs, or 0 when catching up on a backlog.
@@ -88,14 +108,17 @@ function createDrainer(o) {
   async function tick() {
     stats.ticks++;
     stats.lastTickAt = clock();
-    const batch = peek(db, agent, batchSize);
+    // A read-only projection's rows never flip to 'read', so peek a wider window and filter out what
+    // we've already acked in the client store; otherwise the simple status='pending' read suffices.
+    let batch = peek(db, agent, ackStore ? Math.max(batchSize * 10, 1000) : batchSize);
+    if (ackStore) batch = batch.filter(f => !isAcked(f.delivery_id)).slice(0, batchSize);
     stats.lastDrainCount = batch.length;
     let handled = 0;
 
     for (const fact of batch) {
       try {
         await handler(fact);
-        ack(db, fact.delivery_id);
+        commitAck(fact.delivery_id);
         attempts.delete(fact.delivery_id);
         stats.totalHandled++;
         handled++;
@@ -104,7 +127,7 @@ function createDrainer(o) {
         attempts.set(fact.delivery_id, n);
         stats.totalFailed++;
         if (n >= maxAttempts) {
-          deadLetterDelivery(db, fact.delivery_id, `handler_failed_${n}x: ${err && err.message}`);
+          parkPoison(fact, n, err);
           attempts.delete(fact.delivery_id);
           stats.totalDeadLettered++;
         }

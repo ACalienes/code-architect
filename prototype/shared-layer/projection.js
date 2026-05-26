@@ -85,6 +85,17 @@ function projectClient(centralDb, { dir, agent, clientId, mode = 0o600, dirMode 
   fs.mkdirSync(clientDir, { recursive: true, mode: dirMode });
   fs.chmodSync(clientDir, dirMode); // enforce mode despite umask, before any file exists
   const file = path.join(clientDir, 'inbox.db');
+  // Refuse to follow a swapped path (Codex round 4 critical): if inbox.db (or its dir) has been
+  // replaced with a symlink, the projector would write THIS client's data through it into another
+  // client's file. Never open a non-regular file; alert instead. (Defense in depth — the deploy model
+  // also removes client write access to this directory so a swap can't be created in the first place.)
+  for (const p of [clientDir, file]) {
+    let st; try { st = fs.lstatSync(p); } catch (_) { st = null; }
+    if (st && st.isSymbolicLink()) {
+      audit(centralDb, 'projection_refused_symlink', { agent, clientId, path: p });
+      throw new Error(`projection refused: ${p} is a symlink (possible cross-client redirect)`);
+    }
+  }
   const pdb = openProjectionDb(file);
 
   const candidates = centralDb.prepare(

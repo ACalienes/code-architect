@@ -21,6 +21,9 @@ const adapter = require('./adapter-mesh');
 
 function createSharedLayer({ db, registry = reg.defaultRegistry, projectionsDir = null, adapterIdentity = null } = {}) {
   if (!db) throw new Error('createSharedLayer requires { db }');
+  // The agent-facing surface MUST enforce schema — refuse a null/absent registry that would silently
+  // disable validation on write() (Codex round 4). Bypasses live only on the direct trusted primitives.
+  if (!registry) throw new Error('createSharedLayer: a registry is required (schema enforcement) — pass defaultRegistry');
   const needDir = () => { if (!projectionsDir) throw new Error('projectionsDir not configured'); return projectionsDir; };
 
   return {
@@ -55,8 +58,12 @@ function createSharedLayer({ db, registry = reg.defaultRegistry, projectionsDir 
 
     // ── drainers (heartbeat auto-wired for observability) ──
     drainer: (agent, handler, opts = {}) => createDrainer({ db, agent, handler, onTick: (s) => hm.recordHeartbeat(db, agent, s), ...opts }),
-    /** A client repo's drainer rides its OWN projection file, not the central store. */
-    clientDrainer: (agent, file, handler, opts = {}) => createDrainer({ db: proj.openProjectionDb(file), agent, handler, ...opts }),
+    /** A client repo's drainer rides its READ-ONLY projection and acks into its OWN ack-store
+     *  (a separate client-owned file, `ackFile`), so the projection dir needn't be client-writable. */
+    clientDrainer: (agent, file, handler, opts = {}) => {
+      const { ackFile, ...rest } = opts;
+      return createDrainer({ db: proj.openProjectionDb(file), agent, handler, ackStore: ackFile ? core.openDb(ackFile) : null, ...rest });
+    },
 
     // ── event-driven wake ──
     signalWake: (agent) => notify.signalWake(needDir(), agent),

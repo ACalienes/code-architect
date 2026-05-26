@@ -38,7 +38,11 @@ ingestClaim(db, { fact_type: 'decision', subject_id: 'backfilled', visibility: '
 recordHeartbeat(db, 'acd', { pending: 0, lagMs: 0, ticks: 42, wakes: 7, totalHandled: 39 });
 recordHeartbeat(db, 'nami', { pending: 0, lagMs: 0, ticks: 41, wakes: 5, totalHandled: 38 });
 
-const hh = health(db);
+// Health MUST be called with the client projections wired (Codex round 4) — otherwise a wedged client
+// projection reads as OK. In deployment, pass each client repo's projection file + the db opener.
+const { openProjectionDb } = require('./projection');
+const projections = [/* { agent: 'dag-repo', file: '<projections>/dag-repo/inbox.db' }, … per client repo */];
+const hh = health(db, { projections, open: openProjectionDb });
 const out = path.join(__dirname, '..', '..', 'explainers', 'shared-layer-health-2026-05-25.html');
 fs.writeFileSync(out, renderHealthHtml(hh));
 

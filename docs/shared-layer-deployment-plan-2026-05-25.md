@@ -48,6 +48,10 @@ The prototype uses the built-in `node:sqlite` for zero-install demonstrability. 
 
 - Create on the Mini (path TBD with Kai, e.g. `~/.kameha/kameha-mesh.db`), owned by the trusted
   runner/projector user.
+- **OS-permission gate (Codex round 4 — ownership alone is not enough):** the DB's directory, the
+  `kameha-mesh.db` file, AND its `-wal`/`-shm` sidecars must be mode-denied to agent users — dir `0700`,
+  files `0600`, owned by the trusted user. The process boundary is only load-bearing if no agent uid can
+  open the central DB or its sidecars directly. Verify after creation (`ls -la`).
 - `applySchema(db)` builds the core tables; `ensureClaimsTable`/`ensureHeartbeatTable`/
   `ensureIdentitiesTable`/`ensureSeenTable` are lazy — they self-create on first use.
 - `schema_version: 1` is the migration anchor (per CLAUDE.md).
@@ -84,18 +88,20 @@ The prototype uses the built-in `node:sqlite` for zero-install demonstrability. 
 
 - The projector creates `<projections>/<agent>/` **private up front** (mode set before the db file is
   created — closed the temporary read window Codex flagged), writes `inbox.db`, then chmods.
-- **Ownership model (Codex round 3 — the client must WRITE to ack):** the client drainer rides its own
-  projection (`peek`/`ack`), and `ack` WRITES (`UPDATE deliveries SET status='read'`). So a read-only
-  `0640` file is wrong — the client can't ack. Both the projector (deliver) and the client (ack) write.
-  Model:
-  - Pre-create each `<projections>/<agent>/` ONCE at deploy: `chown projector:<client-group>`,
-    `chmod 2770` (rwx for owner+group, **setgid** so files born inside inherit the client group — closes
-    the "born under the projector's group" window), `other` = no access.
-  - The projector then writes `inbox.db`; setgid → it's born in `<client-group>`; the projector chmods
-    it `0660` (owner+group read/write). Call `projectClient({ mode: 0o660, dirMode: 0o2770 })`.
-  - Result: projector (owner) delivers, the client (sole group member) reads AND acks, every other uid/
-    group denied → cross-client read still denied by the OS. The client can mutate ONLY its own inbox
-    (acceptable — it's its own delivery state; isolation across clients is unaffected).
+- **Ownership model (Codex round 4 — a client-WRITABLE projection dir is unsafe):** giving the client
+  group write on the projection dir (the round-3 `2770`) let a compromised client replace its `inbox.db`
+  with a **symlink to another client's file**, so the projector would write its data through the link →
+  cross-client leak. Fix: **the client NEVER writes the projection.** Single writer = the projector; the
+  client reads, and acks into its OWN separate ack-store.
+  - Pre-create each `<projections>/<agent>/` at deploy: `chown projector:<client-group>`, `chmod 2750`
+    (owner rwx, group **r-x — NO write**, setgid so files are born in `<client-group>`), `other` none.
+  - Projector writes `inbox.db` `0640` (owner rw, group r). The client (group) can READ + traverse but
+    canNOT create/replace entries in the dir → no symlink/file-swap.
+  - The client drainer reads the read-only projection and acks into a **client-owned ack-store** in the
+    client's own area (`createSharedLayer.clientDrainer(agent, projectionFile, handler, { ackFile })`).
+    Ack-state lives where only the client can write; the projection tree is never client-writable.
+  - The projector also `lstat`-guards `inbox.db`/dir each cycle and refuses to open a symlink
+    (defense in depth — `projection_refused_symlink`).
 - This cross-uid denial is THE step that turns content isolation into OS-enforced isolation; the
   in-process prototype proves content + timing + the refusal guard, not cross-uid. Confirm the client
   repos run as distinct unix users/groups with Kai.

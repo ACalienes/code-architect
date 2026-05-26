@@ -175,6 +175,11 @@ h('12. Canonicalization — a non-JSON payload value is rejected, closing the []
   const tampered = { ...clean, payload: { status: 'ok', _provenance: [undefined] } };
   check('verifyFact rejects a non-canonical (undefined-bearing) payload', verifyFact(db, tampered, sig).ok === false);
   check('NaN/Infinity also rejected', (() => { try { canonicalFact({ source_agent: 'z', payload: { n: NaN } }); return false; } catch (_) { return true; } })());
+  // non-plain objects (Date/RegExp) canonicalize to {} but JSON.stringify stores a string → reject them
+  check('a Date in a signed payload is rejected (no 2020-vs-2030 collision)', (() => { try { canonicalFact({ source_agent: 'z', payload: { _provenance: new Date() } }); return false; } catch (_) { return true; } })());
+  const cleanD = { fact_type: 'status_update', visibility: 'internal', data_class: 'internal', source_agent: 'z', observed_at: '2026-05-25T00:00:00Z', payload: { status: 'ok' } };
+  const sigD = signFact(k.privateKey, cleanD);
+  check('verifyFact rejects a Date-bearing tampered payload', verifyFact(db, { ...cleanD, payload: { status: 'ok', _provenance: new Date(2030, 0) } }, sigD).ok === false);
 }
 
 h(failures === 0 ? '\x1b[32mALL IDENTITY INVARIANTS HOLD ✓\x1b[0m' : `\x1b[31m${failures} CHECK(S) FAILED\x1b[0m`);

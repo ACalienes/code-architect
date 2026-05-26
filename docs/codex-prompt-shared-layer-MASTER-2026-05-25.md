@@ -6,9 +6,9 @@ plus `docs/shared-layer-deployment-plan-2026-05-25.md` and
 
 ---
 
-This is a **RE-REVIEW (round 4).** Rounds 1–3 (3 + 6 + 5 findings) are all claimed closed — see the
-three response digests `docs/codex-review-shared-layer-*response.md`. **Your first job: verify the
-round-3 Must-Fix are actually closed (read the code).** **Your second job: rule on the residual**
+This is a **RE-REVIEW (round 5).** Rounds 1–4 (3 + 6 + 5 + 5 findings) are all claimed closed — see the
+four response digests `docs/codex-review-shared-layer-*response.md`. **Your first job: verify the
+round-4 Must-Fix are actually closed (read the code).** **Your second job: rule on the residual**
 (replay protection, enrollment rotation history, ajv-vs-pinned-subset, audit retention/migration) —
 must-fix-before-the-Mini-cutover vs. roadmap — and find anything new.
 
@@ -16,21 +16,22 @@ You are reviewing a cross-agent information-sharing system for ~16 autonomous ag
 where **per-client data isolation is the highest-stakes invariant**, green on BOTH node:sqlite and
 better-sqlite3. Review it as a SYSTEM, adversarially.
 
-Round-3 Must-Fix to verify in code:
-- `promoteClaim` is now atomic — `withTx` wraps the validated write AND the claim status flip (a crash
-  rolls both back; no orphan/duplicate). See backfill.test crash-sim.
-- Canonicalization (`stableStringify` in identity.js) now REJECTS non-JSON values (undefined/function/
-  symbol/NaN/Infinity), so `[]` and `[undefined]` can't collide on a signature. See identity.test.
-- `health()` folds client projection `consumption` into status + alerts — a wedged client projection
-  (central says `projected`) now raises CRITICAL `client_consumer_wedged`. See health.test.
-- `enrollFleet` checks the insert-only result and SKIPS writing a key for an already-enrolled agent
-  (no mismatched key on re-run). See enroll.test.
-- Projection ownership model (runbook §6) reworked so the client can ACK (write): projector-owns,
-  `2770` setgid dir + `0660` file, `chown projector:<client-group>`. Assess soundness.
+Round-4 Must-Fix to verify in code:
+- **(was CRITICAL) Projection is now single-writer + read-only to the client.** No client dir-write →
+  no symlink/file-swap. The client drainer rides the read-only projection and acks into its OWN
+  ack-store (`runner` `ackStore` option; `clientDrainer({ackFile})`). `projectClient` lstat-refuses a
+  symlinked dir/file (`projection_refused_symlink`). Runbook §6 reworked (dir `2750` no group-write,
+  file `0640`). Verify the client genuinely cannot write the projection and acks land elsewhere.
+- Canonicalization now rejects non-plain objects (Date/RegExp/class) — not just undefined/NaN — so a
+  Date can't canonicalize to `{}` while persisting a different string. See identity.test §12.
+- `health-dashboard.js` now calls `health(db, {projections, open})`; runbook says health MUST be run
+  with projections wired (the wedged-client detector is now reachable in deployment).
+- `createSharedLayer` REFUSES a null/absent registry (no silent schema-off on the agent write path).
+- Runbook §2 adds the central-DB OS-permission gate (dir/db/-wal/-shm mode-denied to agent uids).
 
-Earlier rounds (also verify): admin-only/insert-only enrollment + explicit rotate; schema-on-by-default
-door + adapter; named `_`-allowlist + field-name scrub; `withTx` on writeFact/revoke/adapter; signed
-adapter provenance; schema-gated promotion; sealed facade / process-boundary; better-sqlite3 port.
+Earlier rounds (also verify): promoteClaim atomic; admin-only/insert-only enrollment + rotate;
+schema-on-by-default door + adapter; named `_`-allowlist + field-name scrub; `withTx` on
+writeFact/revoke/promote/adapter; signed adapter provenance; sealed facade / process boundary; port.
 
 Modules: `shared-layer.js` (core), `db.js` (driver shim), `runner.js` (drainer + wake + onTick),
 `notify.js` (fs wake), `backfill.js` (claims → schema-gated promote), `projection.js` (per-client

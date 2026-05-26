@@ -130,6 +130,39 @@ function seedTwoClients() {
     check('projected fact is now marked revoked (fact kept fresh on re-projection)', !!revoked);
   }
 
+  // ── 7. Symlink refusal — a swapped inbox.db path is refused (cross-client redirect blocked) ──
+  h('7. Symlink guard — the projector refuses to open a swapped (symlinked) inbox.db');
+  {
+    const { db } = seedTwoClients();
+    const dir = freshDir();
+    projectClient(db, { dir, agent: 'tdb-repo', clientId: 'tdb' }); // create TDB's real file
+    // attacker swaps dag-repo/inbox.db → a symlink pointing at TDB's file
+    const dagDir = path.join(dir, 'dag-repo'); fs.mkdirSync(dagDir, { recursive: true });
+    fs.symlinkSync(path.join(dir, 'tdb-repo', 'inbox.db'), path.join(dagDir, 'inbox.db'));
+    let refused = false;
+    try { projectClient(db, { dir, agent: 'dag-repo', clientId: 'dagdc' }); } catch (e) { refused = /symlink/.test(e.message); }
+    check('projector refuses the symlinked path (no write through it)', refused);
+    const tdbRaw = fs.readFileSync(path.join(dir, 'tdb-repo', 'inbox.db')).toString('latin1');
+    check('TDB file got no DAG data written through the link', !tdbRaw.includes('memorial-day'));
+  }
+
+  // ── 8. Read-only projection + client-owned ack-store: the client NEVER writes the projection ──
+  h('8. Read-only projection — client acks into its OWN store; the projection is never client-written');
+  {
+    const { db } = seedTwoClients();
+    const { file } = projectClient(db, { dir: freshDir(), agent: 'dag-repo', clientId: 'dagdc' });
+    const projDb = openProjectionDb(file); openHandles.push(projDb);
+    const ackStore = openDb(); // stands in for the client-owned ack file
+    const got = [];
+    const d = createDrainer({ db: projDb, agent: 'dag-repo', handler: async (f) => got.push(f.subject_id), ackStore });
+    await d.tickOnce();
+    check('client drained its fact from the read-only projection', got.length === 1 && got[0] === 'memorial-day');
+    check('ack was recorded in the CLIENT ack-store, not the projection', ackStore.prepare('SELECT COUNT(*) AS n FROM acked').get().n === 1);
+    check('the projection delivery is STILL pending (client never wrote it)', projDb.prepare("SELECT status FROM deliveries").get().status === 'pending');
+    await d.tickOnce();
+    check('re-tick does NOT re-handle (filtered by the ack-store)', got.length === 1);
+  }
+
   // ── cleanup ──
   for (const hdl of openHandles) { try { hdl.close(); } catch (_) {} }
   fs.rmSync(tmp, { recursive: true, force: true });
