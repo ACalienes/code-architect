@@ -80,6 +80,7 @@ function envelopeFromFact(fact, { actionMap = DEFAULT_ACTION_MAP, to = null } = 
  */
 function ingestEnvelope(db, env, { actionMap, registry = defaultRegistry, adapterIdentity } = {}) {
   ensureSeenTable(db);
+  if (registry === null) return { ok: false, error: 'registry required: schema cannot be disabled on legacy ingress' };
   if (!env || !env.message_id) return { ok: false, error: 'envelope missing message_id' };
   if (!adapterIdentity || !adapterIdentity.agent || !adapterIdentity.privateKey)
     return { ok: false, error: 'unsigned ingress refused: adapter has no enrolled signing identity' };

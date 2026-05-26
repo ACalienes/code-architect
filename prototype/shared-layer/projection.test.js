@@ -72,8 +72,8 @@ function seedTwoClients() {
   {
     const { db } = seedTwoClients();
     const { file } = projectClient(db, { dir: freshDir(), agent: 'dag-repo', clientId: 'dagdc' });
-    check('inbox.db mode is 0600 (owner read/write only)', (fs.statSync(file).mode & 0o777) === 0o600);
-    check('client dir mode is 0700 (owner only)', (fs.statSync(path.dirname(file)).mode & 0o777) === 0o700);
+    check('inbox.db mode is 0640 (owner rw, client-group read-only — client cannot write the projection)', (fs.statSync(file).mode & 0o777) === 0o640);
+    check('client dir mode is 2750 (setgid, group r-x, NO group write → no symlink/swap)', (fs.statSync(path.dirname(file)).mode & 0o7777) === 0o2750);
   }
 
   // ── 3. The runner (#1) rides the projection UNCHANGED ──
@@ -161,6 +161,15 @@ function seedTwoClients() {
     check('the projection delivery is STILL pending (client never wrote it)', projDb.prepare("SELECT status FROM deliveries").get().status === 'pending');
     await d.tickOnce();
     check('re-tick does NOT re-handle (filtered by the ack-store)', got.length === 1);
+    // starvation regression (Codex round 5): a NEWER unacked delivery must still be reached even though
+    // an older one is already acked (the old fixed-window peek would have starved it).
+    const f2 = require('node:crypto').randomUUID();
+    projDb.prepare(`INSERT INTO facts (fact_id, fact_type, client_id, subject_id, visibility, data_class, payload, source_agent, created_at) VALUES (?,?,?,?,?,?,?,?,?)`)
+      .run(f2, 'client_feedback', 'dagdc', 'newer', 'client', 'client_confidential', '{}', 'dag-repo', new Date().toISOString());
+    projDb.prepare(`INSERT INTO deliveries (delivery_id, fact_id, recipient_agent, scope, kind, status, created_at) VALUES (?,?,?,?,?,?,?)`)
+      .run(require('node:crypto').randomUUID(), f2, 'dag-repo', 'dagdc', 'fact', 'pending', new Date().toISOString());
+    await d.tickOnce();
+    check('a newer unacked delivery is still drained past the acked one (no window starvation)', got.length === 2 && got.includes('newer'));
   }
 
   // ── cleanup ──

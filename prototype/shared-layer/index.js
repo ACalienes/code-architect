@@ -44,7 +44,9 @@ function createSharedLayer({ db, registry = reg.defaultRegistry, projectionsDir 
     revoke: (factId, reason) => core.revoke(db, factId, reason),
 
     // ── legacy bridge (the one live loop) — signed ingress via the enrolled adapter identity ──
-    ingestEnvelope: (env, opts = {}) => adapter.ingestEnvelope(db, env, { registry, adapterIdentity, ...opts }),
+    // registry + adapterIdentity come LAST so a caller cannot override them via opts (Codex round 5:
+    // sl.ingestEnvelope(env, {registry:null}) must not disable schema).
+    ingestEnvelope: (env, opts = {}) => adapter.ingestEnvelope(db, env, { ...opts, registry, adapterIdentity }),
 
     // ── backfill (history → quarantined claims → human-gated promotion; promotion is schema-gated) ──
     ingestClaim: (claim) => bf.ingestClaim(db, claim),
@@ -59,10 +61,13 @@ function createSharedLayer({ db, registry = reg.defaultRegistry, projectionsDir 
     // ── drainers (heartbeat auto-wired for observability) ──
     drainer: (agent, handler, opts = {}) => createDrainer({ db, agent, handler, onTick: (s) => hm.recordHeartbeat(db, agent, s), ...opts }),
     /** A client repo's drainer rides its READ-ONLY projection and acks into its OWN ack-store
-     *  (a separate client-owned file, `ackFile`), so the projection dir needn't be client-writable. */
+     *  (a separate client-owned file, `ackFile`), so the projection dir needn't be client-writable.
+     *  `ackFile` is REQUIRED (Codex round 5: without it this would silently be the old write-the-
+     *  projection model). The fixed db/agent/ackStore come LAST so `opts` can't override them. */
     clientDrainer: (agent, file, handler, opts = {}) => {
       const { ackFile, ...rest } = opts;
-      return createDrainer({ db: proj.openProjectionDb(file), agent, handler, ackStore: ackFile ? core.openDb(ackFile) : null, ...rest });
+      if (!ackFile) throw new Error('clientDrainer requires { ackFile } — the client acks into its own store, never the read-only projection');
+      return createDrainer({ ...rest, db: proj.openProjectionDb(file), agent, handler, ackStore: core.openDb(ackFile) });
     },
 
     // ── event-driven wake ──

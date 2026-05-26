@@ -108,9 +108,11 @@ function createDrainer(o) {
   async function tick() {
     stats.ticks++;
     stats.lastTickAt = clock();
-    // A read-only projection's rows never flip to 'read', so peek a wider window and filter out what
-    // we've already acked in the client store; otherwise the simple status='pending' read suffices.
-    let batch = peek(db, agent, ackStore ? Math.max(batchSize * 10, 1000) : batchSize);
+    // A read-only projection's rows never flip to 'read', so we must consider ALL pending and filter
+    // out what's already acked in the client store — a fixed window would starve newer deliveries once
+    // enough historical rows are acked (Codex round 5). (O(pending) scan per tick; for pilot scale this
+    // is fine — an index / ATTACH-join is the documented optimization.) Non-ackStore path is unchanged.
+    let batch = peek(db, agent, ackStore ? Number.MAX_SAFE_INTEGER : batchSize);
     if (ackStore) batch = batch.filter(f => !isAcked(f.delivery_id)).slice(0, batchSize);
     stats.lastDrainCount = batch.length;
     let handled = 0;

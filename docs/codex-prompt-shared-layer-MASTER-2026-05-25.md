@@ -6,11 +6,20 @@ plus `docs/shared-layer-deployment-plan-2026-05-25.md` and
 
 ---
 
-This is a **RE-REVIEW (round 5).** Rounds 1–4 (3 + 6 + 5 + 5 findings) are all claimed closed — see the
-four response digests `docs/codex-review-shared-layer-*response.md`. **Your first job: verify the
-round-4 Must-Fix are actually closed (read the code).** **Your second job: rule on the residual**
+This is a **RE-REVIEW (round 6).** Rounds 1–5 (3+6+5+5+4 findings) are all claimed closed — see the
+five response digests `docs/codex-review-shared-layer-*response.md`. **Your first job: verify the
+round-5 Must-Fix are actually closed (read the code).** **Your second job: rule on the residual**
 (replay protection, enrollment rotation history, ajv-vs-pinned-subset, audit retention/migration) —
 must-fix-before-the-Mini-cutover vs. roadmap — and find anything new.
+
+Round-5 Must-Fix to verify:
+- Facade `ingestEnvelope` can't be passed `registry:null` (registry/adapterIdentity applied after opts);
+  `adapter.ingestEnvelope` refuses explicit `registry:null`. (adapter-mesh.test §8)
+- Ack-store: runner peeks ALL pending + filters acked (no 1000-row starvation); `health()` subtracts
+  `opts.projections[].ackFile` acked-set so acked-old rows aren't false `client_consumer_wedged`.
+  (projection.test §8 starvation regression; health.test §11)
+- `projectClient` defaults are `0640` file / `2750` setgid dir (match the runbook; don't clobber).
+- `clientDrainer` THROWS without `ackFile` and won't let opts override db/agent/ackStore. (index.test §4)
 
 You are reviewing a cross-agent information-sharing system for ~16 autonomous agents on one Mac Mini,
 where **per-client data isolation is the highest-stakes invariant**, green on BOTH node:sqlite and

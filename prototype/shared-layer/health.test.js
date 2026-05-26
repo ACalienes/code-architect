@@ -171,5 +171,33 @@ h('10. No false-OK — a stale client projection (central says projected) raises
   fs.rmSync(tmp, { recursive: true, force: true });
 }
 
+// ── 11. An ACKED old delivery is NOT wedged (health subtracts the ack-store) ──
+h('11. No false wedge — an old projection row that the client already ACKED is not flagged');
+{
+  const db = openDb();
+  subscribe(db, 'dag-repo', 'client_feedback', 'dagdc');
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sl-h2-'));
+  const file = path.join(tmp, 'inbox.db');
+  const ackFile = path.join(tmp, 'ack.db');
+  const did = randomUUID();
+  const pdb = openProjectionDb(file);
+  pdb.prepare(`INSERT INTO facts (fact_id, fact_type, client_id, visibility, data_class, payload, source_agent, created_at) VALUES (?,?,?,?,?,?,?,?)`)
+    .run('f1', 'client_feedback', 'dagdc', 'client', 'client_confidential', '{}', 'x', isoAgo(40 * 60_000));
+  pdb.prepare(`INSERT INTO deliveries (delivery_id, fact_id, recipient_agent, scope, kind, status, created_at) VALUES (?,?,?,?,?,?,?)`)
+    .run(did, 'f1', 'dag-repo', 'dagdc', 'fact', 'pending', isoAgo(40 * 60_000));
+  pdb.close();
+  // the client already acked it, in its own ack-store
+  const adb = openProjectionDb(ackFile);
+  adb.exec('CREATE TABLE IF NOT EXISTS acked (delivery_id TEXT PRIMARY KEY, ts TEXT)');
+  adb.prepare('INSERT INTO acked (delivery_id, ts) VALUES (?, ?)').run(did, new Date().toISOString());
+  adb.close();
+
+  const noack = health(db, { projections: [{ agent: 'dag-repo', file }], open: openProjectionDb });
+  check('without the ack-store, the old row looks wedged (the round-5 false positive)', hasAlert(noack, 'client_consumer_wedged'));
+  const withack = health(db, { projections: [{ agent: 'dag-repo', file, ackFile }], open: openProjectionDb });
+  check('WITH the ack-store, the acked row is NOT wedged', !hasAlert(withack, 'client_consumer_wedged') && withack.ok === true);
+  fs.rmSync(tmp, { recursive: true, force: true });
+}
+
 h(failures === 0 ? '\x1b[32mALL HEALTH INVARIANTS HOLD ✓\x1b[0m' : `\x1b[31m${failures} CHECK(S) FAILED\x1b[0m`);
 process.exit(failures === 0 ? 0 : 1);

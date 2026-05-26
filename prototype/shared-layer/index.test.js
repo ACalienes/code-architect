@@ -68,6 +68,10 @@ const h = (s) => console.log(`\n\x1b[1m${s}\x1b[0m`);
     let refused = false;
     try { createSharedLayer({ db: openDb(), registry: null }); } catch (_) { refused = true; }
     check('the facade REFUSES registry:null (cannot silently disable schema)', refused);
+    const sl2 = createSharedLayer({ db: openDb() });
+    let cdThrew = false;
+    try { sl2.clientDrainer('dag-repo', '/tmp/irrelevant.db', async () => {}); } catch (e) { cdThrew = /ackFile/.test(e.message); }
+    check('clientDrainer REQUIRES ackFile (no silent old write-the-projection model)', cdThrew);
   }
 
   h('5. Enrollment is insert-only — replacing an identity needs an explicit rotate ceremony');

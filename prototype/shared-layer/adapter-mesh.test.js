@@ -99,5 +99,14 @@ h('7. schema — a malformed legacy payload is rejected even when no registry is
   check('nothing persisted', db.prepare('SELECT COUNT(*) AS n FROM facts').get().n === 0);
 }
 
+// ── 8. registry:null is refused (schema can't be disabled on legacy ingress) ──
+h('8. schema non-disablable — ingestEnvelope refuses registry:null');
+{
+  const { db, adapterIdentity } = setup();
+  const r = ingestEnvelope(db, envelope({ message_id: 'm-null' }), { adapterIdentity, registry: null });
+  check('registry:null refused', !r.ok && /registry required/.test(r.error));
+  check('nothing persisted', db.prepare('SELECT COUNT(*) AS n FROM facts').get().n === 0);
+}
+
 h(failures === 0 ? '\x1b[32mADAPTER INVARIANTS HOLD ✓\x1b[0m' : `\x1b[31m${failures} CHECK(S) FAILED\x1b[0m`);
 process.exit(failures === 0 ? 0 : 1);

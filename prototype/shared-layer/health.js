@@ -135,15 +135,28 @@ function health(db, opts = {}) {
     const seen = lastSeen(db, a.agent, hb);
     const silentMs = seen ? ms() - seen : null;
 
-    // optional: read the client's OWN projection file for true consumption lag
+    // optional: read the client's OWN read-only projection for true consumption lag. The projection's
+    // rows stay 'pending' forever (client acks into its separate ack-store), so we MUST subtract the
+    // acked set — otherwise already-handled old rows look wedged (Codex round 5). Pass ackFile alongside.
     let consumption = null;
     if (!a.internal && opts.projections) {
       const proj = opts.projections.find(x => x.agent === a.agent);
       if (proj && proj.file && opts.open) {
         try {
           const pdb = opts.open(proj.file);
-          const cp = pdb.prepare("SELECT COUNT(*) AS n, MIN(created_at) AS oldest FROM deliveries WHERE recipient_agent=? AND status='pending'").get(a.agent);
-          consumption = { pending: cp.n, lag_ms: cp.oldest ? ms() - Date.parse(cp.oldest) : 0 };
+          let acked = new Set();
+          if (proj.ackFile) {
+            try {
+              const adb = opts.open(proj.ackFile);
+              adb.exec('CREATE TABLE IF NOT EXISTS acked (delivery_id TEXT PRIMARY KEY, ts TEXT)');
+              acked = new Set(adb.prepare('SELECT delivery_id FROM acked').all().map(r => r.delivery_id));
+              adb.close && adb.close();
+            } catch (_) { /* no ack-store yet */ }
+          }
+          const rows = pdb.prepare("SELECT delivery_id, created_at FROM deliveries WHERE recipient_agent=? AND status='pending'").all(a.agent);
+          const unacked = rows.filter(r => !acked.has(r.delivery_id));
+          const oldest = unacked.reduce((m, r) => (!m || r.created_at < m) ? r.created_at : m, null);
+          consumption = { pending: unacked.length, lag_ms: oldest ? ms() - Date.parse(oldest) : 0 };
           pdb.close && pdb.close();
         } catch (_) { /* file not yet created — leave null */ }
       }

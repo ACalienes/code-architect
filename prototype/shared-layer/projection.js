@@ -77,7 +77,9 @@ function upsertFact(pdb, fact) {
  * @param {number} [opts.dirMode] dir mode (default 0o700).
  * @returns { file, projected, refused:[{delivery_id, fact_client}] }
  */
-function projectClient(centralDb, { dir, agent, clientId, mode = 0o600, dirMode = 0o700 }) {
+// Defaults match the deploy model (Codex round 5: don't clobber the pre-created perms) — file 0640
+// (owner rw, client-group r), dir 2750 (setgid, group r-x NO write → client can't symlink/swap).
+function projectClient(centralDb, { dir, agent, clientId, mode = 0o640, dirMode = 0o2750 }) {
   if (!dir || !agent || !clientId) throw new Error('projectClient requires { dir, agent, clientId }');
   const clientDir = path.join(dir, agent);
   // Lock the directory down BEFORE the db file is created (Codex: chmod-after-populate left a temporary
