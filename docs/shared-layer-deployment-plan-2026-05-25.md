@@ -12,6 +12,38 @@ are T2/T3. This doc is what Kai needs to deploy.
 - Dedicated `kameha-mesh.db` on the Mini (NOT extending conductor.db — blast radius + isolation).
 - Isolation is structural (delivery split) + physical (per-client files) + identity-enforced.
 
+## Single-user Mini reality + confirmed pilot posture (2026-05-26)
+
+Kai verified on the box: **the Mini is single-user.** Every agent (Kai, mesh-api, Chronicle, Lead
+Engine, Enso, Framer, PDE, all client repos) runs as the one unix user `kai` under one PM2 daemon —
+there are **no per-agent or per-client unix users**. A file owned by `kai` is readable by every `kai`
+process, so the OS cannot enforce a boundary between agents. This collapses the *enforcement* premise
+(below) but **not** the design — it just splits what's real now from what's deferred.
+
+**Confirmed posture (Alex, 2026-05-26): SHIP NOW on the soft boundary; defer the hard wall.**
+
+- **Pilot isolation = logical scoping (the router writes each client only its own deliveries) + signed
+  *integrity* (tamper-evidence, attribution, authz client-binding the router enforces), among trusted
+  first-party agents.** NOT OS-enforced against a compromised co-resident process. State this plainly;
+  don't mistake the soft boundary for the hard one.
+- **D1 — key custody:** `~/.kameha/keys/<agent>.key` (`0600`, dir `0700`), path in each agent's env via
+  `ecosystem.config.js`. Organizationally correct + **chown-ready** (real wall when users split). Soft
+  today (all agents are `kai`).
+- **D2 — DB:** `~/.kameha/mesh/kameha-mesh.db` (own `mesh/` subdir at `0700` so the existing `0755`
+  `~/.kameha` conductor.db isn't touched); db + `-wal`/`-shm` `0600`; owned by `kai` (the trusted writer
+  = router + projector under the same PM2). `0700/0600` is the correct target; "denied to agent users"
+  is not enforceable until users split.
+- **D3 — distinct unix users/groups:** NO, not today. The **physical per-client projection layer
+  (rounds 4–5) is DEFERRED with the OS wall** — it buys no isolation on a single-user box. The pilot
+  runs WITHOUT physical projections: **client repos drain their own scoped deliveries from central**
+  (the logical delivery-split, same path internal agents use). The projection code stays in the repo,
+  dormant + chown-ready; it switches on as step one of the separate **"multi-user Mini" project** (new
+  users/groups, re-chown repos/DB/logs, per-user pm2, key redistribution, unforgeable identity). That
+  restructure is its own gated project — it must NOT ride behind the pilot (downtime risk post-OAuth-outage).
+
+So §6 (physical projections + chown) and the per-uid parts of §2/§3 are **deferred to the multi-user
+project**; the pilot follows the trimmed sequence at the end of this doc.
+
 ## Trust boundary (the enforcement — Codex REVISE)
 
 JS cannot hide an export, so isolation/auth is NOT enforced by hiding functions — it is enforced by the
@@ -124,19 +156,30 @@ The prototype uses the built-in `node:sqlite` for zero-install demonstrability. 
 - Cron `health-dashboard.js` (ported) → publish the HTML somewhere Alex sees it; alert on any
   `critical` (isolation refusal, stale dead-letter, wedged agent).
 
-## 10. Rollout sequence (each step = an Alex go-ahead)
+## 10. Rollout sequence — SINGLE-USER PILOT (trimmed; each step = an Alex go-ahead)
 
-1. Codex round (§0) → fold findings.  2. Port + `kameha-mesh.db` stood up (§1–2).
-3. Enroll identities + subscriptions on a STAGING db; run the integration capstone against it (§3–4).
-4. Backfill history as claims (§ backfill) — review, promote a small batch.
-5. Wire ONE internal pair live behind a flag; watch the dashboard.  6. Add per-client projections + chown (§6).
-7. Bridge the ACD↔Kai loop (§7).  8. The real DAG→ACD/NAMI pilot (#8).  9. Sunset mesh-api (§8).
+Codex rounds are done (5, folded). Physical projections + per-uid perms are DEFERRED to the multi-user
+project (see the 2026-05-26 section). The pilot:
 
-**Rollback:** the layer is additive and the legacy mesh-api stays up until §9 — at any step, stop the
-new drainers and the old path still works. No destructive cutover before sunset.
+1. Port to better-sqlite3 + stand up `~/.kameha/mesh/kameha-mesh.db` (§1–2, single-user perms). *[Kai, on the Mini]*
+2. `enroll.js` → keys to `~/.kameha/keys/` (`0600`); register public keys + authorized subscriptions. *[Kai]*
+3. Run the integration capstone against a STAGING copy on the Mini (sanity on the real driver). *[Kai]*
+4. Wire ONE internal pair (e.g. DAG-fact → ACD) through the signed door + logical delivery-split; watch
+   the health dashboard (run WITH any projection paths once they exist — N/A this pilot). *[Kai + CA reference]*
+5. Add NAMI; run the real **DAG → ACD/NAMI** pilot on logical scoping + signed integrity. *[pilot]*
+6. (optional) bridge the ACD↔Kai legacy loop through the signed adapter; set a mesh-api sunset date.
+
+**Deferred → the "multi-user Mini" project (its own gated effort):** per-agent/-client unix users,
+re-chown of repos/DB/logs, per-user pm2, key redistribution → switches on the physical projection layer
+(§6) + unforgeable identity. No code redesign; it's chown-ready.
+
+**Rollback:** the layer is additive; the legacy mesh-api stays up — at any step, stop the new drainers
+and the old path still works. No destructive cutover.
 
 ## What needs Alex / Kai specifically
 
-- Private-key custody mechanism (T3) · client repos running as distinct unix users (for chown) ·
-  `kameha-mesh.db` path · the live loop's real action vocabulary · go-ahead at each rollout step ·
-  the push of these commits to the remote.
+- ✅ **D1/D2/D3 decided** (2026-05-26): keys `~/.kameha/keys/`, db `~/.kameha/mesh/kameha-mesh.db`,
+  single-user pilot (physical wall deferred).
+- The live ACD↔Kai loop's real **action vocabulary** (for the optional adapter step).
+- **Go-ahead at each rollout step**; Kai executes the Mini-side standup, CA verifies by re-audit.
+- Commits are pushed (`ACalienes/code-architect`, through `6b139d8`).

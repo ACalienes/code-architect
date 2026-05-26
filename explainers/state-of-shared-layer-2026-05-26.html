@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<!-- Shared Layer — hardened through 5 Codex rounds; mesh live (poll-based); instant comms awaits cutover. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>State of the Shared Layer · 2026-05-26 · built, hardened, gated</title>
+<style>
+  :root{
+    --bg:#0a0d12;--bg-2:#0f131a;--card:#141a23;--card-2:#1a212c;--brief-bg:#0c1016;
+    --border:#232c3a;--border-bright:#2f3a4a;--text:#e6edf3;--text-2:#b8c5d3;--muted:#7d8a99;--dim:#5a6573;
+    --accent:#6ea8fe;--accent-glow:rgba(110,168,254,0.4);--green:#4ade80;--green-glow:rgba(74,222,128,0.35);
+    --yellow:#facc15;--orange:#fb923c;--red:#f87171;--purple:#c084fc;--teal:#5eead4;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);font-family:-apple-system,"SF Pro Display","SF Pro Text",BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.6;font-feature-settings:"ss01","ss02","cv11";min-height:100vh}
+  body::before{content:"";position:fixed;inset:0;background:
+      radial-gradient(ellipse 1200px 600px at 18% -10%,rgba(74,222,128,0.06),transparent 50%),
+      radial-gradient(ellipse 800px 400px at 92% 8%,rgba(110,168,254,0.055),transparent 50%),
+      radial-gradient(ellipse 1000px 500px at 50% 120%,rgba(250,204,21,0.04),transparent 50%);pointer-events:none;z-index:0}
+  .container{position:relative;max-width:1060px;margin:0 auto;padding:48px 28px 90px;z-index:1}
+  .mono{font-family:"JetBrains Mono","SF Mono",Menlo,monospace}
+  code{font-family:"JetBrains Mono","SF Mono",Menlo,monospace;font-size:0.85em;background:var(--brief-bg);border:1px solid var(--border);border-radius:5px;padding:1px 6px;color:var(--teal)}
+  .eyebrow{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:var(--green);margin-bottom:16px;display:flex;align-items:center;gap:12px}
+  .eyebrow::before{content:"";width:24px;height:1px;background:var(--green);box-shadow:0 0 8px var(--green-glow)}
+  h1.title{font-size:44px;font-weight:700;letter-spacing:-1.3px;line-height:1.05;margin-bottom:14px;background:linear-gradient(180deg,#fff 0%,#b8c5d3 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .subtitle{font-size:17px;color:var(--text-2);max-width:860px;margin-bottom:30px}
+  .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin-bottom:44px}
+  @media (max-width:880px){.stat-grid{grid-template-columns:repeat(2,1fr)}}
+  .stat{background:linear-gradient(180deg,var(--card) 0%,var(--bg-2) 100%);border:1px solid var(--border);border-radius:12px;padding:15px 16px;position:relative;overflow:hidden}
+  .stat::before{content:"";position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--border-bright),transparent)}
+  .stat .label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:8px;font-weight:600}
+  .stat .value{font-size:25px;font-weight:700;letter-spacing:-1px;line-height:1;margin-bottom:5px;font-family:"JetBrains Mono",monospace}
+  .stat .value.green{color:var(--green);text-shadow:0 0 16px var(--green-glow)}.stat .value.blue{color:var(--accent)}.stat .value.yellow{color:var(--yellow)}
+  .stat .note{font-size:11px;color:var(--muted)}
+  section{margin-bottom:42px}
+  h2.sec{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-2);margin-bottom:18px;padding-bottom:10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+  h2.sec .num{color:var(--green);font-family:"JetBrains Mono",monospace}
+  p.lead{font-size:15px;color:var(--text-2);margin-bottom:18px;max-width:860px}
+  .answer{border-radius:14px;border:1px solid rgba(110,168,254,0.3);background:linear-gradient(180deg,rgba(110,168,254,0.06),transparent);padding:20px 22px;margin-bottom:20px}
+  .answer .q{font-size:13px;color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+  .answer .a{font-size:16px;color:var(--text)}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:6px}
+  th{text-align:left;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:1px;padding:9px 12px;border-bottom:1px solid var(--border)}
+  td{padding:11px 12px;border-bottom:1px solid var(--border);color:var(--text-2);vertical-align:top}
+  td.k{color:var(--text);font-weight:600}
+  .yes{color:var(--green)}.no{color:var(--red)}.warn{color:var(--yellow)}
+  .rounds{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  @media (max-width:760px){.rounds{grid-template-columns:1fr}}
+  .rd{border:1px solid var(--border);border-radius:10px;padding:13px 15px;background:var(--card)}
+  .rd .n{font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--green);text-transform:uppercase;letter-spacing:1px}
+  .rd b{display:block;font-size:13px;margin:4px 0 4px}
+  .rd p{font-size:12px;color:var(--muted)}
+  .gate{border:1px solid rgba(250,204,21,0.35);background:rgba(250,204,21,0.04);border-radius:12px;padding:20px 22px}
+  .gate h3{font-size:14px;color:var(--yellow);margin-bottom:12px}
+  .gate ol{margin:0;padding-left:20px}.gate li{font-size:13.5px;color:var(--text-2);padding:5px 0}
+  .gate li b{color:var(--text)}
+  .seq{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--text-2);background:var(--brief-bg);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-top:14px;line-height:1.9;overflow-x:auto}
+  .seq .done{color:var(--green)}.seq .next{color:var(--yellow)}
+  .footer{margin-top:50px;padding-top:24px;border-top:1px solid var(--border);font-size:12px;color:var(--dim)}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="eyebrow">Code Architect · the Shared Layer · 2026-05-26</div>
+  <h1 class="title">Built. Hardened. Gated on the Mini.</h1>
+  <p class="subtitle">The cross-agent information system is complete as a tested reference and survived
+  <strong>five adversarial Codex review rounds</strong>. The mesh is live today (but poll-paced). The
+  <em>instant</em>, typed, per-client-isolated propagation we built is ready — it goes live at the gated cutover.</p>
+
+  <div class="stat-grid">
+    <div class="stat"><div class="label">Commits this arc</div><div class="value blue">18</div><div class="note">9e9536c → 6b139d8, all pushed</div></div>
+    <div class="stat"><div class="label">Codex rounds folded</div><div class="value green">5</div><div class="note">+ 1 proactive optimization</div></div>
+    <div class="stat"><div class="label">Test drivers green</div><div class="value green">2 / 2</div><div class="note">node:sqlite + better-sqlite3</div></div>
+    <div class="stat"><div class="label">Live on the Mini</div><div class="value yellow">not yet</div><div class="note">gated on 3 decisions</div></div>
+  </div>
+
+  <!-- THE QUESTION -->
+  <section>
+    <h2 class="sec"><span class="num">01</span> "Is the instant communication working yet?"</h2>
+    <div class="answer">
+      <div class="q">Short answer</div>
+      <div class="a">You can message agents <strong>now</strong> (poll-paced — up to ~10 min for some).
+      You'll have <strong>instant</strong> (~20ms) typed, isolated fact-propagation once the Shared Layer is cut over on the Mini.</div>
+    </div>
+    <table>
+      <thead><tr><th>&nbsp;</th><th>Today — the live mesh</th><th>The Shared Layer (built, not deployed)</th></tr></thead>
+      <tbody>
+        <tr><td class="k">Cross-agent messaging</td><td class="yes">✓ works (proven live today)</td><td class="yes">✓ proven on both drivers</td></tr>
+        <tr><td class="k">Latency</td><td class="warn">poll-based — Kai 60s, NAMI/ACD/Framer 600s</td><td class="yes">~20ms (event-wake)</td></tr>
+        <tr><td class="k">Typed facts + per-client isolation</td><td class="no">✗</td><td class="yes">✓ logical + physical + identity</td></tr>
+        <tr><td class="k">Durable / recoverable / audited</td><td class="warn">partial</td><td class="yes">✓ at-least-once, dead-letter, re-audit</td></tr>
+        <tr><td class="k">Live</td><td class="yes">✓ on the Mini</td><td class="no">✗ awaiting cutover</td></tr>
+      </tbody>
+    </table>
+    <p class="lead" style="margin-top:14px;font-size:13px;color:var(--muted)">Correction: an earlier read called the mesh "orphaned." A live probe today disproves that — every agent is heartbeating, recent deliveries complete, and a CA→Kai message just flowed end to end. It works; it's simply not <em>instant</em>.</p>
+  </section>
+
+  <!-- KAI UPDATED -->
+  <section>
+    <h2 class="sec"><span class="num">02</span> Kai has been updated — over the live mesh</h2>
+    <p class="lead">A status message went CA → Kai on the real mesh (tier-2 route): the Shared Layer is hardened
+    and pushed, the runbook is ready, and there are three decisions Kai owns for the cutover. Re-audited to
+    <code>processing</code> — Kai pulled it from the queue on its 60s poll. (Verification by re-audit, not by trusting "queued.")</p>
+  </section>
+
+  <!-- THE FIVE ROUNDS -->
+  <section>
+    <h2 class="sec"><span class="num">03</span> What five review rounds hardened</h2>
+    <p class="lead">Each round was adversarial; each finding was folded and re-proven. The core (isolation, auth,
+    transactions, schema) kept coming back <em>verified-closed</em> — the findings narrowed to one sub-system, then stopped.</p>
+    <div class="rounds">
+      <div class="rd"><div class="n">Round 1–2</div><b>Bypass & contracts</b><p>Sealed the facade; signed the legacy bridge; schema-gated promotion; admin-only / insert-only enrollment; transactions on every multi-step write.</p></div>
+      <div class="rd"><div class="n">Round 3</div><b>Atomicity & crypto</b><p>Atomic promote; canonicalization rejects non-JSON; health catches a wedged client; enrollment can't hand out mismatched keys.</p></div>
+      <div class="rd"><div class="n">Round 4</div><b>The symlink critical</b><p>Single-writer read-only projection (no client dir-write → no symlink swap); reject non-plain objects; central-DB permission gate.</p></div>
+      <div class="rd"><div class="n">Round 5</div><b>Ack accounting</b><p>No schema bypass on ingress; no ack-store starvation or false-wedge; projection perms match the runbook; client drainer requires its ack-store.</p></div>
+      <div class="rd"><div class="n">+ proactive</div><b>Indexed read path</b><p>Client unacked-read is now an indexed ATTACH-join, not an O(n) scan — done deliberately, not waiting for a round to flag it.</p></div>
+      <div class="rd" style="border-color:rgba(74,222,128,0.35)"><div class="n">Verdict</div><b>Core hardened</b><p>Remaining items are deploy-time OS specifics that only the real multi-uid Mini can validate. Loop closed.</p></div>
+    </div>
+  </section>
+
+  <!-- THE GATE -->
+  <section>
+    <h2 class="sec"><span class="num">04</span> The cutover gate — 3 decisions Kai owns</h2>
+    <div class="gate">
+      <h3>Before the Mini cutover can start</h3>
+      <ol>
+        <li><b>Private-key custody</b> — where each agent's Ed25519 private key lives (secret store / per-agent env). The enroller is ready.</li>
+        <li><b>The <code>kameha-mesh.db</code> path</b> on the Mini.</li>
+        <li><b>Client repos as distinct unix users/groups</b> — so the <code>chown projector:&lt;client-group&gt;</code> + <code>2750</code> projection model enforces isolation at the OS, not just in logic.</li>
+      </ol>
+      <div class="seq">
+<span class="done">✓ done</span>  build · harden (5 rounds) · better-sqlite3 port · push · update Kai
+<span class="next">▸ gated</span> decisions ↑ → port-deploy → stand up kameha-mesh.db → enroll keys
+        → projections + chown → DAG→ACD/NAMI pilot → mesh-api sunset
+      </div>
+    </div>
+  </section>
+
+  <div class="footer">
+    Code Architect · State of the Shared Layer · 2026-05-26 · 18 commits (9e9536c→6b139d8), pushed · 5 Codex rounds folded ·
+    both drivers green · reference complete; live cutover gated on Kai's 3 decisions · runbook: <span class="mono">docs/shared-layer-deployment-plan-2026-05-25.md</span>
+  </div>
+
+</div>
+</body>
+</html>

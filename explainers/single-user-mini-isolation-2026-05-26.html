@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<!-- The Mini is single-user — the honest isolation posture + ship-now decision. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Single-user Mini — the honest isolation posture · 2026-05-26</title>
+<style>
+  :root{
+    --bg:#0a0d12;--bg-2:#0f131a;--card:#141a23;--card-2:#1a212c;--brief-bg:#0c1016;
+    --border:#232c3a;--border-bright:#2f3a4a;--text:#e6edf3;--text-2:#b8c5d3;--muted:#7d8a99;--dim:#5a6573;
+    --accent:#6ea8fe;--green:#4ade80;--green-glow:rgba(74,222,128,0.35);--yellow:#facc15;--orange:#fb923c;--red:#f87171;--purple:#c084fc;--teal:#5eead4;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);font-family:-apple-system,"SF Pro Display","SF Pro Text",BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.6;min-height:100vh}
+  body::before{content:"";position:fixed;inset:0;background:
+      radial-gradient(ellipse 1100px 560px at 15% -10%,rgba(250,204,21,0.06),transparent 50%),
+      radial-gradient(ellipse 820px 420px at 92% 6%,rgba(110,168,254,0.05),transparent 50%),
+      radial-gradient(ellipse 1000px 500px at 50% 120%,rgba(74,222,128,0.04),transparent 50%);pointer-events:none;z-index:0}
+  .container{position:relative;max-width:1020px;margin:0 auto;padding:48px 28px 90px;z-index:1}
+  .mono{font-family:"JetBrains Mono","SF Mono",Menlo,monospace}
+  code{font-family:"JetBrains Mono","SF Mono",Menlo,monospace;font-size:0.85em;background:var(--brief-bg);border:1px solid var(--border);border-radius:5px;padding:1px 6px;color:var(--teal)}
+  .eyebrow{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:var(--yellow);margin-bottom:16px;display:flex;align-items:center;gap:12px}
+  .eyebrow::before{content:"";width:24px;height:1px;background:var(--yellow);box-shadow:0 0 8px rgba(250,204,21,0.4)}
+  h1.title{font-size:42px;font-weight:700;letter-spacing:-1.2px;line-height:1.06;margin-bottom:14px;background:linear-gradient(180deg,#fff 0%,#b8c5d3 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .subtitle{font-size:17px;color:var(--text-2);max-width:850px;margin-bottom:30px}
+  /* decisive fact box */
+  .fact{border:1px solid var(--border-bright);background:var(--brief-bg);border-radius:12px;padding:18px 20px;margin-bottom:32px;font-family:"JetBrains Mono",monospace;font-size:13px;color:var(--text-2);line-height:1.8}
+  .fact b{color:var(--teal)} .fact .hl{color:var(--yellow)}
+  section{margin-bottom:40px}
+  h2.sec{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-2);margin-bottom:18px;padding-bottom:10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+  h2.sec .num{color:var(--yellow);font-family:"JetBrains Mono",monospace}
+  p.lead{font-size:15px;color:var(--text-2);margin-bottom:18px;max-width:850px}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th{text-align:left;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:1px;padding:9px 12px;border-bottom:1px solid var(--border)}
+  td{padding:11px 12px;border-bottom:1px solid var(--border);color:var(--text-2);vertical-align:top}
+  td.k{color:var(--text);font-weight:600}
+  .holds{color:var(--green);font-weight:700}.soft{color:var(--yellow);font-weight:700}
+  /* boundary callout */
+  .boundary{border:1px solid rgba(250,204,21,0.4);background:rgba(250,204,21,0.05);border-radius:14px;padding:22px 24px;margin-bottom:8px}
+  .boundary .t{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--yellow);font-weight:700;margin-bottom:10px}
+  .boundary .b{font-size:17px;color:var(--text);line-height:1.5}
+  .boundary .b em{color:var(--yellow);font-style:normal;font-weight:700}
+  /* two columns */
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media (max-width:760px){.two{grid-template-columns:1fr}}
+  .col{border-radius:12px;padding:20px 22px;border:1px solid var(--border);background:var(--card)}
+  .col.now{border-color:rgba(74,222,128,0.4)} .col.later{border-color:rgba(192,132,252,0.35)}
+  .col h3{font-size:15px;margin-bottom:12px}.col.now h3{color:var(--green)}.col.later h3{color:var(--purple)}
+  .col ul{list-style:none}.col li{font-size:13px;color:var(--text-2);padding:5px 0 5px 22px;position:relative}
+  .col.now li::before{content:"✓";position:absolute;left:0;color:var(--green)}
+  .col.later li::before{content:"⏳";position:absolute;left:0;font-size:11px}
+  .seq{font-family:"JetBrains Mono",monospace;font-size:12.5px;color:var(--text-2);background:var(--brief-bg);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-top:8px;line-height:2;overflow-x:auto}
+  .seq .done{color:var(--green)}.seq .go{color:var(--yellow)}
+  .footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);font-size:12px;color:var(--dim)}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="eyebrow">Code Architect × Kai · live-verified on the Mini · 2026-05-26</div>
+  <h1 class="title">The Mini is single-user.<br>Here's the honest isolation posture.</h1>
+  <p class="subtitle">Kai verified it on the box: every agent runs as one unix user. That doesn't break the
+  Shared Layer — but it changes which walls are <strong>real</strong> today vs. which are <strong>built
+  and waiting</strong>. The call: ship the pilot on what's real now, defer the OS-level wall to its own project.</p>
+
+  <div class="fact">
+<span class="hl">$ whoami</span> → <b>kai</b>   ·   human users on box: <b>kai (only one)</b><br>
+all PM2 agents — Kai, mesh-api, Chronicle, Lead Engine, Enso, Framer, PDE, every client repo — run as <b>kai</b><br>
+<span class="hl">⇒</span> a file owned by <b>kai</b> is readable by <b>every</b> kai process — which is all of them.
+  </div>
+
+  <!-- WHAT HOLDS -->
+  <section>
+    <h2 class="sec"><span class="num">01</span> What's real today vs. what's soft on a single-user box</h2>
+    <p class="lead">The OS can't enforce a boundary between processes that are the same user. So the
+    app-level guarantees hold; the OS-level ones are deferred — including, honestly, key-secrecy.</p>
+    <table>
+      <thead><tr><th>Mechanism</th><th>On the single-user Mini</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td class="k">Logical scoping (router writes each client only its own deliveries)</td><td class="holds">HOLDS</td><td>app-level; the trusted router enforces it regardless of OS users</td></tr>
+        <tr><td class="k">Schema / preflight / transactions / dead-letter / observability</td><td class="holds">HOLDS</td><td>all app-level</td></tr>
+        <tr><td class="k">Signed identity — integrity & attribution</td><td class="holds">HOLDS</td><td>tamper-evidence + authz (client-binding) the router enforces</td></tr>
+        <tr><td class="k">Signed identity — <em>unforgeable</em> wall</td><td class="soft">SOFT</td><td>any kai process can read any agent's key file → could sign as another</td></tr>
+        <tr><td class="k">Physical per-client projection files (0640 / 2750 / chown)</td><td class="soft">SOFT (dormant)</td><td>same user owns all files → perms buy nothing until users split</td></tr>
+        <tr><td class="k">Central-DB "denied to agent users"</td><td class="soft">SOFT</td><td>writer and agents are the same user</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- THE BOUNDARY -->
+  <section>
+    <h2 class="sec"><span class="num">02</span> So name the pilot's boundary precisely</h2>
+    <div class="boundary">
+      <div class="t">The pilot's real isolation</div>
+      <div class="b"><em>Logical scoping + signed integrity</em>, among <em>trusted first-party agents</em>.
+      Not OS-enforced against a compromised co-resident process. The hard wall (physical + unforgeable
+      identity) arrives with the user-split — not before.</div>
+    </div>
+    <p class="lead" style="margin-top:14px;font-size:13px;color:var(--muted)">This is an acceptable posture for a pilot of your own agents — the threat it doesn't yet stop (a malicious agent reading a peer's key or DB) isn't the pilot's threat. But it must be stated this bluntly, so nobody mistakes the soft boundary for the hard one.</p>
+  </section>
+
+  <!-- DECISION -->
+  <section>
+    <h2 class="sec"><span class="num">03</span> The decision — ship now, and simplify</h2>
+    <div class="two">
+      <div class="col now"><h3>Ships in the pilot (real now)</h3><ul>
+        <li>Type a fact once → the right agents get it (logical scoping)</li>
+        <li>Clients drain their own scoped deliveries from central</li>
+        <li>Signed facts — integrity, attribution, authz client-binding</li>
+        <li>Schema-at-the-door, transactions, dead-letter, observability</li>
+        <li>Keys as <code>0600</code> files + DB <code>0700/0600</code> — chown-ready targets</li>
+      </ul></div>
+      <div class="col later"><h3>Deferred → the "multi-user Mini" project</h3><ul>
+        <li>Per-agent / per-client unix users + groups</li>
+        <li>Physical per-client projection files (the round 4–5 work — built, dormant)</li>
+        <li>Unforgeable identity (keys readable only by their own agent)</li>
+        <li>OS-enforced "denied to agent users" on keys + central DB</li>
+        <li>re-chown every repo/DB/log · per-user pm2 · key redistribution</li>
+      </ul></div>
+    </div>
+    <p class="lead" style="margin-top:16px">The physical layer that generated the hardest review rounds is <strong>built and chown-ready</strong> — it switches on as step one of the multi-user project, zero redesign. It shouldn't ride behind a pilot (real downtime risk on a box that just had a 24h OAuth outage).</p>
+  </section>
+
+  <!-- ROLLOUT -->
+  <section>
+    <h2 class="sec"><span class="num">04</span> The pilot rollout — now smaller</h2>
+    <div class="seq">
+<span class="done">✓</span> build · harden (5 Codex rounds) · better-sqlite3 port · push · update Kai
+<span class="go">▸</span> confirm posture → stand up <span class="mono">~/.kameha/mesh/kameha-mesh.db</span> → enroll keys
+   → wire the logical delivery-split for DAG → ACD / NAMI → run the pilot
+<span style="color:var(--dim)">later</span> multi-user Mini project → physical wall + unforgeable identity switch on
+    </div>
+  </section>
+
+  <div class="footer">
+    Code Architect × Kai · single-user Mini verified 2026-05-26 · pilot = logical scoping + signed integrity (first-party-trusted) ·
+    physical + hard-identity wall built &amp; chown-ready, deferred to the multi-user project · runbook: <span class="mono">docs/shared-layer-deployment-plan-2026-05-25.md</span>
+  </div>
+
+</div>
+</body>
+</html>
