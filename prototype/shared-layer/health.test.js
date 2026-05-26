@@ -7,8 +7,13 @@
  *
  *   node prototype/shared-layer/health.test.js
  */
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const { randomUUID } = require('node:crypto');
 const { openDb, subscribe, writeFact } = require('./shared-layer');
 const { ingestClaim } = require('./backfill');
+const { openProjectionDb } = require('./projection');
 const { health, recordHeartbeat, renderHealthText, renderHealthHtml } = require('./health');
 
 let failures = 0;
@@ -140,6 +145,30 @@ h('9. Renderers — text briefing and HTML dashboard');
   check('text briefing names the state + a critical alert', /ATTENTION/.test(txt) && /CRITICAL/.test(txt));
   const html = renderHealthHtml(hh);
   check('HTML dashboard is a full doc with the attention banner', /<html/.test(html) && /Attention required/.test(html));
+}
+
+// ── 10. A wedged client PROJECTION is caught (central looks fine; the client isn't draining) ──
+h('10. No false-OK — a stale client projection (central says projected) raises a CRITICAL');
+{
+  const db = openDb();
+  subscribe(db, 'dag-repo', 'client_feedback', 'dagdc'); // classified as a client repo
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sl-h-'));
+  const file = path.join(tmp, 'inbox.db');
+  const pdb = openProjectionDb(file);
+  // a fact delivered to dag-repo's projection, still pending, OLD → its drainer is stalled
+  pdb.prepare(`INSERT INTO facts (fact_id, fact_type, client_id, visibility, data_class, payload, source_agent, created_at) VALUES (?,?,?,?,?,?,?,?)`)
+    .run('f1', 'client_feedback', 'dagdc', 'client', 'client_confidential', '{}', 'x', isoAgo(40 * 60_000));
+  pdb.prepare(`INSERT INTO deliveries (delivery_id, fact_id, recipient_agent, scope, kind, status, created_at) VALUES (?,?,?,?,?,?,?)`)
+    .run(randomUUID(), 'f1', 'dag-repo', 'dagdc', 'fact', 'pending', isoAgo(40 * 60_000));
+  pdb.close();
+
+  const blind = health(db); // no projections passed → central only → looks fine (the bug Codex hit)
+  check('central-only health is unaware (would have waved it through)', blind.ok === true);
+  const seen = health(db, { projections: [{ agent: 'dag-repo', file }], open: openProjectionDb });
+  check('with projection consumption, the wedged client is CRITICAL', hasAlert(seen, 'client_consumer_wedged', 'critical'));
+  check('report flips to not-OK', seen.ok === false);
+  check('agent status reflects the stalled consumer', agentOf(seen, 'dag-repo').status === 'consumer_wedged');
+  fs.rmSync(tmp, { recursive: true, force: true });
 }
 
 h(failures === 0 ? '\x1b[32mALL HEALTH INVARIANTS HOLD ✓\x1b[0m' : `\x1b[31m${failures} CHECK(S) FAILED\x1b[0m`);

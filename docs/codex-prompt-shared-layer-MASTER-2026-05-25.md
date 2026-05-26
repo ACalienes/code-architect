@@ -6,33 +6,31 @@ plus `docs/shared-layer-deployment-plan-2026-05-25.md` and
 
 ---
 
-This is a **RE-REVIEW (round 3).** Round 1 (3 findings) and round 2 (6 Must-Fix) are both claimed
-closed — see `docs/codex-review-shared-layer-MASTER-2026-05-25-response.md` and
-`docs/codex-review-shared-layer-2026-05-25-round2-response.md`. **Your first job: verify the round-2
-Must-Fix are actually closed (read the code, not the digests).** **Your second job: rule on the residual**
-(replay protection, enrollment rotation history, ajv-vs-subset, health expected-roster, audit
-retention/migration) — must-fix-before-the-Mini-cutover vs. roadmap — and find anything new.
+This is a **RE-REVIEW (round 4).** Rounds 1–3 (3 + 6 + 5 findings) are all claimed closed — see the
+three response digests `docs/codex-review-shared-layer-*response.md`. **Your first job: verify the
+round-3 Must-Fix are actually closed (read the code).** **Your second job: rule on the residual**
+(replay protection, enrollment rotation history, ajv-vs-pinned-subset, audit retention/migration) —
+must-fix-before-the-Mini-cutover vs. roadmap — and find anything new.
 
 You are reviewing a cross-agent information-sharing system for ~16 autonomous agents on one Mac Mini,
-where **per-client data isolation is the highest-stakes invariant**. Now **248 tests across 12 suites,
-green on BOTH node:sqlite and better-sqlite3.** Review it as a SYSTEM, adversarially.
+where **per-client data isolation is the highest-stakes invariant**, green on BOTH node:sqlite and
+better-sqlite3. Review it as a SYSTEM, adversarially.
 
-Round-2 Must-Fix to verify in code:
-- Enrollment is now ADMIN-ONLY (`createAdminLayer`, not on `createSharedLayer`) and INSERT-ONLY
-  (`registerIdentity` refuses overwrite; `rotateIdentity` is the explicit ceremony). Confirm an agent
-  reaching the facade cannot register/replace a key.
-- Projection dir is locked **before** the db file is created (no temp read window); runbook §6 has a
-  concrete ownership model (projector-owns / client-group-reads, `0750`/`0640`, chown). Assess it.
-- Schema is ON BY DEFAULT in `writeSignedFact` and the adapter (no registry arg needed); a malformed
-  payload is refused via the bridge with no registry passed.
-- Validators tightened: registry `_`-keys are a NAMED allowlist (`_api_key` rejected); scrub redacts by
-  sensitive field NAME (`{password: "..."}`) in addition to value patterns.
-- Multi-step writes are atomic via a re-entrant `withTx` (db.js): `writeFact` (insert+route), `revoke`,
-  `promoteClaim`, and the adapter (`writeSignedFact`+`mesh_seen`). Probe crash-atomicity + the nesting.
-- `mesh-adapter` is in the enrollment roster.
+Round-3 Must-Fix to verify in code:
+- `promoteClaim` is now atomic — `withTx` wraps the validated write AND the claim status flip (a crash
+  rolls both back; no orphan/duplicate). See backfill.test crash-sim.
+- Canonicalization (`stableStringify` in identity.js) now REJECTS non-JSON values (undefined/function/
+  symbol/NaN/Infinity), so `[]` and `[undefined]` can't collide on a signature. See identity.test.
+- `health()` folds client projection `consumption` into status + alerts — a wedged client projection
+  (central says `projected`) now raises CRITICAL `client_consumer_wedged`. See health.test.
+- `enrollFleet` checks the insert-only result and SKIPS writing a key for an already-enrolled agent
+  (no mismatched key on re-run). See enroll.test.
+- Projection ownership model (runbook §6) reworked so the client can ACK (write): projector-owns,
+  `2770` setgid dir + `0660` file, `chown projector:<client-group>`. Assess soundness.
 
-Earlier rounds (also verify): signed adapter (`_via_mesh_from` provenance), schema-gated promotion,
-sealed facade / process-boundary enforcement, the better-sqlite3 port (`db.js`).
+Earlier rounds (also verify): admin-only/insert-only enrollment + explicit rotate; schema-on-by-default
+door + adapter; named `_`-allowlist + field-name scrub; `withTx` on writeFact/revoke/adapter; signed
+adapter provenance; schema-gated promotion; sealed facade / process-boundary; better-sqlite3 port.
 
 Modules: `shared-layer.js` (core), `db.js` (driver shim), `runner.js` (drainer + wake + onTick),
 `notify.js` (fs wake), `backfill.js` (claims → schema-gated promote), `projection.js` (per-client

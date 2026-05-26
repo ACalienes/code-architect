@@ -23,6 +23,7 @@
 const { randomUUID, createHash } = require('node:crypto');
 const { writeFact } = require('./shared-layer');
 const { writeFactValidated, defaultRegistry } = require('./registry');
+const { withTx } = require('./db');
 
 const now = () => new Date().toISOString();
 
@@ -182,14 +183,20 @@ function promoteClaim(db, claim_id, reviewer, { registry = defaultRegistry } = {
     source_agent: c.source_agent || 'backfill',
     payload: { ...JSON.parse(c.payload), _provenance: c.source_ref, _promoted_from_claim: claim_id },
   };
-  const res = registry ? writeFactValidated(db, factSpec, registry) : writeFact(db, factSpec);
+  // Atomic (Codex round 3): the fact write AND the claim's status flip commit together. writeFact's
+  // own transaction nests inline under this one (re-entrant withTx), so a crash can't leave a written+
+  // routed fact while the claim stays 'quarantined' (which would let the next promote duplicate it).
+  let res;
+  withTx(db, () => {
+    res = registry ? writeFactValidated(db, factSpec, registry) : writeFact(db, factSpec);
+    if (!res.ok) return; // rejected at preflight → nothing was inserted; empty commit
+    db.prepare("UPDATE claims SET status='promoted', promoted_fact_id=?, reviewer=?, reviewed_at=? WHERE claim_id=?")
+      .run(res.fact_id, reviewer ?? null, now(), claim_id);
+  });
   if (!res.ok) {
     audit(db, 'claim_promotion_rejected', { claim_id, error: res.error });
     return { ok: false, error: `promotion rejected by preflight: ${res.error}` }; // claim stays quarantined
   }
-
-  db.prepare("UPDATE claims SET status='promoted', promoted_fact_id=?, reviewer=?, reviewed_at=? WHERE claim_id=?")
-    .run(res.fact_id, reviewer ?? null, now(), claim_id);
   audit(db, 'claim_promoted', { claim_id, fact_id: res.fact_id, reviewer, routed: res.routed });
   return { ok: true, fact_id: res.fact_id, routed: res.routed };
 }

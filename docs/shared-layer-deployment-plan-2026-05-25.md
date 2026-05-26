@@ -84,12 +84,18 @@ The prototype uses the built-in `node:sqlite` for zero-install demonstrability. 
 
 - The projector creates `<projections>/<agent>/` **private up front** (mode set before the db file is
   created — closed the temporary read window Codex flagged), writes `inbox.db`, then chmods.
-- **Ownership model (Codex):** a `0600/0700` client-OWNED file isn't writable by the projector next
-  cycle. So: each `<agent>/` dir is **owned by the trusted projector user, group = that client's group**,
-  modes **dir `0750` / file `0640`**, and `chown -R projector:<client-group>`. Result: the projector
-  (owner) rewrites each cycle; the client (its group) reads its own; **other** has no access and another
-  client's group isn't a member → cross-client read denied by the OS. Pass these modes to
-  `projectClient({mode:0o640, dirMode:0o750})` at deploy.
+- **Ownership model (Codex round 3 — the client must WRITE to ack):** the client drainer rides its own
+  projection (`peek`/`ack`), and `ack` WRITES (`UPDATE deliveries SET status='read'`). So a read-only
+  `0640` file is wrong — the client can't ack. Both the projector (deliver) and the client (ack) write.
+  Model:
+  - Pre-create each `<projections>/<agent>/` ONCE at deploy: `chown projector:<client-group>`,
+    `chmod 2770` (rwx for owner+group, **setgid** so files born inside inherit the client group — closes
+    the "born under the projector's group" window), `other` = no access.
+  - The projector then writes `inbox.db`; setgid → it's born in `<client-group>`; the projector chmods
+    it `0660` (owner+group read/write). Call `projectClient({ mode: 0o660, dirMode: 0o2770 })`.
+  - Result: projector (owner) delivers, the client (sole group member) reads AND acks, every other uid/
+    group denied → cross-client read still denied by the OS. The client can mutate ONLY its own inbox
+    (acceptable — it's its own delivery state; isolation across clients is unaffected).
 - This cross-uid denial is THE step that turns content isolation into OS-enforced isolation; the
   in-process prototype proves content + timing + the refusal guard, not cross-uid. Confirm the client
   repos run as distinct unix users/groups with Kai.

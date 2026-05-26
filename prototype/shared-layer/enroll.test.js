@@ -47,6 +47,17 @@ check('acd receives it', drain(db, 'acd').length === 1);
 const bad = { ...fact, client_id: 'tdb', subject_id: 'x' };
 check('the enrolled client binding still holds (dag-repo can\'t write TDB)', !writeSignedFact(db, bad, signFact(dagPriv, bad)).ok);
 
+h('4. Re-running enrollment skips already-enrolled agents (no mismatched key written)');
+{
+  const keysDir2 = path.join(tmp, 'keys2');
+  const summary2 = enrollFleet(db, roster, { keysDir: keysDir2 }); // same db, already enrolled
+  check('every already-enrolled agent is reported skipped', summary2.every(s => s.skipped) && summary2.length === roster.length);
+  check('NO new key files written for skipped agents (would mismatch the registered pubkey)', !fs.existsSync(path.join(keysDir2, 'dag-repo.key')));
+  // the original enrolled key still verifies — re-run did not replace the identity
+  const stillGood = { ...fact, subject_id: 'after-rerun' };
+  check('the ORIGINAL enrolled key still works (identity untouched by the re-run)', writeSignedFact(db, stillGood, signFact(dagPriv, stillGood), { registry: defaultRegistry }).ok);
+}
+
 // cleanup — do not leave key material on disk
 fs.rmSync(tmp, { recursive: true, force: true });
 h(failures === 0 ? '\x1b[32mENROLLMENT HOLDS ✓ (staging keys cleaned up)\x1b[0m' : `\x1b[31m${failures} CHECK(S) FAILED\x1b[0m`);

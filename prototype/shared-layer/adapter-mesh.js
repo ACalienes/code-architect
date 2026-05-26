@@ -90,7 +90,7 @@ function ingestEnvelope(db, env, { actionMap, registry = defaultRegistry, adapte
   if (!f.ok) return f;
   // re-attribute to the trusted bridge; keep the original sender in provenance
   const fact = { ...f.fact, source_agent: adapterIdentity.agent,
-    payload: { ...f.fact.payload, _via_mesh_from: env.from, _mesh_message_id: env.message_id } };
+    payload: { ...f.fact.payload, _via_mesh_from: env.from ?? null, _mesh_message_id: env.message_id } };
   // Atomic (Codex): the signed write AND the mesh_seen record commit together, so a crash can't
   // persist a fact that then gets replayed (or record seen for a fact that didn't land).
   let res;

@@ -154,6 +154,14 @@ function health(db, opts = {}) {
     else if (lag >= t.lagCritMs) status = a.internal ? 'wedged' : 'projector_behind';
     else if (lag >= t.lagWarnMs) status = a.internal ? 'lagging' : 'projector_lagging';
 
+    // A client repo can have central pending=0 (everything 'projected') yet a WEDGED projection — its
+    // own drainer stalled. central status alone would report OK (Codex round 3). When we have the
+    // client's projection consumption, fold it into status + alerts so a stuck client is caught.
+    if (consumption && consumption.pending > 0) {
+      if (consumption.lag_ms >= t.lagCritMs) status = 'consumer_wedged';
+      else if (consumption.lag_ms >= t.lagWarnMs && (status === 'idle' || status === 'healthy')) status = 'consumer_lagging';
+    }
+
     agents.push({ agent: a.agent, internal: a.internal, clients: a.clients, pending: p.n,
       oldest_pending_at: p.oldest, lag_ms: lag, lag_attributed_to: attribution,
       last_seen_ms_ago: silentMs, consumption, status });
@@ -165,6 +173,11 @@ function health(db, opts = {}) {
       add('warn', a.internal ? 'agent_lagging' : 'projector_lagging',
         `${a.internal ? 'agent' : 'projector for'} ${a.agent}: ${fmtDur(lag)} behind (${p.n} pending)`);
     }
+    // client-side consumption: the client got its data but isn't draining its own projection
+    if (consumption && consumption.pending > 0 && consumption.lag_ms >= t.lagCritMs)
+      add('critical', 'client_consumer_wedged', `client ${a.agent} [${a.clients.join(',')}]: ${consumption.pending} unconsumed in its projection, lag ${fmtDur(consumption.lag_ms)} — client drainer stalled`);
+    else if (consumption && consumption.pending > 0 && consumption.lag_ms >= t.lagWarnMs)
+      add('warn', 'client_consumer_lagging', `client ${a.agent}: ${consumption.pending} unconsumed, lag ${fmtDur(consumption.lag_ms)}`);
     // liveness: only flag "wedged-silent" when there IS work pending AND we have evidence of silence
     if (p.n > 0 && silentMs !== null && silentMs > t.silentCritMs)
       add('critical', 'runner_silent', `agent ${a.agent}: last seen ${fmtDur(silentMs)} ago but ${p.n} pending — runner may be down`);

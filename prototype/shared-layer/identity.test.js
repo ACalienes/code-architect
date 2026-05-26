@@ -9,7 +9,7 @@
  */
 const { openDb, subscribe, drain } = require('./shared-layer');
 const { defaultRegistry } = require('./registry');
-const { generateIdentity, registerIdentity, signFact, verifyFact, writeSignedFact, authorizeSubscribe } = require('./identity');
+const { generateIdentity, registerIdentity, signFact, verifyFact, writeSignedFact, authorizeSubscribe, canonicalFact } = require('./identity');
 
 let failures = 0;
 const check = (label, cond) => {
@@ -159,6 +159,22 @@ h('11. HB#9 — no private key reaches the store or the audit log');
   writeSignedFact(db, fact, signFact(privateKey, fact));
   const dump = JSON.stringify(db.prepare('SELECT * FROM audit_log').all()) + JSON.stringify(db.prepare('SELECT * FROM identities').all());
   check('audit_log + identities contain no PRIVATE KEY material', !/PRIVATE/.test(dump));
+}
+
+// ── 12. Canonicalization rejects non-JSON values (no []-vs-[undefined] signature collision) ──
+h('12. Canonicalization — a non-JSON payload value is rejected, closing the [] vs [undefined] collision');
+{
+  const db = openDb();
+  const k = generateIdentity();
+  registerIdentity(db, { agent: 'z', publicKey: k.publicKey });
+  let threw = false;
+  try { canonicalFact({ source_agent: 'z', payload: { meta: [undefined] } }); } catch (_) { threw = true; }
+  check('canonicalFact throws on undefined-in-array (would collide with [])', threw);
+  const clean = { fact_type: 'status_update', visibility: 'internal', data_class: 'internal', source_agent: 'z', observed_at: '2026-05-25T00:00:00Z', payload: { status: 'ok' } };
+  const sig = signFact(k.privateKey, clean);
+  const tampered = { ...clean, payload: { status: 'ok', _provenance: [undefined] } };
+  check('verifyFact rejects a non-canonical (undefined-bearing) payload', verifyFact(db, tampered, sig).ok === false);
+  check('NaN/Infinity also rejected', (() => { try { canonicalFact({ source_agent: 'z', payload: { n: NaN } }); return false; } catch (_) { return true; } })());
 }
 
 h(failures === 0 ? '\x1b[32mALL IDENTITY INVARIANTS HOLD ✓\x1b[0m' : `\x1b[31m${failures} CHECK(S) FAILED\x1b[0m`);

@@ -77,6 +77,13 @@ function registerIdentity(db, { agent, publicKey, clientId = null, canProduce = 
 // payload key order) signs/verifies to identical bytes. Covers attribution + content, so a signature
 // can't be replayed under a different agent or with any field altered.
 function stableStringify(v) {
+  // Reject non-JSON values rather than letting JSON.stringify coerce them (Codex round 3): otherwise
+  // `[undefined]` serializes to the same bytes as `[]` (and NaN/Infinity → null), so a signature over
+  // one would verify for the other. Throwing here makes verifyFact reject and signFact refuse.
+  if (v === undefined || typeof v === 'function' || typeof v === 'symbol')
+    throw new Error('non-canonical value in signed payload (undefined/function/symbol)');
+  if (typeof v === 'number' && !Number.isFinite(v))
+    throw new Error('non-canonical value in signed payload (non-finite number)');
   if (v === null || typeof v !== 'object') return JSON.stringify(v);
   if (Array.isArray(v)) return '[' + v.map(stableStringify).join(',') + ']';
   return '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + stableStringify(v[k])).join(',') + '}';

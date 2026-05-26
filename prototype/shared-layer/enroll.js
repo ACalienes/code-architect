@@ -44,7 +44,11 @@ function enrollFleet(db, roster = FLEET_ROSTER, { keysDir } = {}) {
   for (const r of roster) {
     const { publicKey, privateKey } = crypto.generateKeyPairSync('ed25519');
     const pubPem = publicKey.export({ type: 'spki', format: 'pem' }).toString();
-    registerIdentity(db, { agent: r.agent, publicKey: pubPem, clientId: r.clientId ?? null, canProduce: r.canProduce ?? null });
+    // Insert-only enrollment: if the agent is already enrolled, registration is REFUSED — so we must
+    // NOT write a private key whose public half isn't the registered one (Codex round 3: a re-run
+    // could otherwise hand out a mismatched key). Skip + report; rotation is an explicit ceremony.
+    const res = registerIdentity(db, { agent: r.agent, publicKey: pubPem, clientId: r.clientId ?? null, canProduce: r.canProduce ?? null });
+    if (res && res.ok === false) { summary.push({ agent: r.agent, skipped: true, reason: res.error }); continue; }
     if (keysDir) {
       const keyPath = path.join(keysDir, `${r.agent}.key`);
       fs.writeFileSync(keyPath, privateKey.export({ type: 'pkcs8', format: 'pem' }), { mode: 0o600 });

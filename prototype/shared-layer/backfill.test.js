@@ -153,6 +153,25 @@ h('7. reject — a bad claim is rejected with a reason and never routes');
   check('never routed', countDeliveries(db) === 0);
 }
 
+// ── 8. Promotion is atomic — a crash during the claim-update rolls back the fact too ──
+h('8. atomic promote — a crash between writing the fact and flipping the claim rolls BOTH back');
+{
+  const db = openDb();
+  subscribe(db, 'acd', 'client_feedback', '*');
+  const r = ingestClaim(db, { fact_type: 'client_feedback', client_id: 'dagdc', subject_id: 'm', visibility: 'client', data_class: 'client_confidential', source_ref: 'mem.md:1', payload: { sentiment: 'loved' } });
+  // simulate a crash exactly at the claim-status UPDATE (after the fact was written + routed)
+  const realPrepare = db.prepare.bind(db);
+  db.prepare = (sql) => { if (sql.includes("UPDATE claims SET status='promoted'")) throw new Error('simulated crash'); return realPrepare(sql); };
+  let threw = false;
+  try { promoteClaim(db, r.claim_id, 'alex'); } catch (_) { threw = true; }
+  db.prepare = realPrepare; // restore
+  check('the crash propagated (transaction aborted)', threw);
+  check('the fact was rolled back — NO orphan fact persisted', db.prepare('SELECT COUNT(*) AS n FROM facts').get().n === 0);
+  check('no orphan deliveries', countDeliveries(db) === 0);
+  check('the claim is still quarantined (so re-promote is clean, not a duplicate)', listClaims(db, { status: 'quarantined' }).length === 1);
+  check('a clean re-promote now succeeds exactly once', promoteClaim(db, r.claim_id, 'alex').ok && db.prepare('SELECT COUNT(*) AS n FROM facts').get().n === 1);
+}
+
 // ── result ──
 h(failures === 0 ? '\x1b[32mALL BACKFILL INVARIANTS HOLD ✓\x1b[0m' : `\x1b[31m${failures} CHECK(S) FAILED\x1b[0m`);
 process.exit(failures === 0 ? 0 : 1);
