@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<!-- CA Phase C cutover diffs — gsuite (mcp-gsuite) -> workspace-mcp. Review gate; nothing applied yet. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>gsuite cutover · exact diffs for review · 2026-05-26</title>
+<style>
+  :root{
+    --bg:#0a0d12;--bg-2:#0f131a;--card:#141a23;--brief-bg:#0c1016;--border:#232c3a;--border-bright:#2f3a4a;
+    --text:#e6edf3;--text-2:#b8c5d3;--muted:#7d8a99;--dim:#5a6573;--accent:#6ea8fe;--green:#4ade80;
+    --yellow:#facc15;--orange:#fb923c;--red:#f87171;--purple:#c084fc;--teal:#5eead4;
+    --add-bg:rgba(74,222,128,0.10);--del-bg:rgba(248,113,113,0.10);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);font-family:-apple-system,"SF Pro Display","SF Pro Text",BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.6;min-height:100vh}
+  body::before{content:"";position:fixed;inset:0;background:
+      radial-gradient(ellipse 1100px 560px at 16% -10%,rgba(110,168,254,0.06),transparent 50%),
+      radial-gradient(ellipse 820px 420px at 92% 6%,rgba(192,132,252,0.05),transparent 50%),
+      radial-gradient(ellipse 1000px 500px at 50% 120%,rgba(94,234,212,0.04),transparent 50%);pointer-events:none;z-index:0}
+  .container{position:relative;max-width:1000px;margin:0 auto;padding:48px 28px 90px;z-index:1}
+  code{font-family:"JetBrains Mono","SF Mono",Menlo,monospace;font-size:0.85em;background:var(--brief-bg);border:1px solid var(--border);border-radius:5px;padding:1px 6px;color:var(--teal)}
+
+  .eyebrow{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:var(--accent);margin-bottom:16px;display:flex;align-items:center;gap:12px}
+  .eyebrow::before{content:"";width:24px;height:1px;background:var(--accent);box-shadow:0 0 8px rgba(110,168,254,0.4)}
+  h1.title{font-size:40px;font-weight:700;letter-spacing:-1.2px;line-height:1.07;margin-bottom:14px;background:linear-gradient(180deg,#fff 0%,#b8c5d3 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .subtitle{font-size:16.5px;color:var(--text-2);max-width:840px;margin-bottom:14px}
+  .stamp{font-size:12px;color:var(--dim);font-family:"JetBrains Mono",monospace;margin-bottom:30px}
+  .stamp b{color:var(--yellow)}
+
+  .keystone{background:linear-gradient(135deg,rgba(250,204,21,0.08),rgba(251,146,60,0.03));border:1px solid rgba(250,204,21,0.3);border-left:3px solid var(--yellow);border-radius:12px;padding:20px 24px;margin-bottom:38px}
+  .keystone .kh{font-size:12px;text-transform:uppercase;letter-spacing:1.5px;color:var(--yellow);font-weight:700;margin-bottom:9px}
+  .keystone p{font-size:14px;color:var(--text-2)}.keystone b{color:var(--text)}
+
+  section{margin-bottom:34px}
+  h2.sec{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-2);margin-bottom:8px;display:flex;align-items:center;gap:10px}
+  h2.sec .num{color:var(--accent);font-family:"JetBrains Mono",monospace}
+  .filemeta{font-size:11.5px;color:var(--muted);font-family:"JetBrains Mono",monospace;margin-bottom:14px}
+  .filemeta .pol{color:var(--orange)}
+  .plain{font-size:13.5px;color:var(--text-2);margin:10px 0 14px;padding-left:12px;border-left:2px solid var(--border-bright)}
+  .plain b{color:var(--green)}
+
+  .diff{background:var(--brief-bg);border:1px solid var(--border-bright);border-radius:10px;overflow:hidden;font-family:"JetBrains Mono",monospace;font-size:12.5px;line-height:1.7}
+  .diff .ln{display:block;padding:1px 14px;white-space:pre-wrap;word-break:break-word;color:var(--text-2)}
+  .diff .del{background:var(--del-bg);color:#fca5a5}
+  .diff .del::before{content:"- ";color:var(--red)}
+  .diff .add{background:var(--add-bg);color:#86efac}
+  .diff .add::before{content:"+ ";color:var(--green)}
+  .diff .ctx::before{content:"  ";color:transparent}
+  .diff .hd{background:#0a0e14;color:var(--muted);padding:6px 14px;font-size:11px;border-bottom:1px solid var(--border)}
+
+  .cmd{background:#0a0e14;border:1px solid var(--border-bright);border-radius:10px;padding:14px 16px;font-family:"JetBrains Mono",monospace;font-size:12.5px;color:var(--teal);line-height:1.9}
+  .cmd .c{color:var(--muted)}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:6px}
+  @media(max-width:720px){.grid2{grid-template-columns:1fr}}
+  .mini{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+  .mini .t{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:6px}
+  .mini.b{border-left:3px solid var(--dim)}.mini.a{border-left:3px solid var(--green)}
+  .mini code{background:transparent;border:none;padding:0;color:var(--text-2);font-size:12px}
+  .mini.a code{color:var(--teal)}
+
+  .da{background:linear-gradient(135deg,rgba(74,222,128,0.08),rgba(94,234,212,0.03));border:1px solid rgba(74,222,128,0.3);border-left:3px solid var(--green);border-radius:12px;padding:20px 24px;margin-top:6px}
+  .da .k{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--green);font-weight:700;margin-bottom:12px}
+  .da ul{list-style:none;display:flex;flex-direction:column;gap:8px}
+  .da li{font-size:13.5px;color:var(--text-2);padding-left:22px;position:relative}
+  .da li::before{content:"\2713";position:absolute;left:0;color:var(--green);font-weight:700}
+  .da li b{color:var(--text)}
+
+  .ask{background:linear-gradient(135deg,rgba(110,168,254,0.08),rgba(94,234,212,0.03));border:1px solid rgba(110,168,254,0.3);border-left:3px solid var(--accent);border-radius:12px;padding:20px 24px;margin-top:34px}
+  .ask .k{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent);font-weight:700;margin-bottom:10px}
+  .ask p{font-size:14px;color:var(--text-2);margin-bottom:8px}.ask b{color:var(--text)}
+
+  .footer{margin-top:42px;padding-top:22px;border-top:1px solid var(--border);font-size:12px;color:var(--dim);font-family:"JetBrains Mono",monospace}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="eyebrow">Code Architect · Phase C · review gate</div>
+  <h1 class="title">gsuite cutover — the exact diffs</h1>
+  <p class="subtitle">Three small changes flip the fleet's email/calendar from the dead <code>mcp-gsuite</code> to the maintained <code>workspace-mcp</code> you just authenticated. Nothing here is applied yet — this is for your eyes first.</p>
+  <div class="stamp">2026-05-26 · <b>NOT YET APPLIED</b> · server name stays <code>gsuite</code> (zero namespace churn) · old server kept as rollback</div>
+
+  <div class="keystone">
+    <div class="kh">The one risk this closes</div>
+    <p>Kai has a safety hook that blocks it from auto-sending email. It only fires on the tool named <code>send_email</code>. The new server's send tool is <code>send_gmail_message</code> — so without change 1, Kai's block would <b>silently stop working</b>. Changes 1 keeps that guarantee intact (and even keeps blocking the old name too).</p>
+  </div>
+
+  <section>
+    <h2 class="sec"><span class="num">1a</span> Kai — hook matcher (the actual gate)</h2>
+    <div class="filemeta">Kai Executive Assistant/.claude/settings.local.json · <span class="pol">policy: human_review_required</span> · local file, not committed</div>
+    <div class="plain"><b>Plain English:</b> Kai still can't send email on its own — the block now triggers on both the old and the new send-tool name.</div>
+    <div class="diff">
+      <span class="ln hd">PreToolUse hook matcher</span>
+      <span class="ln ctx">{</span>
+      <span class="ln del">  "matcher": "mcp__gsuite__send_email",</span>
+      <span class="ln add">  "matcher": "mcp__gsuite__send_email|mcp__gsuite__send_gmail_message",</span>
+      <span class="ln ctx">  "hooks": [{ "command": "node scripts/hooks/block-mcp-outbound.js" }]</span>
+      <span class="ln ctx">}</span>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec"><span class="num">1b</span> Kai — the block script itself</h2>
+    <div class="filemeta">Kai Executive Assistant/scripts/hooks/block-mcp-outbound.js · <span class="pol">policy: human_review_required</span></div>
+    <div class="diff">
+      <span class="ln hd">// Blocked tools comment + BLOCKED set</span>
+      <span class="ln del">//   - mcp__gsuite__send_email (sends email from Gmail)</span>
+      <span class="ln add">//   - mcp__gsuite__send_email (legacy mcp-gsuite send — retired)</span>
+      <span class="ln add">//   - mcp__gsuite__send_gmail_message (workspace-mcp send — current)</span>
+      <span class="ln ctx">const BLOCKED = new Set([</span>
+      <span class="ln ctx">  'mcp__gsuite__send_email',</span>
+      <span class="ln add">  'mcp__gsuite__send_gmail_message',</span>
+      <span class="ln ctx">]);</span>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec"><span class="num">2</span> Flip the server — global config</h2>
+    <div class="filemeta">~/.claude.json · applied via the <code>claude mcp</code> CLI (atomic), not hand-edited</div>
+    <div class="plain"><b>Plain English:</b> the server everyone calls "gsuite" now runs the new, maintained code. The name stays the same so nothing else in the fleet has to change.</div>
+    <div class="grid2">
+      <div class="mini b"><div class="t">before</div><code>gsuite → ~/.kai/gsuite-launcher.sh<br>(vendored mcp-gsuite, dead v0.1.0)</code></div>
+      <div class="mini a"><div class="t">after</div><code>gsuite → ~/.kai/workspace-mcp-launcher.sh<br>(workspace-mcp v1.21.0, --tools gmail calendar)</code></div>
+    </div>
+    <div class="cmd" style="margin-top:14px">
+      <span class="c"># atomic swap, user scope</span><br>
+      claude mcp remove gsuite -s user<br>
+      claude mcp add gsuite -s user -- /Users/alex/.kai/workspace-mcp-launcher.sh
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec"><span class="num">3</span> Rollback — kept on standby</h2>
+    <div class="plain">The vendored <code>mcp-gsuite</code> + its launcher stay on disk untouched. If anything misbehaves, recovery is one command — repoint <code>gsuite</code> back to <code>gsuite-launcher.sh</code> — and we're exactly where we are now. No data, no auth lost.</div>
+  </section>
+
+  <section>
+    <h2 class="sec"><span class="num">DA</span> Devil's-advocate verdict</h2>
+    <div class="da">
+      <div class="k">PASS — conditions met</div>
+      <ul>
+        <li><b>Send-block preserved</b> — matcher + script both updated; old name still blocked too</li>
+        <li><b>No secrets touched</b> — credentials flow unchanged; nothing logged</li>
+        <li><b>Reversible</b> — old server retained; one-line revert</li>
+        <li><b>Minimal blast radius</b> — server name <code>gsuite</code> unchanged → no other agent/file edits needed</li>
+        <li><b>Codex review</b> — prompt for the Kai hook change handed over before it's final</li>
+      </ul>
+    </div>
+  </section>
+
+  <div class="ask">
+    <div class="k">Your call</div>
+    <p>Reply <b>"apply all three"</b> and I make the two Kai edits (staged, not committed) + flip the config, then verify with a fresh probe.</p>
+    <p>Or <b>"config only"</b> (note: brief gap in Kai's send-block), or tell me what to change here first.</p>
+    <p style="color:var(--muted);font-size:12.5px;margin-top:6px">After applying, each agent picks up the new server on its next session start.</p>
+  </div>
+
+  <div class="footer">
+    Code Architect · Phase C review gate · paired with explainers/gsuite-mcp-research-2026-05-26.html and the vendored-patch fix landed earlier this session
+  </div>
+
+</div>
+</body>
+</html>

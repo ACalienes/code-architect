@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<!-- CA research: replacement candidate for the unmaintained gsuite (mcp-gsuite) MCP server. Research only — no migration authorized. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>gsuite MCP · maintained-server research · 2026-05-26</title>
+<style>
+  :root{
+    --bg:#0a0d12;--bg-2:#0f131a;--card:#141a23;--brief-bg:#0c1016;--border:#232c3a;--border-bright:#2f3a4a;
+    --text:#e6edf3;--text-2:#b8c5d3;--muted:#7d8a99;--dim:#5a6573;--accent:#6ea8fe;--green:#4ade80;
+    --green-glow:rgba(74,222,128,0.35);--yellow:#facc15;--orange:#fb923c;--red:#f87171;--purple:#c084fc;--teal:#5eead4;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);font-family:-apple-system,"SF Pro Display","SF Pro Text",BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.6;min-height:100vh}
+  body::before{content:"";position:fixed;inset:0;background:
+      radial-gradient(ellipse 1100px 560px at 16% -10%,rgba(110,168,254,0.06),transparent 50%),
+      radial-gradient(ellipse 820px 420px at 92% 6%,rgba(192,132,252,0.05),transparent 50%),
+      radial-gradient(ellipse 1000px 500px at 50% 120%,rgba(94,234,212,0.04),transparent 50%);pointer-events:none;z-index:0}
+  .container{position:relative;max-width:1060px;margin:0 auto;padding:48px 28px 90px;z-index:1}
+  code{font-family:"JetBrains Mono","SF Mono",Menlo,monospace;font-size:0.84em;background:var(--brief-bg);border:1px solid var(--border);border-radius:5px;padding:1px 6px;color:var(--teal)}
+
+  .eyebrow{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:var(--accent);margin-bottom:16px;display:flex;align-items:center;gap:12px}
+  .eyebrow::before{content:"";width:24px;height:1px;background:var(--accent);box-shadow:0 0 8px rgba(110,168,254,0.4)}
+  h1.title{font-size:42px;font-weight:700;letter-spacing:-1.3px;line-height:1.06;margin-bottom:14px;background:linear-gradient(180deg,#fff 0%,#b8c5d3 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .subtitle{font-size:17px;color:var(--text-2);max-width:870px;margin-bottom:14px}
+  .stamp{font-size:12px;color:var(--dim);font-family:"JetBrains Mono",monospace;margin-bottom:34px}
+  .stamp b{color:var(--yellow)}
+
+  section{margin-bottom:42px}
+  h2.sec{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-2);margin-bottom:18px;padding-bottom:10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+  h2.sec .num{color:var(--accent);font-family:"JetBrains Mono",monospace}
+
+  .keystone{background:linear-gradient(135deg,rgba(74,222,128,0.09),rgba(94,234,212,0.03));border:1px solid rgba(74,222,128,0.3);border-left:3px solid var(--green);border-radius:12px;padding:22px 26px;margin-bottom:42px}
+  .keystone .kh{font-size:12px;text-transform:uppercase;letter-spacing:1.5px;color:var(--green);font-weight:700;margin-bottom:10px}
+  .keystone p{font-size:14.5px;color:var(--text-2);margin-bottom:10px}.keystone p:last-child{margin-bottom:0}
+  .keystone b{color:var(--text)}
+  .keystone .pkg{font-family:"JetBrains Mono",monospace;color:var(--teal);font-size:15px}
+
+  /* status strip */
+  .strip{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+  .chip{font-size:11px;font-family:"JetBrains Mono",monospace;padding:4px 10px;border-radius:6px;border:1px solid var(--border-bright);color:var(--text-2);background:var(--card)}
+  .chip b{color:var(--green)}
+
+  /* comparison table */
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--border-bright)}
+  td{padding:9px 10px;border-bottom:1px solid var(--border);color:var(--text-2);vertical-align:top}
+  td.lbl{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+  td.win{color:var(--text);font-weight:600}
+  td.win b{color:var(--green)}
+  td.old{color:var(--dim)}
+  .colw{width:50%}
+
+  /* ruled out */
+  .ro{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  @media(max-width:760px){.ro{grid-template-columns:1fr}}
+  .rocard{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--dim);border-radius:10px;padding:14px 16px}
+  .rocard.dead{border-left-color:var(--red)}
+  .rocard .rn{font-size:13.5px;font-weight:650;margin-bottom:5px;color:var(--text);font-family:"JetBrains Mono",monospace}
+  .rocard .why{font-size:12px;color:var(--muted)}
+  .rocard .tag{display:inline-block;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:2px 7px;border-radius:4px;margin-bottom:8px}
+  .rocard.dead .tag{background:rgba(248,113,113,.15);color:var(--red)}
+  .rocard .tag.soft{background:rgba(125,138,153,.15);color:var(--muted)}
+
+  /* migration cost */
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:760px){.two{grid-template-columns:1fr}}
+  .col{border-radius:12px;padding:18px 20px;border:1px solid var(--border);background:var(--card);border-left:3px solid var(--orange)}
+  .col .tagm{font-size:10px;font-family:"JetBrains Mono",monospace;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;color:var(--orange)}
+  .col h3{font-size:14px;margin-bottom:8px;color:var(--text)}
+  .col p{font-size:12.5px;color:var(--text-2)}
+  .col p.eg{margin-top:8px;color:var(--muted);font-size:11.5px;font-family:"JetBrains Mono",monospace}
+
+  .ask{background:linear-gradient(135deg,rgba(110,168,254,0.08),rgba(94,234,212,0.03));border:1px solid rgba(110,168,254,0.3);border-left:3px solid var(--accent);border-radius:12px;padding:22px 26px}
+  .ask .k{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent);font-weight:700;margin-bottom:14px}
+  .ask p{font-size:14px;color:var(--text-2);margin-bottom:12px}.ask p:last-child{margin-bottom:0}
+  .ask b{color:var(--text)}
+  .verdict{color:var(--green);font-weight:600}
+
+  .footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);font-size:12px;color:var(--dim);font-family:"JetBrains Mono",monospace;line-height:1.9}
+  .footer a{color:var(--accent);text-decoration:none}
+  .footer a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="eyebrow">Code Architect · Research</div>
+  <h1 class="title">A maintained replacement for the<br>gsuite email/calendar server</h1>
+  <p class="subtitle">The bug that crashed the CFO is fixed and stable. This is the forward-looking question: what should the fleet's Gmail + Calendar tool server be long-term, given the current one is an unmaintained <code>v0.1.0</code>?</p>
+  <div class="stamp">2026-05-26 · research only · <b>no migration authorized</b> · sources at foot</div>
+
+  <div class="keystone">
+    <div class="kh">Recommendation</div>
+    <p>Adopt <span class="pkg">taylorwilsdon/google_workspace_mcp</span> — the consensus most-maintained, most-complete Google Workspace MCP server. It covers the exact Gmail + Calendar surface the fleet uses today, runs over stdio (drop-in for the launcher pattern), and is MIT-licensed.</p>
+    <p><b>But it's a migration, not a swap</b> — tool names change fleet-wide and auth needs a one-time re-setup. No fire: the vendored fix holds, so this happens when you choose, as a scoped project.</p>
+  </div>
+
+  <section>
+    <h2 class="sec"><span class="num">01</span> The winner</h2>
+    <div class="strip">
+      <span class="chip">v1.21.0 · <b>released 9 days ago</b></span>
+      <span class="chip">2,314 commits</span>
+      <span class="chip"><b>2.5k</b> stars · 761 forks</span>
+      <span class="chip">MIT · no open-core</span>
+      <span class="chip">Python · <b>uvx</b>, no install</span>
+      <span class="chip">stdio + HTTP</span>
+    </div>
+    <table style="margin-top:14px">
+      <thead><tr><th>Dimension</th><th class="colw">taylorwilsdon/google_workspace_mcp</th><th class="colw">current — mcp-gsuite (JS)</th></tr></thead>
+      <tbody>
+        <tr><td class="lbl">Maintenance</td><td class="win"><b>Active</b> — release 2026-05-17, 2,314 commits</td><td class="old">Dead — v0.1.0, the bug we just patched</td></tr>
+        <tr><td class="lbl">Scope</td><td class="win">Gmail + Calendar + Drive/Docs/Sheets/Slides/Tasks/Contacts (12 services)</td><td class="old">Gmail + Calendar only</td></tr>
+        <tr><td class="lbl">Gmail tools</td><td class="win"><code>search_gmail_messages</code>, <code>send_gmail_message</code>, <code>get_gmail_thread_content</code>, <code>modify_gmail_message_labels</code>, <code>draft_gmail_message</code>, label tools</td><td class="old"><code>list_emails</code>, <code>search_emails</code>, <code>send_email</code>, <code>modify_email</code></td></tr>
+        <tr><td class="lbl">Calendar tools</td><td class="win"><code>list_calendars</code>, <code>get_events</code>, <code>manage_event</code>, <code>query_freebusy</code>, OOO/focus-time</td><td class="old"><code>list/create/update/delete_event</code></td></tr>
+        <tr><td class="lbl">Auth modes</td><td class="win">Interactive OAuth, <b>headless service account</b>, bearer-token multi-user, external provider</td><td class="old">Personal refresh token (env)</td></tr>
+        <tr><td class="lbl">Runtime</td><td class="win"><code>uvx workspace-mcp</code> (Python, zero-install)</td><td class="old"><code>npx mcp-gsuite</code> (now vendored + patched)</td></tr>
+        <tr><td class="lbl">License</td><td class="win">MIT</td><td class="old">—</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2 class="sec"><span class="num">02</span> Ruled out</h2>
+    <div class="ro">
+      <div class="rocard dead">
+        <span class="tag">Archived</span>
+        <div class="rn">GongRzhe/Gmail-MCP-Server</div>
+        <div class="why">Popular (1.1k★) but <b>archived 2026-03-03</b>. No longer maintained, and Gmail-only.</div>
+      </div>
+      <div class="rocard">
+        <span class="tag soft">Superseded</span>
+        <div class="rn">MarkusPfundstein/mcp-gsuite</div>
+        <div class="why">The Python original our dead JS package was cloned from. Lighter and less active — taylorwilsdon explicitly supersedes it.</div>
+      </div>
+      <div class="rocard">
+        <span class="tag soft">Partial</span>
+        <div class="rn">Official Google Calendar MCP</div>
+        <div class="why">Real and Google-hosted, but Calendar-only and remote. Could complement, not replace.</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec"><span class="num">03</span> The honest tradeoff — why this is a project, not a one-liner</h2>
+    <div class="two">
+      <div class="col">
+        <div class="tagm">Cost 1 · fleet-wide</div>
+        <h3>Tool names change everywhere</h3>
+        <p>Agents call the old namespace and names. The new server uses a different namespace <em>and</em> different tool names — so every agent prompt/script that references email tools needs a coordinated update. Multi-repo, DA-gated.</p>
+        <p class="eg">mcp__gsuite__search_emails<br>→ mcp__google_workspace__search_gmail_messages</p>
+      </div>
+      <div class="col">
+        <div class="tagm">Cost 2 · one-time</div>
+        <h3>Auth re-setup</h3>
+        <p>Your existing OAuth client (id/secret) is reusable, but the new server keeps its own token cache. So it needs one browser consent on the Mini — or a service account, since <code>kamehamedia.com</code> is likely a Workspace domain. Headless thereafter.</p>
+        <p class="eg">existing gsuite-launcher.sh credential<br>hardening would be re-applied, not lost</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec"><span class="num">04</span> Recommendation &amp; next step</h2>
+    <div class="ask">
+      <div class="k">CA call</div>
+      <p><span class="verdict">No urgency.</span> The vendored + patched <code>mcp-gsuite</code> is stable and verified — the CFO and the rest of the fleet are unblocked. This migration is an upgrade, not a fix.</p>
+      <p>When you want it done properly, I'll scope it as a project: pin/vendor <code>workspace-mcp</code>, wire the launcher + auth (re-applying the credential hardening), then migrate every agent's tool references in <b>one coordinated pass with a DA gate</b> so nothing half-switches.</p>
+      <p><b>Decision for you:</b> park it until the CFO billing work is done, or have me write the migration plan now?</p>
+    </div>
+  </section>
+
+  <div class="footer">
+    Sources ·
+    <a href="https://github.com/taylorwilsdon/google_workspace_mcp">taylorwilsdon/google_workspace_mcp</a> ·
+    <a href="https://github.com/GongRzhe/Gmail-MCP-Server">GongRzhe/Gmail-MCP-Server (archived)</a> ·
+    <a href="https://github.com/MarkusPfundstein/mcp-gsuite">MarkusPfundstein/mcp-gsuite</a> ·
+    <a href="https://developers.google.com/workspace/calendar/api/guides/configure-mcp-server">Official Google Calendar MCP</a><br>
+    Code Architect · research deliverable · paired with the gsuite vendored-patch fix landed same session
+  </div>
+
+</div>
+</body>
+</html>
