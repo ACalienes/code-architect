@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<!-- Pitch Deck: what "act on orders instantly" actually requires. 3 mechanisms untangled. 2026-05-26 -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pitch Deck · instant trigger · 2026-05-26</title>
+<style>
+  :root{--bg:#0a0d12;--bg-2:#0f131a;--card:#151b25;--panel:#11161e;--brief:#0c1016;--border:#232c3a;--border-b:#2f3a4a;
+    --text:#e6edf3;--text-2:#aab6c4;--muted:#7d8a99;--dim:#5a6573;--accent:#6ea8fe;--green:#4ade80;--green-glow:rgba(74,222,128,.4);--yellow:#facc15;--orange:#fb923c;--red:#f87171;--purple:#c084fc;--teal:#5eead4;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);font-family:-apple-system,"SF Pro Display","SF Pro Text",BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.5;min-height:100vh}
+  body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellipse 1100px 560px at 50% -8%,rgba(250,204,21,.06),transparent 55%);pointer-events:none;z-index:0}
+  .wrap{position:relative;z-index:1;max-width:1000px;margin:0 auto;padding:44px 24px 80px}
+  code{font-family:"JetBrains Mono",Menlo,monospace;font-size:.82em;background:var(--brief);border:1px solid var(--border);border-radius:5px;padding:1px 6px;color:var(--teal)}
+  .eyebrow{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:var(--yellow);margin-bottom:13px;display:flex;align-items:center;gap:10px}
+  .eyebrow .dot{width:8px;height:8px;border-radius:50%;background:var(--yellow);box-shadow:0 0 8px rgba(250,204,21,.4)}
+  h1{font-size:37px;font-weight:800;letter-spacing:-1.2px;line-height:1.07;background:linear-gradient(180deg,#fff,#b8c5d3);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{font-size:16px;color:var(--text-2);max-width:800px;margin:11px 0 26px}.sub b{color:var(--text)}
+  h2{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.4px;color:var(--text-2);margin:30px 0 13px;display:flex;gap:10px}h2::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent)}
+
+  .answer{background:linear-gradient(135deg,rgba(74,222,128,.1),rgba(74,222,128,.02));border:1px solid rgba(74,222,128,.35);border-radius:14px;padding:17px 22px}
+  .answer .t{font-size:16px;font-weight:800;color:var(--green)}
+  .answer p{font-size:14px;color:var(--text-2);margin-top:5px}.answer b{color:var(--text)}
+
+  .layers{display:flex;flex-direction:column;gap:11px;margin-top:4px}
+  .L{display:flex;gap:14px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:15px 17px}
+  .L .num{font-size:20px;font-weight:800;width:30px;flex-shrink:0;line-height:1.2}
+  .L1 .num{color:var(--green)}.L2 .num{color:var(--yellow)}.L3 .num{color:var(--accent)}
+  .L .body{flex:1}
+  .L .h{font-size:15px;font-weight:700;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .L .badge{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:2px 8px;border-radius:20px}
+  .badge.live{background:rgba(74,222,128,.15);color:var(--green);border:1px solid rgba(74,222,128,.35)}
+  .badge.gap{background:rgba(250,204,21,.13);color:var(--yellow);border:1px solid rgba(250,204,21,.35)}
+  .badge.opt{background:rgba(110,168,254,.12);color:var(--accent);border:1px solid rgba(110,168,254,.35)}
+  .L p{font-size:13px;color:var(--text-2);margin-top:5px}.L p b{color:var(--text)}
+  .L .spd{font-size:11.5px;color:var(--muted);margin-top:7px;font-family:"JetBrains Mono",monospace}
+
+  .flow{display:flex;align-items:center;flex-wrap:wrap;gap:0;background:var(--brief);border:1px solid var(--border-b);border-radius:12px;padding:16px 14px;font-size:13px;margin-top:4px}
+  .node{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:9px 13px;text-align:center}
+  .node b{font-size:12.5px}.node .s{font-size:10px;color:var(--muted)}
+  .node.now{border-color:rgba(250,204,21,.4)}.node.want{border-color:rgba(74,222,128,.45);background:rgba(74,222,128,.06)}
+  .arr{color:var(--dim);padding:0 8px;font-size:15px}
+  @media(max-width:680px){.arr{transform:rotate(90deg)}.flow{flex-direction:column}}
+
+  .rec{display:flex;flex-direction:column;gap:8px}
+  .rc{display:flex;align-items:flex-start;gap:10px;font-size:13.5px;color:var(--text-2)}
+  .rc .m{flex-shrink:0;margin-top:1px}
+  .foot{margin-top:30px;font-size:11px;color:var(--dim);font-family:"JetBrains Mono",monospace;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow"><span class="dot"></span>Architecture clarification · 2026-05-26</div>
+  <h1>What "act on orders instantly" actually needs.</h1>
+  <p class="sub">You asked if Pitch Deck has to be "brought on officially" to act on orders the moment they land. Short answer: <b>that's not the lever.</b> Three different things are getting bundled into one — here they are, untangled.</p>
+
+  <div class="answer">
+    <div class="t">✅ Pitch Deck already acts on orders — today.</div>
+    <p>It's a <b>live engine</b> (running 3 days straight). It already watches its mesh inbox, grabs incoming work orders, does them, and marks them done. <b>It does not need The Board to receive or act on orders.</b> What you actually want — <b>instant</b> — is a separate piece called the push-nudge, and that's the real gap.</p>
+  </div>
+
+  <h2>The three mechanisms (don't confuse them)</h2>
+  <div class="layers">
+    <div class="L L1">
+      <div class="num">1</div>
+      <div class="body">
+        <div class="h">The order channel — <span class="badge live">live now</span></div>
+        <p>How an order actually reaches Pitch Deck. This is <b>the mesh</b> (the office's message system), and Pitch Deck already listens on it, claims the order, and works it. This is the part you thought was missing — <b>it isn't.</b></p>
+        <div class="spd">speed today: checks every ~30 seconds → acts within 30s of an order landing</div>
+      </div>
+    </div>
+    <div class="L L2">
+      <div class="num">2</div>
+      <div class="body">
+        <div class="h">The instant trigger — <span class="badge gap">the real gap</span></div>
+        <p>"Immediately" means not waiting out that 30-second check. That needs a <b>push-nudge</b>: the moment an order lands, something taps Pitch Deck on the shoulder to act <b>right now</b> instead of on its next check. This is your "generalize the NAMI nudge" item — and it's a mesh feature, <b>completely separate from The Board.</b></p>
+        <div class="spd">speed after: order lands → acts in ~1 second</div>
+      </div>
+    </div>
+    <div class="L L3">
+      <div class="num">3</div>
+      <div class="body">
+        <div class="h">The Board (being "brought on officially") — <span class="badge opt">context, not speed</span></div>
+        <p>This gives Pitch Deck <b>shared awareness</b> — it can see decisions, status, and briefs flowing across the office. Genuinely useful, but it's the <b>coordination layer</b>, not the trigger. And The Board also checks every 30s — so enrolling here would <b>not</b> make it instant.</p>
+        <div class="spd">speed: also ~30s · value: context &amp; visibility, not reaction time</div>
+      </div>
+    </div>
+  </div>
+
+  <h2>So what changes if we want truly instant?</h2>
+  <div class="flow">
+    <div class="node now"><b>Now</b><div class="s">order lands → waits up to 30s → acts</div></div>
+    <span class="arr">→</span>
+    <div class="node"><b>Build the push-nudge</b><div class="s">a poke the instant an order arrives</div></div>
+    <span class="arr">→</span>
+    <div class="node want"><b>Instant</b><div class="s">order lands → ~1s → acts</div></div>
+  </div>
+
+  <h2>My recommendation</h2>
+  <div class="rec">
+    <div class="rc"><span class="m">①</span><div><b>If "immediately" means "reliably within ~30s"</b> → you already have it. Nothing to bring on. The thing actually worth checking is <b>reliability</b> (Pitch Deck is on the list of agents with a known silent-drop bug — that's the comms-fix, already Codex-reviewed and ready to apply).</div></div>
+    <div class="rc"><span class="m">②</span><div><b>If "immediately" means sub-second</b> → build the <b>push-nudge</b> (your ASAP item). That's the lever — not Board enrollment. It's a mesh-contract change, so it gets the full review gate.</div></div>
+    <div class="rc"><span class="m">③</span><div><b>Board enrollment</b> is still worth doing for shared context, and it's a 1-minute step — but treat it as "give Pitch Deck awareness," not "make it act fast."</div></div>
+  </div>
+
+  <div class="foot">Code Architect · 2026-05-26 · pde-daemon.js online 3d · mesh poll 30s · push-nudge = the instant lever, separate from The Board</div>
+</div>
+</body>
+</html>

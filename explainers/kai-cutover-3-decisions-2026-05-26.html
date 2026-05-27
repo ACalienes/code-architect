@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<!-- The 3 cutover decisions Kai owns — surfaced for Alex after a live Mini re-audit showed the standup hasn't begun. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The 3 cutover decisions · Shared Layer → Mini · 2026-05-26</title>
+<style>
+  :root{
+    --bg:#0a0d12;--bg-2:#0f131a;--card:#141a23;--brief-bg:#0c1016;--border:#232c3a;--border-bright:#2f3a4a;
+    --text:#e6edf3;--text-2:#b8c5d3;--muted:#7d8a99;--dim:#5a6573;--accent:#6ea8fe;--green:#4ade80;
+    --green-glow:rgba(74,222,128,0.35);--yellow:#facc15;--purple:#c084fc;--teal:#5eead4;--red:#f87171;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);font-family:-apple-system,"SF Pro Display","SF Pro Text",BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.6;min-height:100vh}
+  body::before{content:"";position:fixed;inset:0;background:
+      radial-gradient(ellipse 1100px 560px at 16% -10%,rgba(110,168,254,0.06),transparent 50%),
+      radial-gradient(ellipse 820px 420px at 92% 6%,rgba(192,132,252,0.05),transparent 50%),
+      radial-gradient(ellipse 1000px 500px at 50% 120%,rgba(250,204,21,0.04),transparent 50%);pointer-events:none;z-index:0}
+  .container{position:relative;max-width:1020px;margin:0 auto;padding:48px 28px 90px;z-index:1}
+  .mono{font-family:"JetBrains Mono","SF Mono",Menlo,monospace}
+  code{font-family:"JetBrains Mono","SF Mono",Menlo,monospace;font-size:0.85em;background:var(--brief-bg);border:1px solid var(--border);border-radius:5px;padding:1px 6px;color:var(--teal)}
+  .eyebrow{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:var(--accent);margin-bottom:16px;display:flex;align-items:center;gap:12px}
+  .eyebrow::before{content:"";width:24px;height:1px;background:var(--accent);box-shadow:0 0 8px rgba(110,168,254,0.4)}
+  h1.title{font-size:43px;font-weight:700;letter-spacing:-1.3px;line-height:1.05;margin-bottom:14px;background:linear-gradient(180deg,#fff 0%,#b8c5d3 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .subtitle{font-size:17px;color:var(--text-2);max-width:850px;margin-bottom:30px}
+
+  /* re-audit banner */
+  .banner{background:linear-gradient(180deg,rgba(250,204,21,0.08),rgba(250,204,21,0.02));border:1px solid rgba(250,204,21,0.35);border-radius:12px;padding:18px 22px;margin-bottom:42px}
+  .banner .bh{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--yellow);margin-bottom:12px}
+  .banner table{width:100%;border-collapse:collapse;font-size:13px}
+  .banner td{padding:6px 8px;border-bottom:1px solid var(--border)}
+  .banner tr:last-child td{border-bottom:none}
+  .banner td.k{color:var(--text-2)}.banner td.v{text-align:right;font-family:"JetBrains Mono",monospace}
+  .tag{font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px}
+  .tag.absent{background:rgba(248,113,113,0.15);color:var(--red);border:1px solid rgba(248,113,113,0.3)}
+  .banner p.note{font-size:12.5px;color:var(--muted);margin-top:12px}
+
+  section{margin-bottom:40px}
+  h2.sec{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-2);margin-bottom:18px;padding-bottom:10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+  h2.sec .num{color:var(--accent);font-family:"JetBrains Mono",monospace}
+
+  .dcard{background:linear-gradient(180deg,var(--card) 0%,var(--bg-2) 100%);border:1px solid var(--border);border-radius:14px;padding:24px 26px;margin-bottom:18px;position:relative;overflow:hidden}
+  .dcard::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--border-bright),transparent)}
+  .dcard.crit{border-color:rgba(248,113,113,0.4)}
+  .dcard .dn{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+  .dcard .badge{font-family:"JetBrains Mono",monospace;font-size:12px;font-weight:700;color:var(--accent);background:var(--brief-bg);border:1px solid var(--border-bright);border-radius:8px;padding:3px 10px}
+  .dcard.crit .badge{color:var(--red);border-color:rgba(248,113,113,0.4)}
+  .dcard h3{font-size:19px;font-weight:700;letter-spacing:-0.4px}
+  .dcard .crit-flag{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--red);margin-left:auto}
+  .dcard .body{font-size:14px;color:var(--text-2);margin:12px 0 16px;line-height:1.65}
+  .dcard .rec{background:var(--brief-bg);border-left:3px solid var(--green);border-radius:0 8px 8px 0;padding:12px 16px;font-size:13.5px;color:var(--text)}
+  .dcard .rec b{color:var(--green);font-size:11px;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px}
+  .dcard .need{font-size:12.5px;color:var(--muted);margin-top:12px}
+  .dcard .need b{color:var(--text-2)}
+
+  .footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);font-size:12px;color:var(--dim)}
+  .chain{font-family:"JetBrains Mono",monospace;font-size:12.5px;color:var(--text-2);background:var(--brief-bg);border:1px solid var(--border);border-radius:10px;padding:14px 18px;line-height:1.9}
+  .chain .now{color:var(--yellow)}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="eyebrow">Code Architect · cutover gate · 2026-05-26</div>
+  <h1 class="title">Three decisions stand between built and live.</h1>
+  <p class="subtitle">The Shared Layer is built, hardened, and handed to Kai. The live Mini cutover is
+  gated on three calls only Kai can make — she owns the Mini, the mesh, and the agent processes. Here they
+  are, each with CA's recommended default, so you can decide them now and clear the blocker.</p>
+
+  <div class="banner">
+    <div class="bh">⚠ Live re-audit · Mini · just now — standup has NOT begun</div>
+    <table>
+      <tr><td class="k"><code>kameha-mesh.db</code> (shared SQLite)</td><td class="v"><span class="tag absent">ABSENT</span></td></tr>
+      <tr><td class="k">Shared Layer install / prototype on Mini</td><td class="v"><span class="tag absent">ABSENT</span></td></tr>
+      <tr><td class="k">Enrollment markers (keypairs / registry)</td><td class="v"><span class="tag absent">NONE</span></td></tr>
+      <tr><td class="k">ACD / NAMI projections + ack-stores</td><td class="v"><span class="tag absent">NONE</span></td></tr>
+    </table>
+    <p class="note">Kai consumed both CA mesh messages last session, but no standup artifact has landed on
+    the Mini yet. The <code>~/.kameha/shared/</code> dir that exists is the legacy filesystem-drop channel,
+    not the new layer. Nothing to verify as "done" — the pilot is genuinely waiting on these three answers.</p>
+  </div>
+
+  <section>
+    <h2 class="sec"><span class="num">01</span> Private-key custody</h2>
+    <div class="dcard">
+      <div class="dn"><span class="badge">D1</span><h3>Where each agent's private key lives</h3></div>
+      <div class="body">Each agent gets an Ed25519 keypair; the layer stores <b>only public keys</b>. Each
+      agent's <b>private</b> key must live where only that agent's process can read it — never in
+      <code>kameha-mesh.db</code> or any log. <code>enroll.js</code> generates the keypairs and, as a
+      reference, writes private keys as <code>0600</code> files; production custody is Kai's call.</div>
+      <div class="rec"><b>CA default rec</b>A per-agent <code>0600</code> key file under each agent's home,
+      owned by that agent's user, with the path in its env.</div>
+      <div class="need"><b>Need from Kai:</b> the custody mechanism + how each agent process reads its own
+      key. (Options: pm2-injected env var · per-agent <code>0600</code> file · macOS Keychain · secrets manager.)</div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec"><span class="num">02</span> Database location + owner</h2>
+    <div class="dcard">
+      <div class="dn"><span class="badge">D2</span><h3><code>kameha-mesh.db</code> path + trusted writer</h3></div>
+      <div class="body">A <b>dedicated</b> SQLite DB — <b>not</b> extending <code>conductor.db</code> (blast
+      radius + isolation). The dir (<code>0700</code>), the db, and its <code>-wal</code>/<code>-shm</code>
+      sidecars (<code>0600</code>) must be <b>denied to agent users</b> — ownership alone isn't enough; the
+      process boundary depends on it.</div>
+      <div class="rec"><b>CA default rec</b><code>~/.kameha/kameha-mesh.db</code>, owned by the same trusted
+      user that runs the router/projector service.</div>
+      <div class="need"><b>Need from Kai:</b> the absolute path, and which unix user owns/runs the trusted
+      writer (the router + projector).</div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec"><span class="num">03</span> Per-client unix isolation <span style="color:var(--red);font-weight:400;text-transform:none;letter-spacing:0">— the load-bearing one</span></h2>
+    <div class="dcard crit">
+      <div class="dn"><span class="badge">D3</span><h3>Do client repos run as distinct unix users?</h3><span class="crit-flag">● isolation-critical</span></div>
+      <div class="body">Physical per-client isolation is OS-enforced: each client's projection lives at
+      <code>&lt;projections&gt;/&lt;client-repo&gt;/</code> owned <code>projector:&lt;client-group&gt;</code>,
+      dir <code>2750</code> (setgid, group r-x, <b>no</b> group write), file <code>0640</code> — so only that
+      client's group can read its inbox, the projector writes, everyone else is denied. For that to be real,
+      <b>each client repo must run as its own unix user in its own group</b> (e.g. <code>dag-repo</code> as
+      <code>dagdc</code>, <code>tdb-repo</code> as <code>tdb</code>).</div>
+      <div class="rec"><b>CA default rec</b>If agents currently all run as <code>kai</code> under pm2: ship the
+      pilot on <b>logical scoping + signed integrity</b> now, and treat per-client unix users as the
+      separate "multi-user Mini" project (the install is chown-ready). The logical + identity wall works
+      regardless; this just adds the OS layer when it lands.</div>
+      <div class="need"><b>Need from Kai:</b> can client-repo processes run as distinct unix users/groups
+      today? If not, confirm the logical-only interim — this is the call that decides whether the physical
+      wall is real on day one or deferred.</div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec"><span class="num">04</span> What happens once they're answered</h2>
+    <div class="chain">port-deploy → stand up <code>kameha-mesh.db</code> → enroll keys → projections + chown
+    → <span class="now">DAG → ACD/NAMI pilot</span> → mesh-api sunset</div>
+    <p style="font-size:12.5px;color:var(--muted);margin-top:12px">CA drives each step gated on your
+    go-ahead, then re-audits the receivers (never trusts "done"). Replay protection, key-rotation history,
+    ajv, and audit retention stay roadmap for the local pilot.</p>
+  </section>
+
+  <div class="footer">
+    Code Architect · 3 cutover decisions · 2026-05-26 · source: <code>docs/relay-kai-cutover-decisions-2026-05-26.md</code> ·
+    re-audit: live SSH probe of the Mini, read-only · all three are Kai's to decide — D3 is the one that sets the isolation posture.
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "vocabulary_version": "2026-05-26.2",
+  "generated_by": "manual:code-architect",
+  "generated_at": "2026-05-26",
+  "note": "v2 (post-Codex-REVISE). CFO + Framer extracted from code (verified). NAMI pending — its dispatch isn't a simple handler dict (routes to platform ops); extract before adding. Unregistered agents fail-open -> warn, never block. strict:false everywhere for the warn window; flip per-agent only after its resolver is faithfully encoded + a clean window. NOTE: receivers dispatch on TOP-LEVEL action first, payload.action as fallback (Codex Finding 1) — validate the top-level dispatched field.",
+  "agents": {
+    "cfo": {
+      "strict": false,
+      "code_path": "scripts/cfo-agent.js:199-289 (CAPABILITY_ENDPOINTS + WRITE_CAPABILITIES + KEYWORD_MAP); ALL_CAPABILITY_NAMES = the exact set CFO's error advertises",
+      "accepts": [
+        "cash_summary", "margin_data", "invoice_status", "financial_snapshot",
+        "ar_ap_report", "burn_rate", "runway", "pnl", "forecast", "tax_estimate",
+        "cash_position", "expense_anomalies", "balance_sheet", "mark_estimate_declined"
+      ],
+      "exact_only": ["mark_estimate_declined"],
+      "keyword_map": {
+        "cash": "cash_summary", "revenue": "cash_summary", "summary": "cash_summary", "kpi": "cash_summary",
+        "margin": "margin_data", "collection": "margin_data",
+        "invoice": "invoice_status",
+        "snapshot": "financial_snapshot", "financial": "financial_snapshot", "overview": "financial_snapshot",
+        "ar": "ar_ap_report", "receivable": "ar_ap_report", "aging": "ar_ap_report", "arap": "ar_ap_report",
+        "burn": "burn_rate",
+        "runway": "runway",
+        "pnl": "pnl", "profit": "pnl", "loss": "pnl",
+        "forecast": "forecast",
+        "tax": "tax_estimate",
+        "position": "cash_position",
+        "anomal": "expense_anomalies", "expense": "expense_anomalies",
+        "balance sheet": "balance_sheet"
+      },
+      "_keyword_caveat": "CFO uses single-token word-boundary match (cfo-agent.js:311-338). v2 corrects the prior false set: added 'ar', changed 'anomaly'->'anomal', dropped non-capabilities draft_invoice/draft_invoice_created (handled by the ecosystem route, not resolveCapability). Exact resolver replication is a strict-flip prerequisite."
+    },
+    "framer": {
+      "strict": false,
+      "code_path": "Framer/scripts/daemon.py:117 (handle_work_order handlers dict)",
+      "accepts": [
+        "generate_derivatives", "cull_selects", "apply_color_grade", "retouch_photo",
+        "batch_export", "generate_graphic", "generate_layout", "generate_text_graphic",
+        "expand_asset", "generate_ai_image", "generate_concept", "generate_ai_video",
+        "generate_camera_prompt", "generate_carousel", "plan_carousel", "creative_brief"
+      ],
+      "exact_only": ["__all__"],
+      "_note": "Framer dispatches on exact action keys (handlers dict); 'expand_asset' is a back-compat alias for generate_derivatives. No keyword matching — exact-only. This is the ACD->Framer creative_brief case from the design (now in vocabulary)."
+    }
+  }
+}

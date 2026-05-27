@@ -24,6 +24,13 @@ const { openDatabase, withTx } = require('./db');
 // Controlled vocabulary (the action-vocabulary registry, concrete). Unknown → rejected.
 const FACT_TYPES = new Set([
   'client_feedback', 'creative_brief', 'decision', 'status_update', 'work_order',
+  // Added 2026-05-27 (Kai work order — "everything pertinent lives on the board"):
+  //   objective = standing team/company goal (long-lived, supersedable via revoke)
+  //   question  = open ask needing an answer (closeable; resolution = linked reply fact / payload.status)
+  //   task      = shared trackable to-do (payload: {status: open|in-progress|done, owner}); distinct from
+  //               work_order (one-off delegation) — this is the persistent shared task list.
+  // Lifecycle lives in payload + revoke; no schema change. action-gate still governs execution.
+  'objective', 'question', 'task',
 ]);
 const VISIBILITY = new Set(['client', 'internal', 'fleet']);
 

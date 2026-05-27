@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<!-- The Board — full roster. 12 connected incl. CA + 2 client managers with proven wall. Pitch-deck + KMG still need enrollment. 2026-05-26 -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Board · full roster · 2026-05-26</title>
+<style>
+  :root{--bg:#0a0d12;--bg-2:#0f131a;--card:#151b25;--panel:#11161e;--brief:#0c1016;--border:#232c3a;--border-b:#2f3a4a;
+    --text:#e6edf3;--text-2:#aab6c4;--muted:#7d8a99;--dim:#5a6573;--accent:#6ea8fe;--green:#4ade80;--green-glow:rgba(74,222,128,.4);--yellow:#facc15;--orange:#fb923c;--red:#f87171;--purple:#c084fc;--teal:#5eead4;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);font-family:-apple-system,"SF Pro Display","SF Pro Text",BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.5;min-height:100vh}
+  body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellipse 1100px 560px at 50% -8%,rgba(74,222,128,.07),transparent 55%);pointer-events:none;z-index:0}
+  .wrap{position:relative;z-index:1;max-width:1020px;margin:0 auto;padding:44px 24px 80px}
+  code{font-family:"JetBrains Mono",Menlo,monospace;font-size:.82em;background:var(--brief);border:1px solid var(--border);border-radius:5px;padding:1px 6px;color:var(--teal)}
+  .eyebrow{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:var(--green);margin-bottom:13px;display:flex;align-items:center;gap:10px}
+  .eyebrow .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green-glow);animation:b 1.8s infinite}@keyframes b{50%{opacity:.4}}
+  h1{font-size:38px;font-weight:800;letter-spacing:-1.2px;line-height:1.06;background:linear-gradient(180deg,#fff,#b8c5d3);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{font-size:16px;color:var(--text-2);max-width:800px;margin:11px 0 26px}.sub b{color:var(--text)}
+  h2{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.4px;color:var(--text-2);margin:30px 0 13px;display:flex;gap:10px}h2::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent)}
+
+  .correct{background:linear-gradient(135deg,rgba(110,168,254,.1),rgba(110,168,254,.02));border:1px solid rgba(110,168,254,.35);border-radius:13px;padding:15px 20px;margin-bottom:10px}
+  .correct .t{font-size:14px;font-weight:800;color:var(--accent)}
+  .correct p{font-size:13.5px;color:var(--text-2);margin-top:4px}.correct b{color:var(--text)}
+
+  .meter{display:flex;align-items:center;gap:14px;background:var(--brief);border:1px solid var(--border-b);border-radius:12px;padding:15px 20px;margin-bottom:6px}
+  .meter .big{font-size:32px;font-weight:800;color:var(--green);letter-spacing:-1px;line-height:1}
+  .meter .lbl{font-size:13px;color:var(--text-2)}.meter .lbl b{color:var(--text)}
+  .bar{flex:1;height:9px;border-radius:6px;background:var(--panel);border:1px solid var(--border);overflow:hidden}
+  .bar i{display:block;height:100%;width:85%;background:linear-gradient(90deg,#4ade80,#5eead4);border-radius:6px}
+
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  @media(max-width:760px){.grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:440px){.grid{grid-template-columns:1fr}}
+  .ag{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--green);border-radius:10px;padding:11px 13px}
+  .ag.new{border-left-color:var(--teal)}.ag.client{border-left-color:var(--purple)}
+  .ag .nm{font-size:13.5px;font-weight:700}
+  .ag .rl{font-size:10.5px;color:var(--muted);margin-top:2px}
+  .ag .tag{font-size:10px;margin-top:6px;font-family:"JetBrains Mono",monospace}
+  .ag .tag.on{color:var(--green)}.ag.new .tag{color:var(--teal)}.ag.client .tag{color:var(--purple)}
+
+  .wall{background:var(--brief);border:1px solid var(--border-b);border-radius:12px;padding:16px 18px}
+  .wallrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px}
+  .chip{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:7px 11px;font-size:12px}
+  .chip.tdb{border-color:rgba(192,132,252,.5)}.chip.dag{border-color:rgba(248,113,113,.4)}
+  .yes{color:var(--green);font-weight:700}.no{color:var(--red);font-weight:700}
+  .wall p{font-size:12.5px;color:var(--muted);margin-top:10px}
+
+  .miss{display:grid;grid-template-columns:1fr 1fr;gap:11px}@media(max-width:600px){.miss{grid-template-columns:1fr}}
+  .mc{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--orange);border-radius:11px;padding:13px 15px}
+  .mc .nm{font-size:14px;font-weight:700;color:var(--orange)}
+  .mc p{font-size:12.5px;color:var(--text-2);margin-top:4px}.mc p b{color:var(--text)}
+
+  .next{display:flex;flex-direction:column;gap:8px}
+  .nx{display:flex;align-items:flex-start;gap:10px;font-size:13.5px;color:var(--text-2)}
+  .nx .b{width:18px;height:18px;border-radius:5px;background:var(--panel);border:1px solid var(--border-b);color:var(--dim);font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+  .nx .q{color:var(--yellow);font-weight:700;width:18px;text-align:center;flex-shrink:0}
+  .foot{margin-top:30px;font-size:11px;color:var(--dim);font-family:"JetBrains Mono",monospace;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow"><span class="dot"></span>Live on the Mac Mini · 2026-05-26</div>
+  <h1>The Board — full roster check.</h1>
+  <p class="sub">You named a bunch you thought were missing. Here's the honest map: <b>some were already on, three I just added, and two genuinely don't exist yet.</b></p>
+
+  <div class="correct">
+    <div class="t">↺ Already connected — no action needed</div>
+    <p><b>Kai (yes), CFO, and Enso</b> have been on The Board since last session, along with ACD, NAMI, Framer, Offer Architect, Lead Engine, and Conductor. That was the first 9.</p>
+  </div>
+
+  <div class="meter">
+    <div class="big">12</div>
+    <div style="flex:1">
+      <div class="lbl"><b>agents connected</b> — +3 just added: Code Architect &amp; the first two client managers</div>
+      <div class="bar"><i></i></div>
+    </div>
+  </div>
+
+  <h2>Just added (verified live)</h2>
+  <div class="grid">
+    <div class="ag new"><div class="nm">🏗️ Code Architect</div><div class="rl">Engineering / audit (me)</div><div class="tag">decisions · status · work</div></div>
+    <div class="ag client"><div class="nm">🏢 DAG</div><div class="rl">Client manager · <code>dagdc</code></div><div class="tag">walled — DAG only</div></div>
+    <div class="ag client"><div class="nm">🦷 Dental Boutique</div><div class="rl">Client manager · <code>tdb</code></div><div class="tag">walled — Dental only</div></div>
+  </div>
+
+  <h2>The client wall — proven, not promised</h2>
+  <div class="wall">
+    <div class="wallrow">
+      <span class="chip">I posted a <b>Dental-only</b> fact →</span>
+      <span style="color:var(--dim)">it reached</span>
+      <span class="chip tdb">🦷 Dental <span class="yes">✓</span></span>
+      <span class="chip">+ internal staff (ACD, Conductor, Offer, Lead) <span class="yes">✓</span></span>
+      <span style="color:var(--dim)">but</span>
+      <span class="chip dag">🏢 DAG <span class="no">✗ blocked</span></span>
+    </div>
+    <p>Each client manager only ever sees <b>its own client's</b> facts — DAG can't read Dental and vice-versa. Internal staff see across clients because that's their job. This is the cubicle wall the whole design exists for, and it held on the first live test. (Test fact revoked after.)</p>
+  </div>
+
+  <h2>Genuinely not on yet — these need a build/enroll step</h2>
+  <div class="miss">
+    <div class="mc"><div class="nm">📊 Pitch Deck engine</div><p>Has <b>no Board identity yet</b>. Minting one is a privileged, reviewed step — quick, but I want your go before creating new identities. <b>Say the word and I'll enroll + connect it.</b></p></div>
+    <div class="mc"><div class="nm">🎨 KMG</div><p>Still a <b>phantom</b> — it was fully designed but never built (no code, no running process). I can give it a seat, but nothing would be behind it to use it. The real fix is the KMG build (it's Phase 3 in the org plan, the template for all client managers).</p></div>
+  </div>
+  <p style="font-size:12px;color:var(--muted);margin-top:10px">Two others exist in the mesh you didn't name — <code>chronicle</code> and <code>nami-bridge</code>. Say if you want them on too.</p>
+
+  <h2>Your call</h2>
+  <div class="next">
+    <div class="nx"><span class="q">?</span><div><b>Enroll + connect Pitch Deck</b> now? (1 minute — just needs your go to mint the identity.)</div></div>
+    <div class="nx"><span class="q">?</span><div><b>KMG</b> — schedule the actual build (Phase 3), or park a placeholder seat for now?</div></div>
+    <div class="nx"><span class="b">·</span><div>Then the chain continues: <b>emit hooks</b> → <b>project-board view + Telegram "needs you"</b> → <b>reliability fix</b>.</div></div>
+    <div class="nx"><span class="b">·</span><div>Housekeeping still open: commit (on a branch) · <code>pm2 save</code> · 3 client flags (Gort overdue, Baptist dup, 3 near sign-off).</div></div>
+  </div>
+
+  <div class="foot">Code Architect · 2026-05-26 · kameha-mesh.db on the Mac Mini · 44 subscriptions · 12 agents connected · client wall verified</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,15 @@
+# Codex review response — Comms-fix v1 → v2
+
+**Verdict received:** REVISE (5 findings). **All closed in v2.** Validator 9/9 green (incl. no-env path resolution). Re-review welcome.
+
+| # | Sev | Finding | Fix in v2 |
+|---|---|---|---|
+| 1 | High | Patch 2 validated `payload.action \|\| action`, but receivers dispatch on **top-level `action`** first (CFO:481, NAMI:508, Framer daemon.py:117, Conductor, OA) — could false-block valid mesh traffic when `body.action` is valid but `payload.action` blank. | Patch 2 now validates **`body.action`** (the true dispatched field). Since `body.action` is already non-empty-guarded at mesh-api:810, ACTION_EMPTY can't fire there — Patch 2 is purely Gap A (unknown action), warn-mode. Empty stays Patch 1's (legacy) job. |
+| 2 | High | Gap A uncovered for non-CFO: registry had only `cfo`, so `framer` → AGENT_NOT_REGISTERED and Patch 2 (logging only ACTION_UNRECOGNIZED) surfaced nothing for the motivating case. | **Framer added** to the registry (16 actions from daemon.py:117). Patch 2 now surfaces **any** warn except REGISTRY_UNAVAILABLE — so both ACTION_UNRECOGNIZED *and* AGENT_NOT_REGISTERED (coverage gaps, e.g. nami-pending) get logged. |
+| 3 | Med | Validator default paths missed the stated `knowledge/manifests/` home → silent fail-open, patch inert. | DEFAULT_REGISTRY_PATHS now includes `__dirname/../../knowledge/manifests/action-vocabulary.json` (committed source from scripts/lib/) + colocated dev path, plus the canonical runtime `~/.kameha/`. Deploy step documented: sync committed → runtime. **Verified: validator resolves the registry with no env set.** |
+| 4 | Med | CFO registry unfaithful: included non-capabilities `draft_invoice`/`draft_invoice_created`; missing `ar` keyword; had `anomaly` vs CFO's `anomal`. | accepts trimmed to the exact 14 `ALL_CAPABILITY_NAMES` CFO advertises; **added `ar`**; **`anomaly`→`anomal`**; dropped the two non-capabilities. (Note: `draft_invoice_created` still *resolves* to `invoice_status` via the `invoice` keyword — which is **faithful**: CFO's resolver does the same. Verified in test.) |
+| 5 | Med | Patch 1's `continue` skipped the existing archive (cfo-agent.js:843) → rejected file reprocessed every poll → rejection-notification storm. | Patch 1 rewritten: set `result = { status:'rejected', error:v.code }` and **fall through** the existing response-write + archive path (no `continue`). Rejected file is archived like any processed one — never reprocessed. |
+
+**Direct answer to the prompt's question:** with Patch 2 now validating the top-level dispatched field and ACTION_EMPTY blocking only on the legacy channel (Patch 1), the false-positive path Codex identified is closed. Warn-mode is behavior-neutral; non-CFO coverage now surfaces (Framer in, NAMI flagged pending); strict-flip faithfulness improved (CFO corrected) with the resolver-replication caveat documented as a strict-flip prerequisite.
+
+**Still open / honest scope:** NAMI vocabulary not yet extracted (its dispatch isn't a simple handler dict) → fail-open warn until added. Strict-flip remains gated on per-agent resolver encoding + clean warn window + a re-review.

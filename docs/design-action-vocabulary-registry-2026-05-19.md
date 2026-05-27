@@ -24,6 +24,10 @@ The mesh today has **no shared contract for what action+payload a receiver actua
 
 - **Payload-schema drift (A4):** ACD's `creative_brief` v2 retry to Nami died with `TRANSFORM_REJECTED: payload missing file_path`. The contract for `file_path` is encoded in Nami's transformer, not advertised — ACD had no pre-send way to know.
 
+- **2026-05-26 case (CFO empty-action) — 4th confirmed instance:** a work order reached CFO with the dispatch action `""` (empty). CFO correctly fail-replied `No CFO capability matches action: ""` (status `failed`, confidence 0.3) and listed its 14 real capabilities — but the failure landed silently in `~/.kameha/delegations/kai/wo_1779825251_cfo_htl6.json`; Alex only saw it by hand-relaying. **Two refinements this case surfaced:**
+  1. **The validated field and the dispatched field differ.** mesh-api `POST /messages` *does* reject an empty **envelope** `action` (line 810: `!body.action`). But the capability the receiver dispatches on lives in **`payload.action`** (kai-tools.js:3044 reads `wo.payload && wo.payload.action`), which mesh-api treats as an opaque blob (`payload == null` is the only check). So validation must target the **dispatch action the receiver will actually switch on**, not just the envelope action.
+  2. **Two parallel comms channels.** This WO travelled the **filesystem delegation inbox** (`~/.kameha/delegations/`), not the validated `/messages` table. Send-time validation at the mesh-api choke point alone will not cover delegation-path work orders until the two channels converge (Shared-Layer / single-source direction). v1 must either validate at *both* dispatch points or converge them.
+
 **The class of bug:** "agent X assumes agent Y handles action Z with payload P" is verified nowhere at compose time. The receiver's word that it accepts action Z is not load-bearing (per `feedback_action_whitelist_insufficient.md` — re-audit, don't trust); but today even the receiver isn't asked.
 
 ---

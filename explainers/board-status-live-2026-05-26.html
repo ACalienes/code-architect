@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<!-- The Board — live status. 3 agents connected + talking, proven end-to-end on the Mini. 2026-05-26 -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Board · live status · 2026-05-26</title>
+<style>
+  :root{--bg:#0a0d12;--bg-2:#0f131a;--card:#151b25;--panel:#11161e;--brief:#0c1016;--border:#232c3a;--border-b:#2f3a4a;
+    --text:#e6edf3;--text-2:#aab6c4;--muted:#7d8a99;--dim:#5a6573;--accent:#6ea8fe;--green:#4ade80;--green-glow:rgba(74,222,128,.4);--yellow:#facc15;--orange:#fb923c;--red:#f87171;--purple:#c084fc;--teal:#5eead4;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);font-family:-apple-system,"SF Pro Display","SF Pro Text",BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.5;min-height:100vh}
+  body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellipse 1100px 560px at 50% -8%,rgba(74,222,128,.07),transparent 55%);pointer-events:none;z-index:0}
+  .wrap{position:relative;z-index:1;max-width:1000px;margin:0 auto;padding:44px 24px 80px}
+  code{font-family:"JetBrains Mono",Menlo,monospace;font-size:.82em;background:var(--brief);border:1px solid var(--border);border-radius:5px;padding:1px 6px;color:var(--teal)}
+  .eyebrow{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:var(--green);margin-bottom:13px;display:flex;align-items:center;gap:10px}
+  .eyebrow .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green-glow);animation:b 1.8s infinite}@keyframes b{50%{opacity:.4}}
+  h1{font-size:39px;font-weight:800;letter-spacing:-1.2px;line-height:1.06;background:linear-gradient(180deg,#fff,#b8c5d3);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{font-size:16px;color:var(--text-2);max-width:760px;margin:11px 0 28px}.sub b{color:var(--text)}
+  h2{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.4px;color:var(--text-2);margin:28px 0 13px;display:flex;gap:10px}h2::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent)}
+
+  .win{background:linear-gradient(135deg,rgba(74,222,128,.1),rgba(74,222,128,.02));border:1px solid rgba(74,222,128,.35);border-radius:14px;padding:18px 22px;margin-bottom:8px}
+  .win .t{font-size:17px;font-weight:800;color:var(--green)}
+  .win p{font-size:14px;color:var(--text-2);margin-top:5px}
+
+  .flow{display:flex;align-items:center;flex-wrap:wrap;gap:0;background:var(--brief);border:1px solid var(--border-b);border-radius:12px;padding:16px 14px;font-size:13px}
+  .node{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:9px 13px;text-align:center}
+  .node b{font-size:13px}.node .s{font-size:10.5px;color:var(--muted)}
+  .node.board{border-color:rgba(110,168,254,.5);background:rgba(110,168,254,.08)}
+  .arr{color:var(--dim);padding:0 9px;font-size:16px}
+  @media(max-width:680px){.arr{transform:rotate(90deg)}.flow{flex-direction:column}}
+
+  .agents{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;margin-top:4px}
+  @media(max-width:600px){.agents{grid-template-columns:1fr}}
+  .ag{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--green);border-radius:11px;padding:13px 15px}
+  .ag .nm{font-size:15px;font-weight:700;display:flex;align-items:center;gap:7px}
+  .ag .st{font-size:11px;color:var(--green);margin-top:3px}
+  .ag .ct{font-size:12px;color:var(--muted);margin-top:7px}
+
+  .chan{display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px}
+  @media(max-width:680px){.chan{grid-template-columns:1fr}}
+  .ch{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:14px 16px}
+  .ch .h{font-size:14px;font-weight:700;margin-bottom:4px}
+  .ch.board .h{color:var(--accent)}.ch.tg .h{color:var(--teal)}.ch.term .h{color:var(--yellow)}
+  .ch p{font-size:12px;color:var(--text-2)}
+
+  .next{display:flex;flex-direction:column;gap:8px}
+  .nx{display:flex;align-items:flex-start;gap:10px;font-size:13.5px;color:var(--text-2)}
+  .nx .b{width:18px;height:18px;border-radius:5px;background:var(--panel);border:1px solid var(--border-b);color:var(--dim);font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+
+  .note{margin-top:8px;font-size:12.5px;color:var(--muted)}
+  .foot{margin-top:30px;font-size:11px;color:var(--dim);font-family:"JetBrains Mono",monospace;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow"><span class="dot"></span>Live on the Mac Mini · 2026-05-26</div>
+  <h1>The Board is live — first agents connected.</h1>
+  <p class="sub">Plain-English snapshot of what just got built, so you can follow along without the terminal.</p>
+
+  <div class="win">
+    <div class="t">✅ 3 agents are now talking on The Board</div>
+    <p>Kai, CFO, and Enso are <b>connected and listening 24/7</b>. I seeded your <b>11 active projects</b> onto The Board and they each picked them up automatically — then I posted one live decision and <b>all three had it within 30 seconds, with nobody at a keyboard.</b> That's the whole point, proven for real.</p>
+  </div>
+
+  <h2>How it works now</h2>
+  <div class="flow">
+    <div class="node"><b>An agent posts</b><div class="s">"invoice paid", a decision…</div></div>
+    <span class="arr">→</span>
+    <div class="node board"><b>📋 The Board</b><div class="s">routes to who's subscribed</div></div>
+    <span class="arr">→</span>
+    <div class="node"><b>Listener picks it up</b><div class="s">one trusted drainer, 24/7</div></div>
+    <span class="arr">→</span>
+    <div class="node"><b>Lands in each agent's inbox</b><div class="s">they now "know" it</div></div>
+  </div>
+
+  <h2>Connected now</h2>
+  <div class="agents">
+    <div class="ag"><div class="nm">⚓ Kai</div><div class="st">● talking</div><div class="ct">11 projects + the live decision</div></div>
+    <div class="ag"><div class="nm">💰 CFO</div><div class="st">● talking</div><div class="ct">11 projects + the live decision</div></div>
+    <div class="ag"><div class="nm">🎬 Enso</div><div class="st">● talking</div><div class="ct">11 projects + the live decision</div></div>
+  </div>
+  <p class="note">A real snag along the way: three separate processes fought over the database ("locked"). Fixed by switching to <b>one trusted writer</b> serving all agents — stable, zero errors.</p>
+
+  <h2>Your channels (settled)</h2>
+  <div class="chan">
+    <div class="ch board"><div class="h">📋 The Board</div><p>The source of truth + the full project view. Everything lives here.</p></div>
+    <div class="ch tg"><div class="h">📱 Telegram</div><p><b>Kept</b> — live check-ins on your phone + yes/no approvals. Where "needs you" comes to you.</p></div>
+    <div class="ch term"><div class="h">⌨️ Terminal</div><p>Power use — where you and I do the heavy work.</p></div>
+  </div>
+
+  <h2>What's next</h2>
+  <div class="next">
+    <div class="nx"><span class="b">1</span><div>Connect the rest of the team (ACD, NAMI, Framer, Offer Architect, Lead Engine, Conductor) — same pattern.</div></div>
+    <div class="nx"><span class="b">2</span><div>Wire <b>emit hooks</b> so agents auto-post real updates (a project hits a stage → it posts itself).</div></div>
+    <div class="nx"><span class="b">3</span><div>Build the <b>project-board view</b> + push "needs you" to Telegram.</div></div>
+    <div class="nx"><span class="b">4</span><div>Apply the reliability fix (so nothing silently drops) — already Codex-reviewed.</div></div>
+  </div>
+
+  <div class="foot">Code Architect · live status · 2026-05-26 · kameha-mesh.db on the Mac Mini · board-drainer online · 3/9 agents connected</div>
+</div>
+</body>
+</html>

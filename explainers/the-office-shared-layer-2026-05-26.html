@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<!-- The Office — top-down floor plan. Departments around a central "shared brain" server room. Live-probed 2026-05-26. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Office · floor plan · 2026-05-26</title>
+<style>
+  :root{
+    --bg:#0a0d12;--floor:#0e131b;--carpet:#121925;--wall:#33405288;--card:#1a2230;--desk:#1d2636;
+    --border:#283342;--text:#e6edf3;--text-2:#aab6c4;--muted:#7d8a99;--dim:#5a6573;
+    --accent:#6ea8fe;--green:#4ade80;--green-glow:rgba(74,222,128,.55);--yellow:#facc15;--orange:#fb923c;--purple:#c084fc;--teal:#5eead4;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);font-family:-apple-system,"SF Pro Display","SF Pro Text",BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.45;min-height:100vh}
+  .wrap{max-width:1200px;margin:0 auto;padding:40px 22px 70px}
+  .eyebrow{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:var(--accent);text-align:center;margin-bottom:10px}
+  h1{font-size:40px;font-weight:800;letter-spacing:-1.3px;text-align:center;background:linear-gradient(180deg,#fff,#aeb9c7);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{font-size:15px;color:var(--text-2);text-align:center;max-width:620px;margin:9px auto 0}
+
+  .tally{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin:22px 0 16px}
+  .tly{background:#11161e;border:1px solid var(--border);border-radius:999px;padding:7px 15px;font-size:12.5px;color:var(--text-2);display:flex;align-items:center;gap:7px}
+  .tly b{font-family:"JetBrains Mono",monospace;font-size:15px}.tly .g{color:var(--green)}.tly .y{color:var(--yellow)}.tly .b{color:var(--accent)}
+  .legend{display:flex;justify-content:center;gap:16px;flex-wrap:wrap;margin-bottom:22px;font-size:12px;color:var(--muted)}
+  .legend .k{display:flex;align-items:center;gap:6px}
+  .lt{width:10px;height:10px;border-radius:50%}
+  .lt.talk{background:var(--green);box-shadow:0 0 7px var(--green-glow)}.lt.near{background:var(--accent);box-shadow:0 0 7px rgba(110,168,254,.6)}
+  .lt.ready{background:var(--yellow)}.lt.setup{background:var(--orange)}.lt.out{background:#39424f}
+
+  /* the floor */
+  .floor{background:var(--floor);border:1px solid #1d2530;border-radius:18px;padding:16px;
+    background-image:linear-gradient(var(--carpet) 1px,transparent 1px),linear-gradient(90deg,var(--carpet) 1px,transparent 1px);
+    background-size:28px 28px;background-position:-1px -1px;
+    display:grid;gap:14px;grid-template-columns:1fr 1.15fr 1fr;
+    grid-template-areas:"lead brain creative" "clients brain sales" "behind behind behind"}
+  @media(max-width:820px){.floor{grid-template-columns:1fr 1fr;grid-template-areas:"lead creative" "brain brain" "clients sales" "behind behind"}}
+  @media(max-width:540px){.floor{grid-template-columns:1fr;grid-template-areas:"brain" "lead" "creative" "sales" "clients" "behind"}}
+
+  .room{border:1.5px solid var(--wall);border-radius:12px;padding:30px 12px 14px;position:relative;background:rgba(10,14,20,.4)}
+  .room .plate{position:absolute;top:-1px;left:14px;transform:translateY(-50%);background:#0e131b;border:1px solid var(--wall);border-radius:6px;padding:3px 11px;font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text-2)}
+  .room .plate small{color:var(--dim);font-weight:500;text-transform:none;letter-spacing:0;margin-left:6px}
+  .desks{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+
+  /* a workstation, top-down: glowing monitor strip + the seat (person) + nameplate */
+  .ws{width:124px;background:linear-gradient(180deg,var(--desk),#161d2a);border:1px solid var(--border);border-radius:11px;padding:9px 9px 11px;text-align:center;position:relative;transition:transform .1s}
+  .ws .screen{height:7px;border-radius:4px;background:#39424f;margin:0 8px 9px}
+  .ws .av{font-size:25px;line-height:1;filter:grayscale(.2)}
+  .ws .nm{font-size:12.5px;font-weight:700;margin-top:5px}
+  .ws .role{font-size:10px;color:var(--muted);margin-top:1px}
+  .ws .st{font-size:9.5px;font-weight:600;margin-top:5px;display:flex;align-items:center;gap:4px;justify-content:center}
+  /* status glows */
+  .ws.talk{box-shadow:0 0 0 1px var(--green),0 0 16px var(--green-glow)} .ws.talk .screen{background:var(--green);box-shadow:0 0 9px var(--green-glow)} .ws.talk .st{color:var(--green)}
+  .ws.near{box-shadow:0 0 0 1px var(--accent),0 0 13px rgba(110,168,254,.4)} .ws.near .screen{background:var(--accent);box-shadow:0 0 8px rgba(110,168,254,.6)} .ws.near .st{color:var(--accent)}
+  .ws.ready .screen{background:var(--yellow);box-shadow:0 0 7px rgba(250,204,21,.5)} .ws.ready .st{color:var(--yellow)}
+  .ws.setup .screen{background:var(--orange);box-shadow:0 0 6px rgba(251,146,60,.5)} .ws.setup .st{color:var(--orange)}
+  .ws.out{opacity:.5} .ws.out .av{filter:grayscale(1)} .ws.out .st{color:var(--muted)}
+
+  /* the central fixture — THE BOARD (the shared project board on the wall) */
+  .brain{grid-area:brain;border:1.5px solid rgba(110,168,254,.5);border-radius:14px;display:flex;flex-direction:column;align-items:center;padding:18px 16px;min-height:200px;
+    background:radial-gradient(ellipse at center,rgba(110,168,254,.13),rgba(110,168,254,.02));box-shadow:0 0 50px rgba(110,168,254,.14) inset,0 0 26px rgba(110,168,254,.1)}
+  .brain .t{font-size:16px;font-weight:800;color:#cfe0ff;letter-spacing:.4px;animation:glow 2.8s ease-in-out infinite}
+  @keyframes glow{0%,100%{text-shadow:0 0 8px rgba(110,168,254,.4)}50%{text-shadow:0 0 16px rgba(110,168,254,.8)}}
+  .brain .sub2{font-size:11.5px;color:var(--text-2);margin-top:5px;max-width:250px;text-align:center}
+  /* mini kanban so it reads as an actual board */
+  .kanban{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;width:100%;margin-top:12px}
+  .col{background:rgba(10,14,20,.5);border:1px solid var(--border);border-radius:8px;padding:7px 6px}
+  .col .ch{font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:700;margin-bottom:6px;text-align:center}
+  .note{font-size:9.5px;border-radius:5px;padding:4px 6px;margin-bottom:5px;line-height:1.25;border-left:2px solid}
+  .note.f{background:rgba(74,222,128,.08);border-color:var(--green);color:#cfeede}
+  .note.p{background:rgba(250,204,21,.08);border-color:var(--yellow);color:#efe2b0}
+  .note.d{background:rgba(110,168,254,.08);border-color:var(--accent);color:#cfe0ff}
+  .brain .meta{font-size:10px;font-family:"JetBrains Mono",monospace;color:var(--accent);margin-top:11px;border-top:1px dashed rgba(110,168,254,.3);padding-top:7px;width:100%;text-align:center}
+
+  .foot{margin-top:30px;padding:18px 20px;background:#11161e;border:1px solid var(--border);border-radius:14px}
+  .foot .ft{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-2);margin-bottom:8px}
+  .foot p{font-size:13.5px;color:var(--text-2);margin-bottom:6px}.foot b{color:var(--text)}
+  .stamp{text-align:center;font-size:11px;color:var(--dim);font-family:"JetBrains Mono",monospace;margin-top:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">Code Architect · the office floor · 2026-05-26</div>
+  <h1>The Office</h1>
+  <p class="sub">A top-down look at your team. Every department sits around <b>The Board</b> in the middle — the shared project board everyone posts to. A lit monitor means that desk is plugged in and talking.</p>
+
+  <div class="tally">
+    <div class="tly">🪑 <b>16</b> desks</div>
+    <div class="tly">🟢 here & running <b class="g">11</b></div>
+    <div class="tly">🔌 posting to The Board <b class="b">1</b></div>
+    <div class="tly">💬 fully talking <b class="y">0</b><span style="color:var(--dim)"> — yet</span></div>
+  </div>
+  <div class="legend">
+    <span class="k"><span class="lt talk"></span> Talking</span>
+    <span class="k"><span class="lt near"></span> Almost there</span>
+    <span class="k"><span class="lt ready"></span> Ready — needs plugging in</span>
+    <span class="k"><span class="lt setup"></span> Needs setting up</span>
+    <span class="k"><span class="lt out"></span> Not in the system</span>
+  </div>
+
+  <div class="floor">
+    <div class="room" style="grid-area:lead"><div class="plate">Leadership <small>· reports to you</small></div><div class="desks" id="lead"></div></div>
+    <div class="brain">
+      <div class="t">📋 THE BOARD</div>
+      <div class="sub2">The shared project board. Everyone posts what they're doing here; everyone reads what matters to them — day & night.</div>
+      <div class="kanban">
+        <div class="col"><div class="ch">In progress</div><div class="note p">Q3 brand refresh</div><div class="note p">Malága brief</div></div>
+        <div class="col"><div class="ch">Updates</div><div class="note d">INV-1042 paid</div><div class="note d">reel-cut-04 shipped</div></div>
+        <div class="col"><div class="ch">Shipped</div><div class="note f">Dan loved the<br>Memorial Day posts ✓</div></div>
+      </div>
+      <div class="meta">live source of truth · kameha-mesh.db on the Mac Mini</div>
+    </div>
+    <div class="room" style="grid-area:creative"><div class="plate">Creative <small>· under ACD</small></div><div class="desks" id="creative"></div></div>
+    <div class="room" style="grid-area:clients"><div class="plate">Clients & Brand</div><div class="desks" id="clients"></div></div>
+    <div class="room" style="grid-area:sales"><div class="plate">Sales <small>· under Offer Architect</small></div><div class="desks" id="sales"></div></div>
+    <div class="room" style="grid-area:behind"><div class="plate">Behind the scenes <small>· systems, not colleagues</small></div><div class="desks" id="behind"></div></div>
+  </div>
+
+  <div class="foot">
+    <div class="ft">In one line</div>
+    <p>Most of your team is <b>at their desks and running</b>, but only <b>Kai</b> is posting to The Board so far — and we've <b>proven one real handoff</b> (CFO → Kai) flowing through it. The yellow desks are <b>ready to plug in</b>; orange ones need a desk set up first.</p>
+    <p><b>Next:</b> turn the yellow monitors green — plug each "Ready" agent in (a subscription + its always-on listener).</p>
+  </div>
+  <div class="stamp">live-probed from kameha-mesh.db + pm2 on the Mac Mini · 2026-05-26</div>
+</div>
+
+<script>
+const DESKS = {
+  lead: [
+    ['⚓','Kai','Chief of Staff','near'],
+    ['💰','CFO','Finance','ready'],
+    ['🔧','Code Architect','Engineering (me)','setup'],
+  ],
+  creative: [
+    ['🎨','ACD','Creative director','ready'],
+    ['📱','NAMI','Social media','ready'],
+    ['🖼️','Framer','Design & visuals','ready'],
+    ['🎬','Enso','Video production','ready'],
+  ],
+  sales: [
+    ['🤝','Offer Architect','Sales lead','ready'],
+    ['🧲','Lead Engine','Lead generation','ready'],
+    ['📊','Pitch Deck','Decks','out'],
+  ],
+  clients: [
+    ['🏢','DAGDC','Client account','setup'],
+    ['🦷','TDB','Client (Dental)','setup'],
+    ['✦','KMG','Brand — not built','out'],
+  ],
+  behind: [
+    ['📋','Conductor','Project tracker','ready'],
+    ['🔌','Switchboard','Carries old messages in','setup'],
+    ['🌿','Chronicle','Personal / wellness','out'],
+  ],
+};
+const WORD={talk:'Talking',near:'Almost there',ready:'Ready',setup:'Needs setup',out:'Not in'};
+for (const [room,desks] of Object.entries(DESKS)){
+  const host=document.getElementById(room);
+  for (const [av,nm,role,st] of desks){
+    const d=document.createElement('div'); d.className='ws '+st;
+    d.innerHTML=`<div class="screen"></div><div class="av">${av}</div><div class="nm">${nm}</div><div class="role">${role}</div><div class="st"><span class="lt ${st}"></span>${WORD[st]}</div>`;
+    host.appendChild(d);
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<!-- The Board — post-mortem of the unused kai-dashboard, the lessons, what carries over, and the wiring plan. 2026-05-26 -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Board · post-mortem + plan · 2026-05-26</title>
+<style>
+  :root{--bg:#0a0d12;--bg-2:#0f131a;--card:#141a23;--brief:#0c1016;--border:#232c3a;--border-b:#2f3a4a;
+    --text:#e6edf3;--text-2:#b8c5d3;--muted:#7d8a99;--dim:#5a6573;--accent:#6ea8fe;--green:#4ade80;--green-glow:rgba(74,222,128,.35);--yellow:#facc15;--orange:#fb923c;--red:#f87171;--purple:#c084fc;--teal:#5eead4;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);font-family:-apple-system,"SF Pro Display","SF Pro Text",BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.55;min-height:100vh}
+  body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellipse 1100px 560px at 16% -10%,rgba(248,113,113,.05),transparent 50%),radial-gradient(ellipse 900px 460px at 90% 6%,rgba(74,222,128,.05),transparent 50%);pointer-events:none;z-index:0}
+  .wrap{position:relative;z-index:1;max-width:1000px;margin:0 auto;padding:46px 26px 84px}
+  code{font-family:"JetBrains Mono",Menlo,monospace;font-size:.83em;background:var(--brief);border:1px solid var(--border);border-radius:5px;padding:1px 6px;color:var(--teal)}
+  .eyebrow{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:var(--accent);margin-bottom:14px;display:flex;align-items:center;gap:12px}
+  .eyebrow::before{content:"";width:24px;height:1px;background:var(--accent)}
+  h1{font-size:39px;font-weight:800;letter-spacing:-1.2px;line-height:1.06;background:linear-gradient(180deg,#fff,#b8c5d3);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{font-size:16px;color:var(--text-2);max-width:780px;margin:12px 0 30px}
+  h2{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1.4px;color:var(--text-2);margin:34px 0 16px;padding-bottom:9px;border-bottom:1px solid var(--border);display:flex;gap:10px}
+  h2 .n{color:var(--accent);font-family:"JetBrains Mono",monospace}
+
+  .cause{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--red);border-radius:11px;padding:15px 18px;margin-bottom:11px}
+  .cause .h{font-size:15px;font-weight:700;color:var(--red);margin-bottom:4px}
+  .cause p{font-size:13.5px;color:var(--text-2)}
+  .cause .ev{font-size:11.5px;color:var(--dim);margin-top:6px;font-family:"JetBrains Mono",monospace}
+
+  .rule{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--green);border-radius:11px;padding:15px 18px;margin-bottom:11px}
+  .rule .h{font-size:15px;font-weight:700;color:var(--green);margin-bottom:4px}
+  .rule p{font-size:13.5px;color:var(--text-2)}
+  .rule .from{font-size:11.5px;color:var(--muted);margin-top:6px}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px}
+  th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--border-b)}
+  td{padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text-2);vertical-align:top}
+  td.n{font-family:"JetBrains Mono",monospace;color:var(--accent);text-align:right;white-space:nowrap}
+
+  .opt{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:6px}
+  @media(max-width:720px){.opt{grid-template-columns:1fr}}
+  .o{border-radius:12px;padding:16px 18px;border:1px solid var(--border);background:var(--card)}
+  .o.rec{border-color:rgba(74,222,128,.4)}
+  .o .t{font-size:14px;font-weight:700;margin-bottom:6px}.o.rec .t{color:var(--green)}
+  .o p{font-size:12.5px;color:var(--text-2)}
+  .o .tag{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--green);margin-left:6px}
+
+  .map{font-family:"JetBrains Mono",monospace;font-size:12.5px;background:var(--brief);border:1px solid var(--border-b);border-radius:11px;padding:16px 18px;line-height:2;color:var(--text-2)}
+  .map b{color:var(--teal)} .map .a{color:var(--accent)}
+  .foot{margin-top:38px;padding-top:20px;border-top:1px solid var(--border);font-size:12px;color:var(--dim);font-family:"JetBrains Mono",monospace}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">Code Architect · post-mortem + plan · 2026-05-26</div>
+  <h1>The Board: learn from the dashboard, don't rebuild it.</h1>
+  <p class="sub">You said the kai-dashboard was a good effort that's <b>not used at all</b>. Before The Board becomes the same thing with a new name, here's <b>why</b> the dashboard went unused, the rules that follow, and what's worth carrying over.</p>
+
+  <h2><span class="n">01</span> Why the dashboard sits unused</h2>
+  <div class="cause"><div class="h">It's a place you have to GO to</div><p>It's a web app on <code>localhost:3000</code>, behind a login token, served from the Mac Mini. To see it you navigate to a URL over Tailscale and authenticate. Nothing brings you there — and you live in terminals and on your phone. A board you must remember to open loses every time.</p><div class="ev">evidence: dashboard.js — app.listen(3000) · authMiddleware · static web build</div></div>
+  <div class="cause"><div class="h">It duplicates channels you already use</div><p>It's a second way to chat with Kai + run tools — but you already do that in the terminal and on Telegram/iMessage. A redundant front door has no reason to be opened.</p><div class="ev">evidence: dashboard.js wires the same Kai chat + kai-tools as your other channels</div></div>
+  <div class="cause"><div class="h">No single source of truth underneath it</div><p>It rendered whatever it could reach, with no shared, trusted state behind it — so it couldn't reliably answer "what's actually happening across everything." A board you can't trust, you stop checking. <i>(Your own read — confirmed.)</i></p><div class="ev">the gap The Board itself fills</div></div>
+  <div class="cause"><div class="h">It shows status, not "what needs you"</div><p>It displays; it doesn't pull you back. Nothing says "Alex, these 3 things need a decision." So there's no hook to return.</p></div>
+
+  <h2><span class="n">02</span> The rules The Board lives by (so it actually gets used)</h2>
+  <div class="rule"><div class="h">Come to you — don't make you come to it</div><p>The Board's important posts get <b>pushed where you already are</b> (terminal, the agents you talk to, a notification). The full board is there to pull up, but you never <i>have</i> to.</p><div class="from">fixes cause #1</div></div>
+  <div class="rule"><div class="h">Be the source of truth, not another view</div><p>Every agent reads and writes The Board, so it's <b>load-bearing, not optional</b>. It isn't a duplicate window — it's the one place state lives.</p><div class="from">fixes cause #2 & #3</div></div>
+  <div class="rule"><div class="h">Lead with "what needs you"</div><p>The first thing it surfaces is decisions/approvals/flags waiting on you — not vanity status.</p><div class="from">fixes cause #4</div></div>
+  <div class="rule"><div class="h">Only ever show live, trusted state</div><p>It reflects what the synced system actually knows (the work we just stood up), or it doesn't show it. Trust is the whole game.</p><div class="from">fixes cause #3</div></div>
+
+  <h2><span class="n">03</span> What carries over (Conductor → The Board)</h2>
+  <p style="font-size:13.5px;color:var(--text-2);margin-bottom:4px">Conductor already holds a real project history worth keeping:</p>
+  <table><tbody>
+    <tr><td>Projects</td><td class="n">27</td><td>Tasks</td><td class="n">279</td></tr>
+    <tr><td>Milestones</td><td class="n">85</td><td>Scope events</td><td class="n">22</td></tr>
+    <tr><td>Deliverables</td><td class="n">5</td><td>Production decisions</td><td class="n">3</td></tr>
+    <tr><td>Client reviews / feedback</td><td class="n">✓</td><td>Lessons</td><td class="n">1</td></tr>
+  </tbody></table>
+  <p style="font-size:13px;color:var(--muted);margin:12px 0 8px">Two ways to "carry it over" — your call:</p>
+  <div class="opt">
+    <div class="o rec"><div class="t">Point The Board's view AT Conductor<span class="tag">recommended</span></div><p>The project-board view reads Conductor's live data directly (it stays the project store; it just "folds in" as you decided). New cross-agent updates flow as fresh posts on top. <b>No risky copy of 279 rows;</b> nothing lost.</p></div>
+    <div class="o"><div class="t">Migrate the rows into The Board's store</div><p>Physically copy active projects/tasks in as facts — true consolidation, one store. More work + a fact-type for projects/tasks, and we'd filter to what's still active first.</p></div>
+  </div>
+  <p style="font-size:12px;color:var(--dim);margin-top:10px">Either way, step one is the same: filter 27 projects / 279 tasks down to what's <b>actually active</b> — a lot of 279 is likely history.</p>
+
+  <h2><span class="n">04</span> Connecting agents — where we are</h2>
+  <p style="font-size:13.5px;color:var(--text-2)">Started: <b>Kai + CFO + Enso are subscribed</b> to The Board (they've declared what they listen for). The CFO→Kai handoff is already proven live. Next per agent: turn on its always-on listener so it actually picks up + acts. Then widen to the rest of the "Ready" desks.</p>
+
+  <h2><span class="n">05</span> The metaphor IS the wiring</h2>
+  <div class="map">
+<span class="a">desk</span>            =  an agent (a running process)<br>
+<span class="a">"plugging in"</span>   =  a subscription + an always-on listener (the <b>runner</b>)<br>
+<span class="a">"posting"</span>       =  an emit hook (when X happens here → post fact Y)<br>
+<span class="a">The Board</span>       =  the shared store (<b>kameha-mesh.db</b>) + its project-board view<br>
+<span class="a">the view</span>        =  the dashboard, done right (replaces kai-dashboard)<br>
+<span class="a">Switchboard</span>     =  the adapter (bridges the old mesh wiring in)
+  </div>
+
+  <div class="foot">
+    Code Architect · post-mortem + plan · 2026-05-26 · sources: dashboard.js + conductor.db + kameha-mesh.db (live, Mac Mini) ·
+    decisions needed: (a) view-reads-Conductor vs migrate · (b) go-ahead to turn on the trio's listeners · (c) confirm "push to your channels" as the view's primary surface.
+  </div>
+</div>
+</body>
+</html>

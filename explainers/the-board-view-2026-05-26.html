@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<!-- The Board — live view prototype. Reads the 11 active Conductor projects + live Board posts. What-needs-you first. 2026-05-26 -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Board · 2026-05-26</title>
+<style>
+  :root{--bg:#0a0d12;--bg-2:#0f131a;--card:#151b25;--panel:#11161e;--brief:#0c1016;--border:#232c3a;--border-b:#2f3a4a;
+    --text:#e6edf3;--text-2:#aab6c4;--muted:#7d8a99;--dim:#5a6573;--accent:#6ea8fe;--green:#4ade80;--green-glow:rgba(74,222,128,.35);--yellow:#facc15;--orange:#fb923c;--red:#f87171;--purple:#c084fc;--teal:#5eead4;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);font-family:-apple-system,"SF Pro Display","SF Pro Text",BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.5;min-height:100vh}
+  .wrap{max-width:1120px;margin:0 auto;padding:42px 24px 80px}
+  code{font-family:"JetBrains Mono",Menlo,monospace;font-size:.82em;background:var(--brief);border:1px solid var(--border);border-radius:5px;padding:1px 6px;color:var(--teal)}
+  .top{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px;margin-bottom:8px}
+  .eyebrow{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:var(--accent)}
+  h1{font-size:34px;font-weight:800;letter-spacing:-1px;display:flex;align-items:center;gap:10px}
+  .live{font-size:11px;font-weight:700;color:var(--green);display:flex;align-items:center;gap:6px;text-transform:uppercase;letter-spacing:.5px}
+  .live::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green-glow);animation:b 1.8s infinite}
+  @keyframes b{50%{opacity:.4}}
+  .src{font-size:12px;color:var(--dim);font-family:"JetBrains Mono",monospace;margin-bottom:26px}
+
+  h2{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.4px;color:var(--text-2);margin:26px 0 13px;display:flex;align-items:center;gap:10px}
+  h2 .c{font-family:"JetBrains Mono",monospace;color:var(--dim);font-weight:500}
+  h2::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent)}
+
+  /* needs you */
+  .needs{display:flex;flex-direction:column;gap:9px}
+  .nu{background:linear-gradient(90deg,rgba(248,113,113,.08),transparent);border:1px solid rgba(248,113,113,.3);border-left:3px solid var(--red);border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:12px}
+  .nu.warn{background:linear-gradient(90deg,rgba(250,204,21,.07),transparent);border-color:rgba(250,204,21,.3);border-left-color:var(--yellow)}
+  .nu .ic{font-size:18px}
+  .nu .tx{font-size:13.5px;color:var(--text)}.nu .tx b{font-weight:700}
+  .nu .tx .sub{font-size:11.5px;color:var(--muted);margin-top:2px}
+
+  /* projects board */
+  .board{display:grid;grid-template-columns:repeat(auto-fill,minmax(258px,1fr));gap:12px}
+  .proj{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:14px 15px;position:relative}
+  .proj .pn{font-size:14px;font-weight:700;line-height:1.25;margin-bottom:7px}
+  .proj .meta{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-bottom:11px}
+  .badge{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:2px 7px;border-radius:5px;background:var(--panel);border:1px solid var(--border-b);color:var(--text-2)}
+  .badge.client{color:var(--teal)}
+  .stage{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted)}
+  .bar{flex:1;height:6px;border-radius:3px;background:var(--panel);overflow:hidden;border:1px solid var(--border)}
+  .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--green))}
+  .proj .due{font-size:11px;color:var(--dim);margin-top:8px}
+  .proj .due.over{color:var(--red);font-weight:600}
+
+  /* board posts */
+  .posts{display:flex;flex-direction:column;gap:8px}
+  .post{background:var(--panel);border:1px solid var(--border);border-radius:9px;padding:10px 14px;display:flex;align-items:center;gap:12px;font-size:13px}
+  .post .ty{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--accent);min-width:96px}
+  .post .who{font-size:11px;color:var(--dim);margin-left:auto;font-family:"JetBrains Mono",monospace}
+
+  .note{margin-top:30px;padding:16px 18px;background:var(--panel);border:1px solid var(--border);border-radius:13px;font-size:13px;color:var(--text-2)}
+  .note b{color:var(--text)}
+  .foot{margin-top:18px;font-size:11px;color:var(--dim);font-family:"JetBrains Mono",monospace;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div><div class="eyebrow">Code Architect · the board (view prototype)</div>
+    <h1>📋 The Board</h1></div>
+    <div class="live">live · reads Conductor + The Board</div>
+  </div>
+  <div class="src">source of truth · 11 active projects (of 27) + live posts · Tue May 26 2026</div>
+
+  <h2>⚠ Needs you <span class="c">3</span></h2>
+  <div class="needs">
+    <div class="nu"><span class="ic">⏰</span><div class="tx"><b>Gort Productions — Social Miami Event</b> is past due (4 May) and at the final stage.<div class="sub">close it out or push the date — it's been sitting ~3 weeks</div></div></div>
+    <div class="nu warn"><span class="ic">🔀</span><div class="tx"><b>Baptist Health testimonial looks duplicated</b> — two active projects, same job (<code>baptist-health</code> + <code>baptist-health-south-florida</code>).<div class="sub">merge or archive one so the board isn't double-counting</div></div></div>
+    <div class="nu warn"><span class="ic">✅</span><div class="tx"><b>3 projects are near the finish</b> (Swine and Dine, Cynthia/Tenet, Cynthia About-Me) — likely waiting on a final review or sign-off.<div class="sub">richer "needs you" flags arrive once agents post decisions to The Board</div></div></div>
+  </div>
+
+  <h2>Active projects <span class="c">11</span></h2>
+  <div class="board" id="board"></div>
+
+  <h2>Live on The Board <span class="c">posts</span></h2>
+  <div class="posts" id="posts"></div>
+
+  <div class="note">
+    <p>This view reads your <b>live project store (Conductor)</b> + the <b>live Board posts</b> — one source of truth, not a separate copy. Right now the only posts are the CFO→Kai test handoff; <b>real posts start flowing once agents' listeners + emit hooks are turned on.</b></p>
+    <p style="margin-top:7px">Per the post-mortem: this is built to <b>come to you</b> (a glanceable view, opened for you) and <b>lead with what needs you</b> — not an auth-gated web app you have to remember to visit.</p>
+  </div>
+  <div class="foot">prototype of the kai-dashboard replacement · live-read from conductor.db + kameha-mesh.db on the Mac Mini · 2026-05-26</div>
+</div>
+
+<script>
+const PROJECTS = [
+  {name:"Gort Productions — Social Miami Event 4/20",client:"gort-productions",type:"event_coverage",stage:10,due:"2026-05-04"},
+  {name:"Cynthia Demos — Tenet / Alista Projects",client:"tenet",type:"white_label",stage:9},
+  {name:"Swine and Dine",client:"george-villalba",type:"event_coverage",stage:8},
+  {name:"DAG Development & Construction — Content + SMM + AI",client:"dag-development-construction",type:"multi_component_retainer",stage:7},
+  {name:"Direct Builders — Social Media Content Retainer",client:"direct-builders",type:"social_retainer",stage:7},
+  {name:"Cynthia Demos — About Me Video",client:"cynthia-demos-communications",type:"video",stage:7},
+  {name:"Townhomes on Malaga — Launch Ready",client:"christian-rodriguez",type:"video",stage:6},
+  {name:"Baptist Health — van der Ven / Diaz Hip Replacement Testimonial",client:"baptist-health-south-florida",type:"white_label",stage:5},
+  {name:"Baptist Health — Vanderven / Diaz Hip Replacement",client:"baptist-health",type:"video",stage:5},
+  {name:"JMM Law — Monthly Content Retainer",client:"jmm-law",type:"social_retainer",stage:3},
+  {name:"Dr. Pratt — Podcast Interview (Guest + Book)",client:"dr-pratt",type:"white_label",stage:1},
+];
+const POSTS = [
+  {ty:"status_update",subj:"INV-1042 — invoice paid",who:"via cfo"},
+  {ty:"status_update",subj:"INV-1042 — invoice paid",who:"via cfo"},
+];
+const board=document.getElementById("board");
+for(const p of PROJECTS){
+  const over = p.due && new Date(p.due) < new Date("2026-05-26");
+  const d=document.createElement("div"); d.className="proj";
+  d.innerHTML=`<div class="pn">${p.name}</div>
+    <div class="meta"><span class="badge client">${p.client}</span><span class="badge">${p.type.replace(/_/g,' ')}</span></div>
+    <div class="stage">stage ${p.stage}/10 <span class="bar"><i style="width:${p.stage*10}%"></i></span></div>
+    ${p.due?`<div class="due ${over?'over':''}">${over?'⏰ past due ':'due '}${p.due}</div>`:''}`;
+  board.appendChild(d);
+}
+const posts=document.getElementById("posts");
+for(const x of POSTS){
+  const e=document.createElement("div"); e.className="post";
+  e.innerHTML=`<span class="ty">${x.ty}</span><span>${x.subj}</span><span class="who">${x.who}</span>`;
+  posts.appendChild(e);
+}
+</script>
+</body>
+</html>

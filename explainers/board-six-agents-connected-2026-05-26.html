@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<!-- The Board — the remaining 6 agents connected. Whole team now live on the Mini. 2026-05-26 -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Board · whole team connected · 2026-05-26</title>
+<style>
+  :root{--bg:#0a0d12;--bg-2:#0f131a;--card:#151b25;--panel:#11161e;--brief:#0c1016;--border:#232c3a;--border-b:#2f3a4a;
+    --text:#e6edf3;--text-2:#aab6c4;--muted:#7d8a99;--dim:#5a6573;--accent:#6ea8fe;--green:#4ade80;--green-glow:rgba(74,222,128,.4);--yellow:#facc15;--orange:#fb923c;--red:#f87171;--purple:#c084fc;--teal:#5eead4;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);font-family:-apple-system,"SF Pro Display","SF Pro Text",BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.5;min-height:100vh}
+  body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellipse 1100px 560px at 50% -8%,rgba(74,222,128,.07),transparent 55%);pointer-events:none;z-index:0}
+  .wrap{position:relative;z-index:1;max-width:1000px;margin:0 auto;padding:44px 24px 80px}
+  code{font-family:"JetBrains Mono",Menlo,monospace;font-size:.82em;background:var(--brief);border:1px solid var(--border);border-radius:5px;padding:1px 6px;color:var(--teal)}
+  .eyebrow{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:var(--green);margin-bottom:13px;display:flex;align-items:center;gap:10px}
+  .eyebrow .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green-glow);animation:b 1.8s infinite}@keyframes b{50%{opacity:.4}}
+  h1{font-size:39px;font-weight:800;letter-spacing:-1.2px;line-height:1.06;background:linear-gradient(180deg,#fff,#b8c5d3);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{font-size:16px;color:var(--text-2);max-width:780px;margin:11px 0 28px}.sub b{color:var(--text)}
+  h2{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.4px;color:var(--text-2);margin:28px 0 13px;display:flex;gap:10px}h2::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent)}
+
+  .win{background:linear-gradient(135deg,rgba(74,222,128,.1),rgba(74,222,128,.02));border:1px solid rgba(74,222,128,.35);border-radius:14px;padding:18px 22px;margin-bottom:8px}
+  .win .t{font-size:17px;font-weight:800;color:var(--green)}
+  .win p{font-size:14px;color:var(--text-2);margin-top:5px}.win p b{color:var(--text)}
+
+  .meter{display:flex;align-items:center;gap:14px;background:var(--brief);border:1px solid var(--border-b);border-radius:12px;padding:16px 20px;margin-top:8px}
+  .meter .big{font-size:34px;font-weight:800;color:var(--green);letter-spacing:-1px;line-height:1}
+  .meter .lbl{font-size:13px;color:var(--text-2)}
+  .bar{flex:1;height:9px;border-radius:6px;background:var(--panel);border:1px solid var(--border);overflow:hidden}
+  .bar i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#4ade80,#5eead4);border-radius:6px}
+
+  .agents{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;margin-top:4px}
+  @media(max-width:600px){.agents{grid-template-columns:1fr}}
+  .ag{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--green);border-radius:11px;padding:13px 15px}
+  .ag.new{border-left-color:var(--teal)}
+  .ag .nm{font-size:15px;font-weight:700;display:flex;align-items:center;gap:7px}
+  .ag .rl{font-size:11px;color:var(--muted);margin-top:2px}
+  .ag .st{font-size:11px;color:var(--green);margin-top:7px}
+  .ag.new .st{color:var(--teal)}
+  .ag .ct{font-size:11.5px;color:var(--dim);margin-top:6px;font-family:"JetBrains Mono",monospace}
+
+  .flow{display:flex;align-items:center;flex-wrap:wrap;gap:0;background:var(--brief);border:1px solid var(--border-b);border-radius:12px;padding:16px 14px;font-size:13px}
+  .node{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:9px 13px;text-align:center}
+  .node b{font-size:13px}.node .s{font-size:10.5px;color:var(--muted)}
+  .node.board{border-color:rgba(110,168,254,.5);background:rgba(110,168,254,.08)}
+  .arr{color:var(--dim);padding:0 9px;font-size:16px}
+  @media(max-width:680px){.arr{transform:rotate(90deg)}.flow{flex-direction:column}}
+
+  .proof{display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px}
+  @media(max-width:680px){.proof{grid-template-columns:1fr}}
+  .pf{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:14px 16px}
+  .pf .h{font-size:13px;font-weight:700;color:var(--accent);margin-bottom:4px}
+  .pf p{font-size:12px;color:var(--text-2)}.pf p b{color:var(--text)}
+
+  .next{display:flex;flex-direction:column;gap:8px}
+  .nx{display:flex;align-items:flex-start;gap:10px;font-size:13.5px;color:var(--text-2)}
+  .nx .b{width:18px;height:18px;border-radius:5px;background:var(--panel);border:1px solid var(--border-b);color:var(--dim);font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+  .nx .q{color:var(--yellow);font-weight:700}
+
+  .note{margin-top:10px;font-size:12.5px;color:var(--muted)}.note b{color:var(--text-2)}
+  .foot{margin-top:30px;font-size:11px;color:var(--dim);font-family:"JetBrains Mono",monospace;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow"><span class="dot"></span>Live on the Mac Mini · 2026-05-26</div>
+  <h1>The whole team is on The Board.</h1>
+  <p class="sub">The last 6 agents just joined the 3 already talking. <b>Everyone's connected now</b> — and I proved it end-to-end on the live Mini, not on paper.</p>
+
+  <div class="win">
+    <div class="t">✅ 6 more agents connected — and verified live</div>
+    <p>I added ACD, NAMI, Framer, Offer Architect, Lead Engine, and Conductor to The Board, then posted one live message and watched <b>all 9 agents receive it within 5 seconds, nobody at a keyboard.</b> Cleaned up the test message after. The board-drainer didn't even need a restart — new agents auto-enroll the moment they're subscribed.</p>
+  </div>
+
+  <div class="meter">
+    <div class="big">9/9</div>
+    <div style="flex:1">
+      <div class="lbl"><b>agents connected</b> — was 3, the active fleet is now whole on The Board</div>
+      <div class="bar"><i></i></div>
+    </div>
+  </div>
+
+  <h2>Who just joined</h2>
+  <div class="agents">
+    <div class="ag new"><div class="nm">🎨 ACD</div><div class="rl">Asst. Creative Director</div><div class="st">● connected</div><div class="ct">briefs · work · decisions · feedback</div></div>
+    <div class="ag new"><div class="nm">📣 NAMI</div><div class="rl">Content &amp; Social</div><div class="st">● connected</div><div class="ct">briefs · work · decisions</div></div>
+    <div class="ag new"><div class="nm">🖼️ Framer</div><div class="rl">Visual Production</div><div class="st">● connected</div><div class="ct">briefs · work · decisions</div></div>
+    <div class="ag new"><div class="nm">💵 Offer Architect</div><div class="rl">Pricing &amp; Research</div><div class="st">● connected</div><div class="ct">status · work · decisions · feedback</div></div>
+    <div class="ag new"><div class="nm">🎯 Lead Engine</div><div class="rl">Leads &amp; Pipeline</div><div class="st">● connected</div><div class="ct">status · work · decisions · feedback</div></div>
+    <div class="ag new"><div class="nm">🎼 Conductor</div><div class="rl">Project tracker</div><div class="st">● connected</div><div class="ct">sees all 5 — the coordination hub</div></div>
+  </div>
+  <p class="note">Already on from last session: <b>Kai · CFO · Enso</b>. Each agent only subscribes to the kinds of updates its job needs — creatives get briefs, the pipeline agents get status &amp; feedback, Conductor sees everything because it tracks the whole office.</p>
+
+  <h2>How "connecting" works</h2>
+  <div class="flow">
+    <div class="node"><b>Add a subscription</b><div class="s">"NAMI wants briefs"</div></div>
+    <span class="arr">→</span>
+    <div class="node board"><b>📋 The Board</b><div class="s">drainer reads the list live</div></div>
+    <span class="arr">→</span>
+    <div class="node"><b>Auto-enrolled</b><div class="s">no new process, no restart</div></div>
+    <span class="arr">→</span>
+    <div class="node"><b>Receives from now on</b><div class="s">lands in its inbox in seconds</div></div>
+  </div>
+
+  <h2>Proof (not a promise)</h2>
+  <div class="proof">
+    <div class="pf"><div class="h">Routed</div><p>One test decision → <b>delivered to 9/9</b> agents' mailboxes the instant it posted.</p></div>
+    <div class="pf"><div class="h">Picked up</div><p>The live drainer dropped it into all 6 new inboxes in <b>under 5 seconds</b>.</p></div>
+    <div class="pf"><div class="h">Cleaned</div><p>Test message <b>revoked</b> afterward so your real board view stays clean.</p></div>
+  </div>
+
+  <h2>What's next — your call</h2>
+  <div class="next">
+    <div class="nx"><span class="b">1</span><div><span class="q">Backfill context?</span> Conductor / Offer Architect / Lead Engine joined after I seeded your 11 projects — I can route those projects to just them (no duplicate spam to the others).</div></div>
+    <div class="nx"><span class="b">2</span><div><b>Emit hooks</b> — agents auto-post real updates (a project hits a stage → it posts itself). The end of manual seeding.</div></div>
+    <div class="nx"><span class="b">3</span><div>The <b>project-board view</b> + push "needs you" to Telegram.</div></div>
+    <div class="nx"><span class="b">4</span><div>Apply the <b>reliability fix</b> (nothing silently drops) — already Codex-reviewed.</div></div>
+    <div class="nx"><span class="q">·</span><div class="note" style="margin:0"><b>Housekeeping:</b> commit this work (on a branch) · <code>pm2 save</code> so the drainer survives a reboot · 3 client flags waiting: Gort ~3wks overdue, Baptist Health dup project, 3 near sign-off.</div></div>
+  </div>
+
+  <div class="foot">Code Architect · 2026-05-26 · kameha-mesh.db on the Mac Mini · board-drainer online (0 restarts) · 31 subscriptions · 9/9 agents connected</div>
+</div>
+</body>
+</html>

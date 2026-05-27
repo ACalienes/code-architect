@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<!-- The Board — full mutual awareness. 14 agents, baseline = everyone hears decisions + status. Client wall preserved. 2026-05-26 -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Board · everyone aware · 2026-05-26</title>
+<style>
+  :root{--bg:#0a0d12;--bg-2:#0f131a;--card:#151b25;--panel:#11161e;--brief:#0c1016;--border:#232c3a;--border-b:#2f3a4a;
+    --text:#e6edf3;--text-2:#aab6c4;--muted:#7d8a99;--dim:#5a6573;--accent:#6ea8fe;--green:#4ade80;--green-glow:rgba(74,222,128,.4);--yellow:#facc15;--orange:#fb923c;--red:#f87171;--purple:#c084fc;--teal:#5eead4;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);font-family:-apple-system,"SF Pro Display","SF Pro Text",BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.5;min-height:100vh}
+  body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellipse 1100px 560px at 50% -8%,rgba(74,222,128,.07),transparent 55%);pointer-events:none;z-index:0}
+  .wrap{position:relative;z-index:1;max-width:1020px;margin:0 auto;padding:44px 24px 80px}
+  code{font-family:"JetBrains Mono",Menlo,monospace;font-size:.82em;background:var(--brief);border:1px solid var(--border);border-radius:5px;padding:1px 6px;color:var(--teal)}
+  .eyebrow{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:var(--green);margin-bottom:13px;display:flex;align-items:center;gap:10px}
+  .eyebrow .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green-glow);animation:b 1.8s infinite}@keyframes b{50%{opacity:.4}}
+  h1{font-size:37px;font-weight:800;letter-spacing:-1.2px;line-height:1.07;background:linear-gradient(180deg,#fff,#b8c5d3);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{font-size:16px;color:var(--text-2);max-width:810px;margin:11px 0 26px}.sub b{color:var(--text)}
+  h2{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.4px;color:var(--text-2);margin:30px 0 13px;display:flex;gap:10px}h2::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent)}
+
+  .win{background:linear-gradient(135deg,rgba(74,222,128,.1),rgba(74,222,128,.02));border:1px solid rgba(74,222,128,.35);border-radius:14px;padding:17px 22px}
+  .win .t{font-size:16px;font-weight:800;color:var(--green)}
+  .win p{font-size:14px;color:var(--text-2);margin-top:5px}.win b{color:var(--text)}
+
+  .meter{display:flex;align-items:center;gap:14px;background:var(--brief);border:1px solid var(--border-b);border-radius:12px;padding:15px 20px;margin-top:8px}
+  .meter .big{font-size:32px;font-weight:800;color:var(--green);letter-spacing:-1px;line-height:1}
+  .meter .lbl{font-size:13px;color:var(--text-2)}.meter .lbl b{color:var(--text)}
+  .bar{flex:1;height:9px;border-radius:6px;background:var(--panel);border:1px solid var(--border);overflow:hidden}
+  .bar i{display:block;height:100%;width:93%;background:linear-gradient(90deg,#4ade80,#5eead4);border-radius:6px}
+
+  .base{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:15px 18px;font-size:13.5px;color:var(--text-2)}
+  .base b{color:var(--text)}.base .pill{display:inline-block;font-family:"JetBrains Mono",monospace;font-size:11px;background:var(--brief);border:1px solid var(--border-b);color:var(--teal);border-radius:6px;padding:2px 8px;margin:0 2px}
+
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+  @media(max-width:760px){.grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:440px){.grid{grid-template-columns:1fr}}
+  .ag{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--green);border-radius:10px;padding:10px 12px}
+  .ag.new{border-left-color:var(--teal)}.ag.client{border-left-color:var(--purple)}
+  .ag .nm{font-size:13px;font-weight:700}
+  .ag .rl{font-size:10px;color:var(--muted);margin-top:2px}
+  .ag .tag{font-size:9.5px;margin-top:5px;font-family:"JetBrains Mono",monospace;color:var(--dim)}
+  .ag.new .tag{color:var(--teal)}.ag.client .tag{color:var(--purple)}
+
+  .wall{background:var(--brief);border:1px solid rgba(192,132,252,.3);border-radius:12px;padding:14px 18px;font-size:13px;color:var(--text-2)}
+  .wall b{color:var(--text)}.wall .hl{color:var(--purple);font-weight:700}
+
+  .held{display:grid;grid-template-columns:1fr 1fr;gap:11px}@media(max-width:600px){.held{grid-template-columns:1fr}}
+  .hc{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--orange);border-radius:11px;padding:13px 15px}
+  .hc .nm{font-size:14px;font-weight:700;color:var(--orange)}
+  .hc p{font-size:12.5px;color:var(--text-2);margin-top:4px}.hc b{color:var(--text)}
+
+  .next{display:flex;flex-direction:column;gap:8px}
+  .nx{display:flex;align-items:flex-start;gap:10px;font-size:13.5px;color:var(--text-2)}
+  .nx .q{color:var(--yellow);font-weight:700;width:16px;text-align:center;flex-shrink:0}
+  .nx .b{width:16px;text-align:center;color:var(--dim);flex-shrink:0}
+  .foot{margin-top:30px;font-size:11px;color:var(--dim);font-family:"JetBrains Mono",monospace;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow"><span class="dot"></span>Live on the Mac Mini · 2026-05-26</div>
+  <h1>Everyone's aware of everyone.</h1>
+  <p class="sub">You wanted each agent contextually aware of the others so it can do its best work — that's exactly what The Board is for. I wired the full awareness layer: <b>every agent now hears the office's decisions and status as they happen.</b></p>
+
+  <div class="win">
+    <div class="t">✅ Full mutual awareness — live and verified</div>
+    <p>I brought on the last two working agents (<b>Pitch Deck</b> and <b>Chronicle</b>) and gave <b>every</b> agent the shared-awareness feed. Posted a live decision and watched it reach all 12 internal agents at once. The two client managers correctly stayed walled (more below).</p>
+  </div>
+
+  <div class="meter">
+    <div class="big">14</div>
+    <div style="flex:1">
+      <div class="lbl"><b>agents on The Board</b> — every live working agent is now connected</div>
+      <div class="bar"><i></i></div>
+    </div>
+  </div>
+
+  <h2>The awareness baseline (the new part)</h2>
+  <div class="base">
+    Every agent now subscribes to the two "what's-going-on" signals — <span class="pill">decision</span> and <span class="pill">status_update</span> — on top of its job-specific feeds. So when a decision is made or a project moves, <b>everyone who should know, knows</b>, without anyone asking. That's the contextual awareness you wanted.
+  </div>
+
+  <h2>Who's on (14)</h2>
+  <div class="grid">
+    <div class="ag"><div class="nm">⚓ Kai</div><div class="rl">Chief of Staff</div><div class="tag">aware</div></div>
+    <div class="ag"><div class="nm">💰 CFO</div><div class="rl">Finance</div><div class="tag">aware</div></div>
+    <div class="ag"><div class="nm">🎬 Enso</div><div class="rl">Production</div><div class="tag">aware</div></div>
+    <div class="ag"><div class="nm">🎨 ACD</div><div class="rl">Creative Dir</div><div class="tag">+ status now</div></div>
+    <div class="ag"><div class="nm">📣 NAMI</div><div class="rl">Content/Social</div><div class="tag">+ status now</div></div>
+    <div class="ag"><div class="nm">🖼️ Framer</div><div class="rl">Visual Prod</div><div class="tag">+ status now</div></div>
+    <div class="ag"><div class="nm">💵 Offer Architect</div><div class="rl">Pricing</div><div class="tag">aware</div></div>
+    <div class="ag"><div class="nm">🎯 Lead Engine</div><div class="rl">Pipeline</div><div class="tag">aware</div></div>
+    <div class="ag"><div class="nm">🎼 Conductor</div><div class="rl">Tracker</div><div class="tag">aware</div></div>
+    <div class="ag"><div class="nm">🏗️ Code Architect</div><div class="rl">Engineering</div><div class="tag">aware</div></div>
+    <div class="ag new"><div class="nm">📊 Pitch Deck</div><div class="rl">Deck engine</div><div class="tag">NEW · full feed</div></div>
+    <div class="ag new"><div class="nm">📚 Chronicle</div><div class="rl">Historian</div><div class="tag">NEW · hears all</div></div>
+    <div class="ag client"><div class="nm">🏢 DAG</div><div class="rl">Client mgr · dagdc</div><div class="tag">walled</div></div>
+    <div class="ag client"><div class="nm">🦷 Dental Boutique</div><div class="rl">Client mgr · tdb</div><div class="tag">walled</div></div>
+  </div>
+
+  <h2>The wall still holds</h2>
+  <div class="wall">
+    The awareness feed is for <b>internal staff</b>. The two <span class="hl">client managers (DAG, Dental)</span> are deliberately <b>not</b> on the fleet-wide feed — they only ever see <b>their own client's</b> facts. My live decision test confirmed it: it reached all 12 internal agents and <b>neither client manager</b>. Awareness for the team, privacy for the clients — both at once.
+  </div>
+
+  <h2>Two I deliberately held — your call</h2>
+  <div class="held">
+    <div class="hc"><div class="nm">🔌 nami-bridge</div><p>It's NAMI's <b>transport bridge</b> (moves messages), not a thinker. NAMI itself is already fully aware, so a separate seat would just be a dead mailbox. <b>I'd skip it</b> — say if you disagree.</p></div>
+    <div class="hc"><div class="nm">🎨 KMG</div><p>Still a <b>phantom</b> — designed but never built, nothing runs behind it. It literally can't "be aware" yet. The real fix is building KMG (Phase 3, the template for all client managers). <b>I'd park it</b> until then.</p></div>
+  </div>
+
+  <h2>What's next</h2>
+  <div class="next">
+    <div class="nx"><span class="q">?</span><div>Confirm: <b>skip nami-bridge</b> &amp; <b>park KMG</b> (vs build it)?</div></div>
+    <div class="nx"><span class="b">·</span><div>Then the awareness gets <i>real</i>: <b>emit hooks</b> so agents auto-post their own updates (instead of me seeding them).</div></div>
+    <div class="nx"><span class="b">·</span><div>The <b>project-board view</b> + push "needs you" to Telegram · the <b>reliability fix</b> (no silent drops).</div></div>
+    <div class="nx"><span class="b">·</span><div>Housekeeping: commit (on a branch) · <code>pm2 save</code> · 3 client flags (Gort overdue, Baptist dup, 3 near sign-off).</div></div>
+  </div>
+
+  <div class="foot">Code Architect · 2026-05-26 · kameha-mesh.db on the Mac Mini · 15 identities · 57 subscriptions · 14 agents aware · client wall verified</div>
+</div>
+</body>
+</html>

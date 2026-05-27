@@ -15,12 +15,23 @@
  */
 function openDatabase(path = ':memory:', { driver } = {}) {
   driver = driver || process.env.SL_DB_DRIVER || 'node';
+  let db;
   if (driver === 'better-sqlite3' || driver === 'better') {
     const Database = require('better-sqlite3');
-    return new Database(path);
+    db = new Database(path);
+  } else {
+    const { DatabaseSync } = require('node:sqlite');
+    db = new DatabaseSync(path);
   }
-  const { DatabaseSync } = require('node:sqlite');
-  return new DatabaseSync(path);
+  // Multi-process concurrency (required once per-agent listeners + writers share one file on the Mini):
+  // WAL lets many readers + one writer coexist; busy_timeout makes a writer WAIT for a held lock instead
+  // of throwing SQLITE_BUSY ("database is locked"); synchronous=NORMAL is the safe WAL companion.
+  // Skipped for in-memory (tests) where it's a no-op.
+  if (path !== ':memory:') {
+    try { db.exec('PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000; PRAGMA synchronous = NORMAL;'); }
+    catch (_) { /* best-effort; never block open */ }
+  }
+  return db;
 }
 
 // Re-entrant transaction wrapper (Codex: multi-step durable writes must be atomic). Runs fn inside a

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<!-- KMG: not a phantom — already built, never deployed. The "build" is a deploy. 2026-05-26 -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KMG · build = deploy · 2026-05-26</title>
+<style>
+  :root{--bg:#0a0d12;--bg-2:#0f131a;--card:#151b25;--panel:#11161e;--brief:#0c1016;--border:#232c3a;--border-b:#2f3a4a;
+    --text:#e6edf3;--text-2:#aab6c4;--muted:#7d8a99;--dim:#5a6573;--accent:#6ea8fe;--green:#4ade80;--green-glow:rgba(74,222,128,.4);--yellow:#facc15;--orange:#fb923c;--red:#f87171;--purple:#c084fc;--teal:#5eead4;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);font-family:-apple-system,"SF Pro Display","SF Pro Text",BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.5;min-height:100vh}
+  body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellipse 1100px 560px at 50% -8%,rgba(192,132,252,.07),transparent 55%);pointer-events:none;z-index:0}
+  .wrap{position:relative;z-index:1;max-width:1010px;margin:0 auto;padding:44px 24px 80px}
+  code{font-family:"JetBrains Mono",Menlo,monospace;font-size:.82em;background:var(--brief);border:1px solid var(--border);border-radius:5px;padding:1px 6px;color:var(--teal)}
+  .eyebrow{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:var(--purple);margin-bottom:13px;display:flex;align-items:center;gap:10px}
+  .eyebrow .dot{width:8px;height:8px;border-radius:50%;background:var(--purple);box-shadow:0 0 8px rgba(192,132,252,.4)}
+  h1{font-size:37px;font-weight:800;letter-spacing:-1.2px;line-height:1.07;background:linear-gradient(180deg,#fff,#b8c5d3);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{font-size:16px;color:var(--text-2);max-width:810px;margin:11px 0 26px}.sub b{color:var(--text)}
+  h2{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.4px;color:var(--text-2);margin:30px 0 13px;display:flex;gap:10px}h2::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent)}
+
+  .retract{background:linear-gradient(135deg,rgba(251,146,60,.1),rgba(251,146,60,.02));border:1px solid rgba(251,146,60,.35);border-radius:13px;padding:15px 20px;margin-bottom:10px}
+  .retract .t{font-size:14px;font-weight:800;color:var(--orange)}
+  .retract p{font-size:13.5px;color:var(--text-2);margin-top:4px}.retract b{color:var(--text)}
+
+  .built{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:680px){.built{grid-template-columns:1fr}}
+  .col{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:15px 18px}
+  .col h3{font-size:13px;font-weight:700;margin-bottom:9px;display:flex;align-items:center;gap:8px}
+  .col.done h3{color:var(--green)}.col.todo h3{color:var(--yellow)}
+  .col ul{list-style:none;display:flex;flex-direction:column;gap:6px}
+  .col li{font-size:12.5px;color:var(--text-2);padding-left:20px;position:relative}
+  .col.done li::before{content:"✓";position:absolute;left:0;color:var(--green);font-weight:700}
+  .col.todo li::before{content:"○";position:absolute;left:0;color:var(--yellow)}
+  .col li b{color:var(--text)}
+
+  .steps{display:flex;flex-direction:column;gap:9px}
+  .stp{display:flex;gap:13px;background:var(--card);border:1px solid var(--border);border-radius:11px;padding:13px 16px}
+  .stp .n{width:24px;height:24px;border-radius:7px;background:var(--panel);border:1px solid var(--border-b);color:var(--purple);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .stp .bd{flex:1}
+  .stp .h{font-size:14px;font-weight:700}
+  .stp .h .g{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:1px 7px;border-radius:20px;margin-left:8px;vertical-align:middle}
+  .g.safe{background:rgba(74,222,128,.13);color:var(--green);border:1px solid rgba(74,222,128,.3)}
+  .g.gate{background:rgba(250,204,21,.12);color:var(--yellow);border:1px solid rgba(250,204,21,.3)}
+  .g.da{background:rgba(248,113,113,.12);color:var(--red);border:1px solid rgba(248,113,113,.3)}
+  .stp p{font-size:12.5px;color:var(--text-2);margin-top:3px}.stp p b{color:var(--text)}
+
+  .note{margin-top:10px;font-size:12.5px;color:var(--muted)}.note b{color:var(--text-2)}
+  .ask{background:var(--brief);border:1px solid var(--border-b);border-radius:11px;padding:14px 18px;margin-top:8px;font-size:13.5px;color:var(--text-2)}
+  .ask b{color:var(--text)}
+  .foot{margin-top:30px;font-size:11px;color:var(--dim);font-family:"JetBrains Mono",monospace;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow"><span class="dot"></span>KMG build plan · 2026-05-26</div>
+  <h1>KMG is already built. We just have to ship it.</h1>
+  <p class="sub">You asked how we build KMG. Turns out the hard part is done — there's a complete agent sitting in <code>~/Desktop/Code/Kameha Media Group/</code>, worked on as recently as <b>today</b>. It has never been <b>deployed</b>. So "build KMG" = <b>deploy + activate</b> the one that exists.</p>
+
+  <div class="retract">
+    <div class="t">↺ Correcting myself</div>
+    <p>An hour ago I called KMG a "phantom — designed but no code." <b>That was wrong</b> — I was trusting a planning doc instead of looking at the repo. The repo shows the opposite: a full daemon, all 11 brand capabilities, and a complete 8-section Brand Bible v1.0. I should have checked the code first.</p>
+  </div>
+
+  <h2>What already exists vs what's left</h2>
+  <div class="built">
+    <div class="col done">
+      <h3>✅ Built (in the repo, today)</h3>
+      <ul>
+        <li><b>The daemon</b> — <code>kmg-daemon.js</code></li>
+        <li><b>All 11 brand capabilities</b> — query bible / ICP / voice / positioning / partner-economics, fit &amp; voice checks, conflict-check, decision log</li>
+        <li><b>The Brand Bible v1.0</b> — 657 lines, all 8 sections, Vania-ready</li>
+        <li><b>Manifest, mesh client, self-test, deploy workflow</b></li>
+        <li><b>GitHub repo</b> wired (<code>ACalienes/kmg</code>); git tree clean</li>
+        <li><b>Board identity</b> — minted today (the reserved seat)</li>
+      </ul>
+    </div>
+    <div class="col todo">
+      <h3>○ Never done (the gap)</h3>
+      <ul>
+        <li><b>Deployed to the Mini</b> — no <code>~/kmg</code> exists there</li>
+        <li><b>Running</b> — not a live process; never heartbeated</li>
+        <li><b>Registered in the mesh</b> — its 6 routes aren't seeded; it's still the "phantom 13th"</li>
+        <li><b>On The Board</b> — seat exists, no subscriptions yet</li>
+        <li><b>Dependencies installed / self-test run</b></li>
+        <li><b>Smoke-tested</b> against Kai + ACD</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>The deploy path — how we ship it</h2>
+  <div class="steps">
+    <div class="stp"><div class="n">1</div><div class="bd"><div class="h">Verify the build<span class="g safe">safe · laptop</span></div><p>Install deps + run KMG's own self-test (<code>npm run verify</code>) on the laptop. Confirms the bible parses, handlers load, nothing's broken — <b>before</b> anything touches the Mini. Non-destructive; I can do this now.</p></div></div>
+    <div class="stp"><div class="n">2</div><div class="bd"><div class="h">Push to GitHub<span class="g gate">your go</span></div><p>Push to <code>ACalienes/kmg</code> — this fires the deploy workflow. First push of a new agent to live infra, so it's a gated step.</p></div></div>
+    <div class="stp"><div class="n">3</div><div class="bd"><div class="h">Deploy to the Mini<span class="g gate">your go</span></div><p>Land KMG at <code>~/kmg</code>, install deps there, run the self-test again on the Mini.</p></div></div>
+    <div class="stp"><div class="n">4</div><div class="bd"><div class="h">Register in the mesh<span class="g da">DA-gated</span></div><p>Seed KMG's 6 routes (kai↔kmg, lead-engine→kmg, offer-architect→kmg, acd↔kmg) + make it a real agent (not the phantom). This edits the mesh's wiring + needs a mesh restart (brief blip for all agents) — so it gets the full review gate.</p></div></div>
+    <div class="stp"><div class="n">5</div><div class="bd"><div class="h">Start it + survive reboot<span class="g gate">your go</span></div><p><code>pm2 start</code> KMG on the Mini, confirm it heartbeats into <code>/health</code>, then <code>pm2 save</code>.</p></div></div>
+    <div class="stp"><div class="n">6</div><div class="bd"><div class="h">Wire to The Board<span class="g safe">additive</span></div><p>Subscribe KMG (its seat's already minted) for awareness — decisions + status. One-minute add, the pattern you've seen.</p></div></div>
+    <div class="stp"><div class="n">7</div><div class="bd"><div class="h">Smoke-test it for real<span class="g safe">verify</span></div><p>Kai asks KMG an ICP question → gets a bible-grounded answer. KMG sends ACD a voice-guide notification → ACD receives it. If both pass, KMG is genuinely live.</p></div></div>
+  </div>
+
+  <h2>Two honest flags</h2>
+  <p class="note"><b>① The fires.</b> The org plan said not to deploy to the Mini mid-fire (the 7TB Dropbox migration + OAuth stability). I'll confirm those are clear before step 3 — KMG's deploy is fairly isolated, but live-prod discipline holds.<br>
+  <b>② The bible was edited today.</b> Step 1's self-test tells us whether it's in a shippable state. If Alex is mid-edit on the bible, we finish that first.</p>
+
+  <div class="ask">
+    <b>My recommendation:</b> let me run <b>step 1 right now</b> (verify the build, laptop-only, nothing ships) so we know it's green — then I'll bring you the deploy go/no-go with the mesh-route change written out for your approval. <b>Want me to start the verify?</b>
+  </div>
+
+  <div class="foot">Code Architect · 2026-05-26 · KMG built, not deployed · ACalienes/kmg · deploy gated on Alex · mesh-route seed is the DA-gated step</div>
+</div>
+</body>
+</html>

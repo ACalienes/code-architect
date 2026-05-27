@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<!-- CA implementation plan for Kai's agent-org redesign. Plan only — no code authorized. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Org Buildout · CA implementation plan · 2026-05-26</title>
+<style>
+  :root{
+    --bg:#0a0d12;--bg-2:#0f131a;--card:#141a23;--brief-bg:#0c1016;--border:#232c3a;--border-bright:#2f3a4a;
+    --text:#e6edf3;--text-2:#b8c5d3;--muted:#7d8a99;--dim:#5a6573;--accent:#6ea8fe;--green:#4ade80;
+    --green-glow:rgba(74,222,128,0.35);--yellow:#facc15;--orange:#fb923c;--red:#f87171;--purple:#c084fc;--teal:#5eead4;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);font-family:-apple-system,"SF Pro Display","SF Pro Text",BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.6;min-height:100vh}
+  body::before{content:"";position:fixed;inset:0;background:
+      radial-gradient(ellipse 1100px 560px at 16% -10%,rgba(110,168,254,0.06),transparent 50%),
+      radial-gradient(ellipse 820px 420px at 92% 6%,rgba(192,132,252,0.05),transparent 50%),
+      radial-gradient(ellipse 1000px 500px at 50% 120%,rgba(94,234,212,0.04),transparent 50%);pointer-events:none;z-index:0}
+  .container{position:relative;max-width:1060px;margin:0 auto;padding:48px 28px 90px;z-index:1}
+  code{font-family:"JetBrains Mono","SF Mono",Menlo,monospace;font-size:0.84em;background:var(--brief-bg);border:1px solid var(--border);border-radius:5px;padding:1px 6px;color:var(--teal)}
+  .eyebrow{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:var(--accent);margin-bottom:16px;display:flex;align-items:center;gap:12px}
+  .eyebrow::before{content:"";width:24px;height:1px;background:var(--accent);box-shadow:0 0 8px rgba(110,168,254,0.4)}
+  h1.title{font-size:42px;font-weight:700;letter-spacing:-1.3px;line-height:1.06;margin-bottom:14px;background:linear-gradient(180deg,#fff 0%,#b8c5d3 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .subtitle{font-size:17px;color:var(--text-2);max-width:870px;margin-bottom:14px}
+  .stamp{font-size:12px;color:var(--dim);font-family:"JetBrains Mono",monospace;margin-bottom:34px}
+  .stamp b{color:var(--yellow)}
+
+  section{margin-bottom:42px}
+  h2.sec{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-2);margin-bottom:18px;padding-bottom:10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+  h2.sec .num{color:var(--accent);font-family:"JetBrains Mono",monospace}
+
+  .keystone{background:linear-gradient(135deg,rgba(110,168,254,0.08),rgba(94,234,212,0.03));border:1px solid rgba(110,168,254,0.3);border-left:3px solid var(--accent);border-radius:12px;padding:22px 26px;margin-bottom:42px}
+  .keystone .kh{font-size:12px;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent);font-weight:700;margin-bottom:10px}
+  .keystone p{font-size:14.5px;color:var(--text-2);margin-bottom:10px}.keystone p:last-child{margin-bottom:0}
+  .keystone b{color:var(--text)}
+
+  /* engine diagram */
+  .engine{background:var(--brief-bg);border:1px solid var(--border-bright);border-radius:14px;padding:22px;margin-top:6px}
+  .erow{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:760px){.erow{grid-template-columns:1fr}}
+  .driver{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:16px 18px}
+  .driver.kai{border-color:rgba(192,132,252,0.4)}.driver.mira{border-color:rgba(94,234,212,0.4)}
+  .driver .dn{font-size:15px;font-weight:700;margin-bottom:8px}.driver.kai .dn{color:var(--purple)}.driver.mira .dn{color:var(--teal)}
+  .driver .lane{font-size:12.5px;color:var(--text-2);padding:3px 0}
+  .shared{margin-top:14px;text-align:center;font-size:12.5px;color:var(--accent);background:rgba(110,168,254,0.06);border:1px solid rgba(110,168,254,0.22);border-radius:9px;padding:11px}
+
+  /* phase table */
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--border-bright)}
+  td{padding:9px 10px;border-bottom:1px solid var(--border);color:var(--text-2);vertical-align:top}
+  td.ph{font-family:"JetBrains Mono",monospace;color:var(--accent);white-space:nowrap;font-weight:600}
+  .pill{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:2px 7px;border-radius:4px}
+  .pill.lo{background:rgba(74,222,128,.15);color:var(--green)}.pill.md{background:rgba(250,204,21,.15);color:var(--yellow)}.pill.hi{background:rgba(248,113,113,.15);color:var(--red)}
+  .dep{color:var(--purple);font-weight:600}
+
+  /* comms */
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:760px){.two{grid-template-columns:1fr}}
+  .col{border-radius:12px;padding:18px 20px;border:1px solid var(--border);background:var(--card)}
+  .col h3{font-size:14px;margin-bottom:10px}.col.a h3{color:var(--green)}.col.b h3{color:var(--yellow)}
+  .col p{font-size:13px;color:var(--text-2)}
+  .col .tagm{font-size:10px;font-family:"JetBrains Mono",monospace;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+  .col.a .tagm{color:var(--green)}.col.b .tagm{color:var(--yellow)}
+
+  /* risks */
+  .risks{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:760px){.risks{grid-template-columns:1fr}}
+  .risk{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--orange);border-radius:10px;padding:14px 16px}
+  .risk.hi{border-left-color:var(--red)}.risk.ca{border-left-color:var(--accent)}
+  .risk .rn{font-size:10px;font-family:"JetBrains Mono",monospace;color:var(--dim);margin-bottom:5px}
+  .risk .rh{font-size:13.5px;font-weight:650;margin-bottom:4px}.risk.hi .rh{color:var(--red)}
+  .risk p{font-size:12px;color:var(--muted)}
+
+  /* triangulation */
+  .tri{font-size:13px}.tri .row{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
+  .tri .row:last-child{border:none}
+  .tri .mk{font-family:"JetBrains Mono",monospace;font-weight:700;flex-shrink:0}
+  .tri .f{color:var(--red)}.tri .t{color:var(--green)}.tri .w{color:var(--yellow)}
+  .tri .txt{color:var(--text-2)}.tri .txt b{color:var(--text)}
+
+  .ask{background:linear-gradient(135deg,rgba(250,204,21,0.08),rgba(251,146,60,0.03));border:1px solid rgba(250,204,21,0.3);border-left:3px solid var(--yellow);border-radius:12px;padding:22px 26px}
+  .ask .k{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--yellow);font-weight:700;margin-bottom:14px}
+  .ask ol{margin-left:18px;display:flex;flex-direction:column;gap:11px}
+  .ask li{font-size:14px;color:var(--text-2)}.ask li b{color:var(--text)}
+
+  .footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--border);font-size:12px;color:var(--dim);font-family:"JetBrains Mono",monospace}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="eyebrow">Code Architect · implementation plan · 2026-05-26</div>
+  <h1 class="title">The org, built in the right order.</h1>
+  <p class="subtitle">Kai's work order, turned into a sequenced, gated build plan — shared-engine architecture
+  for the Kai/Mira split, the ≤60s comms fix, audit-first Conductor, client managers, and a risk register
+  that carries Kai's five and adds CA's engineering five.</p>
+  <p class="stamp">PLAN ONLY · <b>no code, no commit, no push</b> · for Alex's approval of the approach · DA re-enters before each build phase</p>
+
+  <div class="keystone" style="border-color:rgba(250,204,21,.35);background:linear-gradient(135deg,rgba(250,204,21,.08),rgba(251,146,60,.03));border-left:3px solid var(--yellow)"><div class="kh" style="color:var(--yellow)">⚠ Amendment (Alex, 2026-05-26)</div><p><b>Kai = Chief of Staff</b> (title only — same role). <b>Mira (EA) deferred to Phase 2 — not built this pass:</b> Kai wears both hats as one agent. The shared-engine / two-identities split stays a kept blueprint (§1, marked deferred), built only when triggered — EA load vs strategic work · hard personal/business wall · growth. This drops the engine refactor + Mira staging from immediate scope.</p></div>
+
+  <div class="keystone">
+    <div class="kh">★ The insight that reorders everything</div>
+    <p>Two of the four hard requirements — <b>"no context lost on hand-offs"</b> and <b>"clean lanes / wall
+    around clients"</b> — aren't new work. They <b>are the Shared Layer</b> (already built + hardened, gated
+    on Kai's 3 cutover decisions). The org redesign <b>sits on top of it</b>: identities = its isolation,
+    lossless handoff = its typed-fact projection. So the Shared Layer pilot is a <b>prerequisite</b>, not a parallel track.</p>
+    <p>Second reality from the live probe: <b>all 18 processes run as one unix user (<code>kai</code>)</b>.
+    Every wall here — client cubicles, Kai/Mira lanes — is <b>logical + signed isolation, not OS-enforced</b>,
+    until the separate "multi-user Mini" project lands. Same honest posture already accepted for the Shared Layer. No overclaiming.</p>
+  </div>
+
+  <section>
+    <h2 class="sec"><span class="num">01</span> Shared engine, two identities</h2>
+    <p class="subtitle" style="font-size:14px">CA recommendation (the work order left packaging to CA): <b>monorepo, identity-as-configuration — not a code fork.</b> One <code>core/</code> engine; Kai &amp; Mira are config overlays. Two pm2 processes, same entrypoint, <code>IDENTITY=kai</code> / <code>IDENTITY=mira</code>. Build once, maintain once, no drift — two genuinely separate runtimes, memories, mesh seats.</p>
+    <div class="engine">
+      <div class="erow">
+        <div class="driver mira">
+          <div class="dn">🌊 Mira · personal · reports to Alex</div>
+          <div class="lane">Personal calendar · email · errands · travel · household</div>
+          <div class="lane">Own memory · own Telegram bot (separate chat)</div>
+        </div>
+        <div class="driver kai">
+          <div class="dn">⚓ Kai (Chief of Staff) · the business</div>
+          <div class="lane">Office ops · agent coordination · project oversight</div>
+          <div class="lane">Business calendar &amp; email · the standup</div>
+        </div>
+      </div>
+      <div class="shared">⚙ Shared <code>core/</code> underneath · identity = {persona, tools, data-lane, memory, mesh seat, channel}</div>
+    </div>
+    <p style="font-size:12.5px;color:var(--muted);margin-top:12px">The hard part (Kai's RISK 01): one calendar, one work identity. CA fix — separate underlying accounts + a deterministic ownership router + a reconciliation gate that catches any double-book before it happens. Proof gate: a live crossover reconciled cleanly.</p>
+    <div class="keystone" style="margin:18px 0 0"><div class="kh">Front door — resolved: NOT Telegram</div><p>Channel = transport, separable from identity. Alex's real door is <b>VS Code terminals</b> (now) + the <b>dashboard</b> as the unified UI (Kai/Mira as panes, not phone bots). <b>Telegram-per-identity dropped.</b> The dashboard likely failed for lack of sync infra — the very wiring this plan builds (Phase 8 verifies + revives it).</p></div>
+  </section>
+
+  <section>
+    <h2 class="sec"><span class="num">02</span> ≤60s comms — the key requirement</h2>
+    <div class="keystone" style="border-color:rgba(248,113,113,.35);background:linear-gradient(135deg,rgba(248,113,113,.07),rgba(248,113,113,.02));border-left:3px solid var(--red)"><div class="kh" style="color:var(--red)">✕ Corrected: ≤60s is already met</div><p>The <code>300–600s</code> in <code>/health</code> is the <b>heartbeat</b> cadence, NOT message-poll. In code, CFO / Conductor / Nami all set <code>MESH_POLL_INTERVAL = 30s</code> — <b>every agent already picks up messages within ~30s</b>. The work order (and "polling won't cut it") misread the heartbeat number as latency.</p></div>
+    <div class="two">
+      <div class="col a"><div class="tagm">Dropped</div><h3>Poll-tighten — unnecessary</h3><p>Agents are already at 30s for messages. Tightening would fix a non-problem. Removed from Phase 0.</p></div>
+      <div class="col b"><div class="tagm">Optional · later · DA-gated</div><h3>Push-nudge — nice-to-have</h3><p>Only helps multi-hop chains (A→B→C ≈ 90s at 30s/hop) + snappiness. Build only if multi-hop latency actually bites. <b>The real comms pain is reliability, not speed.</b></p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec"><span class="num">03</span> Sequenced rollout — every step gated</h2>
+    <table>
+      <thead><tr><th>Phase</th><th>What</th><th>Proof gate</th><th>Risk</th></tr></thead>
+      <tbody>
+        <tr><td class="ph">0 · Deck</td><td>Await 7TB migration; OAuth stable. <i>Nearly empty: ≤60s already met (30s polls), drift overstated, kmg unbuilt — no writes.</i></td><td>fires clear · OAuth green 48h</td><td><span class="pill lo">none</span></td></tr>
+        <tr><td class="ph">1 · Shared Layer</td><td>Existing gated pilot: <code>kameha-mesh.db</code> → enroll → DAG/NAMI split <span class="dep">(Kai's 3 decisions first)</span></td><td>receivers re-audited: projected, acked, isolated</td><td><span class="pill md">med</span></td></tr>
+        <tr><td class="ph">2 · Conductor</td><td>Read-only audit; document functions + all <code>conductor.db</code> readers <span class="dep">(parallel OK)</span></td><td>audit doc complete; every consumer mapped</td><td><span class="pill lo">low</span></td></tr>
+        <tr><td class="ph">3 · KMG + clients</td><td><b>Build KMG first</b> (designed, unbuilt — §5), then template DAG + Dental managers in its image on the wall; matrix lines</td><td>KMG boots; each client scoped to its cubicle, ≤60s, no cross-client read</td><td><span class="pill hi">med→hi</span></td></tr>
+        <tr><td class="ph">4 · Dashboard</td><td>Diagnose why <code>kai-dashboard</code> fails (infra vs code — verify), then make it the unified front door over now-synced state</td><td>shows live correct state; drive from one UI</td><td><span class="pill md">med</span></td></tr>
+        <tr style="opacity:.55"><td class="ph">D1–D3</td><td><b>Deferred (Phase 2):</b> engine refactor → stand Mira up → prove → Kai sheds EA. Blueprint kept; built only when triggered.</td><td>— not this pass —</td><td><span class="pill" style="background:rgba(125,138,153,.2);color:var(--muted)">defer</span></td></tr>
+      </tbody>
+    </table>
+    <p style="font-size:12px;color:var(--muted);margin-top:10px"><span class="dep">Purple</span> = depends on the Shared Layer / Kai's cutover decisions. Nothing past Phase 0 starts mid-fire.</p>
+  </section>
+
+  <section>
+    <h2 class="sec"><span class="num">04</span> Risk register</h2>
+    <div class="risks">
+      <div class="risk hi"><div class="rn">R01 · Kai · HIGHEST</div><div class="rh">Calendar/email split</div><p>Separate accounts + ownership router + reconciliation gate.</p></div>
+      <div class="risk hi"><div class="rn">R02 · Kai · timing</div><div class="rh">Don't operate mid-fire</div><p>Phase 0 gates everything behind the current fires.</p></div>
+      <div class="risk"><div class="rn">R03 · Kai</div><div class="rh">Mira starts memory-blank</div><p>Accepted; builds her own personal memory.</p></div>
+      <div class="risk"><div class="rn">R04 · Kai</div><div class="rh">More reach → guardrails matter more</div><p>Guardrails unchanged; Chief of Staff = coordination, not autonomy.</p></div>
+      <div class="risk"><div class="rn">R05 · Kai</div><div class="rh">Recursion</div><p>CA builds the org incl. its own seat. Noted.</p></div>
+      <div class="risk ca hi"><div class="rn">R06 · CA · HIGH</div><div class="rh">Engine-refactor regression</div><p>Refactor with Kai sole-identity first; prove byte-identical before Mira.</p></div>
+      <div class="risk ca"><div class="rn">R07 · CA</div><div class="rh">Logical-only isolation</div><p>All procs run as <code>kai</code> — walls are logical+signed, not OS, until multi-user Mini.</p></div>
+      <div class="risk ca"><div class="rn">R08 · CA</div><div class="rh">Push-comms = mesh-contract change</div><p>DA-gated, fleet blast radius. Phase B behind A.</p></div>
+      <div class="risk ca"><div class="rn">R09 · CA</div><div class="rh">Conductor is load-bearing</div><p><code>conductor.db</code> active + shared; 3.6MB WAL needs checkpoint. Map readers first.</p></div>
+      <div class="risk ca"><div class="rn">R10 · CA</div><div class="rh">Mira's new external channel</div><p>Bot-token custody + no-external-send-without-approval guardrail apply.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec"><span class="num">05</span> Triangulation — work order claims vs live state</h2>
+    <div class="tri">
+      <div class="row"><span class="mk f">✕</span><span class="txt"><b>"sync-agents-json.js missing on Mini"</b> — FALSE. Present at <code>/Users/kai/kai/scripts/mesh/sync-agents-json.js</code> (4195 b, identical to repo). Stale claim.</span></div>
+      <div class="row"><span class="mk t">✓</span><span class="txt"><b>"agents.json Mini=12 missing kmg, mesh=13"</b> — CONFIRMED. Mini lists 12; mesh <code>/health</code> reports 13 (adds <code>kmg</code>, inactive).</span></div>
+      <div class="row"><span class="mk f">✕</span><span class="txt"><b>"Mini deploy drift"</b> — OVERSTATED. Same remote; Mini <b>contains</b> the laptop's feature commits (has <code>3fa4b72c</code>). Diverged auto-backup state, not a stale deployment. No big sync needed.</span></div>
+      <div class="row"><span class="mk f">✕</span><span class="txt"><b>"agents.json 12→13, bring kmg active"</b> — MISFRAMED. <code>kmg</code> has no code/manifest/process anywhere — only a reserved mesh seat. Designed but <b>never built</b>. It's a Phase-3 build, not a Phase-0 file edit.</span></div>
+    </div>
+  </section>
+
+  <div class="ask">
+    <div class="k">What CA needs from you before building</div>
+    <ol>
+      <li><b>Approve the architecture</b> — monorepo / identity-as-config · push-nudge comms · audit-first Conductor · client managers as KMG-templated identities.</li>
+      <li><b>Confirm the sequence</b> — Phase 0→7, nothing past Phase 0 until the fires (Dropbox, OAuth) clear.</li>
+      <li><b>Green-light the safe Phase-0 mechanicals now</b> — read-only Conductor audit · <code>agents.json</code> 12→13 + kmg active · poll-tighten ≤60s (each still returns for go-ahead before the write).</li>
+      <li><b>The dependency</b> — Kai's 3 Shared-Layer cutover decisions gate Phases 4–7. Decide those alongside this.</li>
+    </ol>
+  </div>
+
+  <div class="footer">
+    Code Architect · agent-org buildout plan · 2026-05-26 · plan: <code>docs/plan-agent-org-buildout-2026-05-26.md</code> ·
+    intake: <code>docs/intake-kai-agent-org-buildout-2026-05-26.md</code> · DA re-enters per build phase · no code authorized by this doc.
+  </div>
+
+</div>
+</body>
+</html>

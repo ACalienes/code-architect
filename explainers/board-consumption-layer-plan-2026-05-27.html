@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<!-- Plan: The Board consumption layer — acknowledgement + action. 2026-05-27 -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plan · Board acknowledgement + action layers · 2026-05-27</title>
+<style>
+  :root{--bg:#0a0d12;--card:#151b25;--panel:#11161e;--brief:#0c1016;--border:#232c3a;--border-b:#2f3a4a;
+    --text:#e6edf3;--text-2:#aab6c4;--muted:#7d8a99;--dim:#5a6573;--accent:#6ea8fe;--green:#4ade80;--yellow:#facc15;--orange:#fb923c;--purple:#c084fc;--teal:#5eead4;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);font-family:-apple-system,"SF Pro Text",sans-serif;line-height:1.5;min-height:100vh}
+  body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellipse 1100px 560px at 50% -8%,rgba(110,168,254,.07),transparent 55%);pointer-events:none;z-index:0}
+  .wrap{position:relative;z-index:1;max-width:1000px;margin:0 auto;padding:44px 24px 80px}
+  code{font-family:"JetBrains Mono",Menlo,monospace;font-size:.82em;background:var(--brief);border:1px solid var(--border);border-radius:5px;padding:1px 6px;color:var(--teal)}
+  .eyebrow{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:var(--accent);margin-bottom:13px}
+  h1{font-size:36px;font-weight:800;letter-spacing:-1.2px;line-height:1.07;background:linear-gradient(180deg,#fff,#b8c5d3);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{font-size:16px;color:var(--text-2);max-width:800px;margin:11px 0 26px}.sub b{color:var(--text)}
+  h2{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.4px;color:var(--text-2);margin:30px 0 13px;display:flex;gap:10px}h2::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent)}
+
+  .ladder{display:flex;flex-direction:column;gap:8px}
+  .rung{display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid var(--border);border-radius:11px;padding:13px 16px}
+  .rung .lvl{font-size:13px;font-weight:700;width:130px;flex-shrink:0}
+  .rung .desc{font-size:13px;color:var(--text-2);flex:1}
+  .rung .tag{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:2px 9px;border-radius:20px;flex-shrink:0}
+  .rung.have{border-left:3px solid var(--green)}.rung.have .tag{background:rgba(74,222,128,.13);color:var(--green)}
+  .rung.have .lvl{color:var(--green)}
+  .rung.build{border-left:3px solid var(--yellow)}.rung.build .tag{background:rgba(250,204,21,.13);color:var(--yellow)}
+  .rung.build .lvl{color:var(--yellow)}
+
+  .phase{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:17px 20px;margin-bottom:11px}
+  .phase .h{font-size:16px;font-weight:800;margin-bottom:4px}
+  .phase.p1 .h{color:var(--green)}.phase.p2 .h{color:var(--purple)}
+  .phase .g{font-size:12.5px;color:var(--muted);margin-bottom:10px}
+  .phase ol{margin:0 0 0 18px;display:flex;flex-direction:column;gap:6px}
+  .phase li{font-size:13px;color:var(--text-2)}.phase li b{color:var(--text)}
+
+  .principles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:680px){.principles{grid-template-columns:1fr}}
+  .pr{background:var(--brief);border:1px solid var(--border-b);border-radius:10px;padding:12px 15px}
+  .pr .t{font-size:13px;font-weight:700;color:var(--accent)}
+  .pr p{font-size:12px;color:var(--text-2);margin-top:3px}
+
+  .flow{display:flex;align-items:center;flex-wrap:wrap;gap:0;background:var(--brief);border:1px solid var(--border-b);border-radius:12px;padding:16px 14px;font-size:13px;margin-top:4px}
+  .node{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:9px 13px;text-align:center}
+  .node b{font-size:12.5px}.node .s{font-size:10px;color:var(--muted)}
+  .node.new{border-color:rgba(74,222,128,.45);background:rgba(74,222,128,.06)}
+  .arr{color:var(--dim);padding:0 8px;font-size:15px}
+  @media(max-width:680px){.arr{transform:rotate(90deg)}.flow{flex-direction:column}}
+  .foot{margin-top:30px;font-size:11px;color:var(--dim);font-family:"JetBrains Mono",monospace;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">Plan · next session · 2026-05-27</div>
+  <h1>Making the board confirm, not just show.</h1>
+  <p class="sub">You asked the right question: where's the acknowledgement that a message was <b>received and absorbed</b>? Today the board <b>shows</b> things; it doesn't <b>confirm</b> them. This is the plan to add the two missing layers — <b>acknowledgement</b> (got it, logged it) and <b>action</b> (did the right thing, still gated).</p>
+
+  <h2>The four levels — where we are</h2>
+  <div class="ladder">
+    <div class="rung have"><div class="lvl">1 · Delivered</div><div class="desc">It's in the agent's inbox.</div><div class="tag">have it</div></div>
+    <div class="rung have"><div class="lvl">2 · Read</div><div class="desc">The drainer pulled it — but that's the <i>mailman</i> marking "dropped in the box," not the agent saying anything.</div><div class="tag">have it</div></div>
+    <div class="rung build"><div class="lvl">3 · Acknowledged</div><div class="desc">The agent confirms it received and <b>logged</b> the info to its own memory. Visible to you.</div><div class="tag">build — phase 1</div></div>
+    <div class="rung build"><div class="lvl">4 · Acted</div><div class="desc">The agent does the right thing for the type — through the approval gate, never auto-running.</div><div class="tag">build — phase 2</div></div>
+  </div>
+
+  <h2>The round-trip we're building</h2>
+  <div class="flow">
+    <div class="node"><b>Agent posts</b></div><span class="arr">→</span>
+    <div class="node"><b>Delivered</b><div class="s">into inbox</div></div><span class="arr">→</span>
+    <div class="node"><b>Read</b><div class="s">drainer pulls</div></div><span class="arr">→</span>
+    <div class="node new"><b>✓ Acknowledged</b><div class="s">agent logged it</div></div><span class="arr">→</span>
+    <div class="node new"><b>Acted (gated)</b><div class="s">claim → approve → do</div></div>
+  </div>
+
+  <h2>Four principles (non-negotiable)</h2>
+  <div class="principles">
+    <div class="pr"><div class="t">One writer</div><p>Agents read their own inbox files; acks flow back through a single writer. No N-agents-writing (that's what caused "database locked" before).</p></div>
+    <div class="pr"><div class="t">Proof from the agent</div><p>The acknowledgement comes from the agent's own logic <i>after it logs</i> — not auto-stamped by the mailman, or it's the same hollow "read" we have now.</p></div>
+    <div class="pr"><div class="t">Seeing ≠ doing</div><p>Awareness facts just inform. Work &amp; tasks always route through your approval gate — never auto-chain.</p></div>
+    <div class="pr"><div class="t">Re-auditable</div><p>Every ack &amp; action is a row you can re-check. The ack is the visible signal; the audit is the truth.</p></div>
+  </div>
+
+  <h2>Phase 1 — Acknowledgement (do first, lower risk)</h2>
+  <div class="phase p1">
+    <div class="g">When an agent consumes a fact, it logs it and acks. The ledger shows: delivered → read → ✓ acknowledged by Kai (logged).</div>
+    <ol>
+      <li>Add the <b>acked</b> step to delivery (reuse the board's existing ack mechanism).</li>
+      <li>Build a reusable <b>consumer</b>: reads an agent's inbox → logs to its memory → acks.</li>
+      <li>Wire <b>Kai first</b> end-to-end (the live CA↔Kai loop) and prove the round-trip.</li>
+      <li>Upgrade the <b>ledger</b> to show acknowledgements (who logged what).</li>
+      <li>CA (single-shot) consumes + acks its inbox <b>at session start</b>.</li>
+    </ol>
+  </div>
+
+  <h2>Phase 2 — Action (after ack is proven)</h2>
+  <div class="phase p2">
+    <div class="g">Agents take the right action per type — gated.</div>
+    <ol>
+      <li><b>Awareness</b> (objective, decision, status): update context, ack, no action.</li>
+      <li><b>Question</b>: if answerable, draft an answer (gated) → on approval, post the resolution.</li>
+      <li><b>Work order / task</b>: claim → surface for <b>your approval</b> → act; track status back to the board.</li>
+      <li>Route every action through each agent's existing approval gate. <b>No auto-chaining.</b> Roll out agent-by-agent (Kai first).</li>
+    </ol>
+  </div>
+
+  <h2>Before building</h2>
+  <p class="sub" style="margin:0">Codex review on the design first (it's a contract change touching every agent), CA-internal devil's-advocate per phase, commit per gate with your go-ahead. Full plan: <code>docs/plan-board-consumption-layer-2026-05-27.md</code>.</p>
+
+  <div class="foot">Code Architect · plan · 2026-05-27 · acknowledgement (phase 1) → action (phase 2) · single-writer · action-gate preserved</div>
+</div>
+</body>
+</html>

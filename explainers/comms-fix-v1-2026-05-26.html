@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<!-- Comms-fix v1: dispatch-action validation. Built + tested as drafts, staged for apply-approval. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Comms-fix v1 · dispatch-action validation · 2026-05-26</title>
+<style>
+  :root{
+    --bg:#0a0d12;--bg-2:#0f131a;--card:#141a23;--brief-bg:#0c1016;--border:#232c3a;--border-bright:#2f3a4a;
+    --text:#e6edf3;--text-2:#b8c5d3;--muted:#7d8a99;--dim:#5a6573;--accent:#6ea8fe;--green:#4ade80;
+    --green-glow:rgba(74,222,128,0.35);--yellow:#facc15;--orange:#fb923c;--red:#f87171;--purple:#c084fc;--teal:#5eead4;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);font-family:-apple-system,"SF Pro Display","SF Pro Text",BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.6;min-height:100vh}
+  body::before{content:"";position:fixed;inset:0;background:
+      radial-gradient(ellipse 1100px 560px at 16% -10%,rgba(74,222,128,0.06),transparent 50%),
+      radial-gradient(ellipse 820px 420px at 92% 6%,rgba(110,168,254,0.05),transparent 50%),
+      radial-gradient(ellipse 1000px 500px at 50% 120%,rgba(248,113,113,0.04),transparent 50%);pointer-events:none;z-index:0}
+  .container{position:relative;max-width:1020px;margin:0 auto;padding:48px 28px 90px;z-index:1}
+  code{font-family:"JetBrains Mono","SF Mono",Menlo,monospace;font-size:0.84em;background:var(--brief-bg);border:1px solid var(--border);border-radius:5px;padding:1px 6px;color:var(--teal)}
+  .eyebrow{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:var(--green);margin-bottom:16px;display:flex;align-items:center;gap:12px}
+  .eyebrow::before{content:"";width:24px;height:1px;background:var(--green);box-shadow:0 0 8px var(--green-glow)}
+  h1.title{font-size:42px;font-weight:700;letter-spacing:-1.3px;line-height:1.06;margin-bottom:14px;background:linear-gradient(180deg,#fff 0%,#b8c5d3 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .subtitle{font-size:17px;color:var(--text-2);max-width:870px;margin-bottom:14px}
+  .stamp{font-size:12px;color:var(--dim);font-family:"JetBrains Mono",monospace;margin-bottom:34px}
+  .stamp b{color:var(--green)}
+  section{margin-bottom:40px}
+  h2.sec{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-2);margin-bottom:18px;padding-bottom:10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+  h2.sec .num{color:var(--green);font-family:"JetBrains Mono",monospace}
+
+  .flow{background:var(--brief-bg);border:1px solid var(--border-bright);border-radius:12px;padding:18px 20px;font-family:"JetBrains Mono",monospace;font-size:12.5px;color:var(--text-2);line-height:1.9;overflow-x:auto}
+  .flow .bad{color:var(--red)}.flow .ok{color:var(--green)}.flow .dim{color:var(--dim)}
+
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:760px){.two{grid-template-columns:1fr}}
+  .gap{border-radius:12px;padding:18px 20px;border:1px solid var(--border);background:var(--card);border-left:3px solid var(--orange)}
+  .gap h3{font-size:14px;margin-bottom:8px;color:var(--orange)}
+  .gap p{font-size:12.5px;color:var(--text-2)}
+
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--border-bright)}
+  td{padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text-2);vertical-align:top}
+  td.r{font-family:"JetBrains Mono",monospace}
+  .b{color:var(--red);font-weight:700}.g{color:var(--green);font-weight:700}.w{color:var(--yellow);font-weight:700}
+
+  .patch{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:12px}
+  .patch .pt{font-size:14px;font-weight:650;margin-bottom:6px}.patch .pt .tag{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--accent);background:var(--brief-bg);border:1px solid var(--border-bright);border-radius:6px;padding:2px 8px;margin-right:8px}
+  .patch p{font-size:12.5px;color:var(--text-2)}
+  .patch.rec{border-left:3px solid var(--purple)}
+
+  .da{background:linear-gradient(135deg,rgba(74,222,128,.07),rgba(74,222,128,.02));border:1px solid rgba(74,222,128,.3);border-left:3px solid var(--green);border-radius:12px;padding:18px 22px}
+  .da .k{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--green);font-weight:700;margin-bottom:10px}
+  .da ul{list-style:none}.da li{font-size:13px;color:var(--text-2);padding:4px 0 4px 20px;position:relative}
+  .da li::before{content:"✓";position:absolute;left:0;color:var(--green)}
+  .da .cond{font-size:12px;color:var(--muted);margin-top:10px;border-top:1px dashed var(--border);padding-top:10px}
+
+  .ask{background:linear-gradient(135deg,rgba(250,204,21,.08),rgba(251,146,60,.03));border:1px solid rgba(250,204,21,.3);border-left:3px solid var(--yellow);border-radius:12px;padding:20px 24px}
+  .ask .k{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--yellow);font-weight:700;margin-bottom:12px}
+  .ask ol{margin-left:18px;display:flex;flex-direction:column;gap:9px}.ask li{font-size:13.5px;color:var(--text-2)}.ask li b{color:var(--text)}
+  .footer{margin-top:46px;padding-top:22px;border-top:1px solid var(--border);font-size:12px;color:var(--dim);font-family:"JetBrains Mono",monospace}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="eyebrow">Code Architect · comms-fix v1 · 2026-05-26</div>
+  <h1 class="title">Stop the silent drops.</h1>
+  <p class="subtitle">A shared validator so a malformed or unsupported message gets rejected <i>loudly at the door</i> — instead of dying quietly in an inbox nobody reads. Built and tested as drafts; staged for your apply-approval.</p>
+  <p class="stamp">DRAFT in <code>drafts/comms-fix/</code> · <b>no Kai-repo edits</b> (deploy gate) · validator 10/10 test cases green · DA: PASS (warn-mode)</p>
+
+  <section>
+    <h2 class="sec"><span class="num">01</span> What broke (your CFO case)</h2>
+    <div class="flow">
+someone → <span class="dim">drops a work-order FILE</span> → cfo legacy inbox  <span class="dim">(action: <span class="bad">""</span>)</span>
+   <span class="dim">↓ bypasses every mint guard — no validation on this channel</span>
+cfo dispatches <span class="bad">""</span> → no capability matches → <span class="bad">FAIL</span>
+   <span class="dim">↓ failure written to a filesystem inbox no live process watches</span>
+you only saw it because you <span class="bad">hand-relayed</span> it
+    </div>
+    <p style="font-size:12.5px;color:var(--muted);margin-top:10px">Two distinct gaps, only one validated channel:</p>
+    <div class="two" style="margin-top:10px">
+      <div class="gap"><h3>Gap A · unknown action on the mesh</h3><p>A valid message whose action the receiver doesn't support (ACD→Framer <code>creative_brief</code>, nami→framer). Dies at the receiver, no signal back to the sender.</p></div>
+      <div class="gap"><h3>Gap B · the legacy filesystem-drop channel</h3><p>Files written straight into <code>~/.kameha/delegations/&lt;agent&gt;/</code>, read by <code>pollLegacyInbox</code> with <b>zero validation</b> — the CFO <code>""</code> path. Failures land unseen.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec"><span class="num">02</span> The validator — and why it can't break traffic</h2>
+    <p class="subtitle" style="font-size:14px">One shared check (<code>action-vocabulary.js</code>) every send/receive path can call. <b>Fail-open by design:</b> the only hard block is an empty action (always a bug); everything uncertain warns, never blocks. Proven against the real registry:</p>
+    <table>
+      <thead><tr><th>Input</th><th>Result</th><th></th></tr></thead>
+      <tbody>
+        <tr><td class="r"><code>""</code> / whitespace <span style="color:var(--dim)">(the bug)</span></td><td class="r b">BLOCK</td><td>ACTION_EMPTY — zero false positives</td></tr>
+        <tr><td class="r">cash_summary · mark_estimate_declined</td><td class="r g">OK</td><td>exact capability</td></tr>
+        <tr><td class="r">"give me the cash summary"</td><td class="r g">OK</td><td>free-text resolves → won't break delegation</td></tr>
+        <tr><td class="r">make_me_a_sandwich</td><td class="r w">OK + WARN</td><td>unknown → surfaced, not blocked (warn-mode)</td></tr>
+        <tr><td class="r">unregistered agent · missing registry</td><td class="r g">OK</td><td>fail-open — never wedges traffic</td></tr>
+        <tr><td class="r">unknown under <code>strict:true</code></td><td class="r b">BLOCK</td><td>the future strict-flip works</td></tr>
+      </tbody>
+    </table>
+    <p style="font-size:12px;color:var(--muted);margin-top:10px"><code>action-vocabulary.json</code> — registry v1, CFO fully extracted from code (16 capabilities + keyword map). Other agents fail-open to warn until added pair-at-a-time.</p>
+  </section>
+
+  <section>
+    <h2 class="sec"><span class="num">03</span> Where it wires in</h2>
+    <div class="patch"><div class="pt"><span class="tag">Patch 1</span>CFO <code>pollLegacyInbox</code> — receiver guard</div><p>Reject empty/malformed dropped files loudly <b>and raise a <code>work_order_rejected</code> mesh notification to Kai</b> — so the failure surfaces on the live mesh, not in a dead inbox. Template for every agent.</p></div>
+    <div class="patch"><div class="pt"><span class="tag">Patch 2</span>mesh-api <code>POST /messages</code></div><p>Validate the field the receiver actually dispatches on (<code>payload.action</code>), warn-mode. Zero behavior change beyond a surfaced log.</p></div>
+    <div class="patch rec"><div class="pt"><span class="tag" style="color:var(--purple)">Patch 3</span>Durable fix (recommendation)</div><p>Retire the legacy filesystem-drop channel onto the validated mesh + Shared Layer — removes Gap B at the root and closes the visibility gap. Sequenced under org-plan Phase 1.</p></div>
+  </section>
+
+  <section>
+    <h2 class="sec"><span class="num">04</span> DA verdict — PASS (warn-mode)</h2>
+    <div class="da">
+      <div class="k">Why it's safe to apply in warn-mode</div>
+      <ul>
+        <li>Fail-open + empty-only block → cannot wedge live traffic; the one block is unambiguously a bug</li>
+        <li>Validates the <i>dispatched</i> field (payload.action) — fixes the real fragmentation, not a decoy</li>
+        <li>Warn-mode = no behavior change beyond surfaced logs; strict-flip is separately gated + reversible</li>
+        <li>Receiver reject raises a mesh notification → failures surface live (fixes the visibility gap too)</li>
+      </ul>
+      <div class="cond">Conditions before strict-flip: encode each agent's resolver in the registry · clean warn window · Codex review (mesh contract) · confirm each agent's legacy-inbox path at apply time.</div>
+    </div>
+  </section>
+
+  <div class="ask">
+    <div class="k">Next — your gates</div>
+    <ol>
+      <li><b>Codex review</b> (in progress) — prompt is <code>drafts/comms-fix/codex-prompt.md</code>; fold findings (the REVISE→fix loop).</li>
+      <li><b>Apply CA-lane pieces</b> — validator → <code>scripts/lib/</code>, registry → <code>knowledge/manifests/</code> (your go-ahead).</li>
+      <li><b>Apply Patches 1–2</b> — <code>cfo-agent.js</code>, <code>mesh-api.js</code> (outside my lane → hand to Kai on your go-ahead).</li>
+      <li><b>Later:</b> strict-flip per agent, and Patch 3 (retire the legacy channel) under the org plan.</li>
+    </ol>
+  </div>
+
+  <div class="footer">
+    Code Architect · comms-fix v1 · 2026-05-26 · drafts: <code>drafts/comms-fix/</code> (validator · registry · PATCHES-and-DA · codex-prompt) ·
+    spec: <code>docs/impl-action-validation-2026-05-26.md</code> · class: <code>pattern_silent_failure_class_fleetwide</code> · nothing applied to live.
+  </div>
+
+</div>
+</body>
+</html>
