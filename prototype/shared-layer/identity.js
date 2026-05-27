@@ -165,5 +165,5 @@ function authorizeSubscribe(db, agent, factType, clientScope) {
 
 module.exports = {
   ensureIdentitiesTable, generateIdentity, registerIdentity, canonicalFact, signFact,
-  verifyFact, writeSignedFact, authorizeSubscribe,
+  verifyFact, authzProduce, writeSignedFact, authorizeSubscribe,
 };
