@@ -68,32 +68,51 @@ function collect() {
   return events;
 }
 
-/** Emit one event — through the door (remote) or to the DB (local). Returns true on success. */
+// Codex #1: an event is "settled" (safe to mark seen) ONLY on a 200, or on a PERMANENT rejection
+// (quarantined — retrying a malformed event forever is pointless). TRANSIENT failures (network, 5xx,
+// 429) stay PENDING so the next tick retries them — a gateway blip must never silently lose an event.
+const PERMANENT = new Set([400, 401, 403, 409, 422]);
+const QUARANTINE = path.join(HOME, '.kameha', 'board-emit-quarantine.ndjson');
+function quarantine(agent, e, reason) {
+  try { fs.appendFileSync(QUARANTINE, JSON.stringify({ ts: new Date().toISOString(), agent, key: e.key, subject: e.subject, detail: e.detail, reason }) + '\n'); } catch (_) {}
+}
+
+/** Emit one event. Returns 'ok' | 'permanent' | 'transient'. */
 async function emitOne(e, db) {
   const fact = { fact_type: 'status_update', visibility: 'internal', data_class: 'internal', subject_type: 'finance', subject_id: e.subject, payload: { status: 'update', detail: e.detail } };
   if (REMOTE) {
-    const r = await _postFact({ url: REMOTE, token: _token, idempotencyKey: 'cfo:' + e.key, fact });
-    if (r.status !== 200) console.error(`[emit-cfo] gateway rejected (${r.status}): ${r.error || ''}`);
-    return r.status === 200;
+    let r;
+    try { r = await _postFact({ url: REMOTE, token: _token, idempotencyKey: 'cfo:' + e.key, fact }); }
+    catch (err) { console.error(`[emit-cfo] network error: ${err.message}`); return 'transient'; }
+    if (r.status === 200) return 'ok';
+    console.error(`[emit-cfo] gateway ${r.status}: ${r.error || ''}`);
+    return PERMANENT.has(r.status) ? 'permanent' : 'transient';
   }
-  return _writeFact(db, { ...fact, client_id: null, source_agent: 'cfo' }).ok;
+  return _writeFact(db, { ...fact, client_id: null, source_agent: 'cfo' }).ok ? 'ok' : 'permanent';
 }
 
+/** Returns { settled: keys to mark seen, posted, quarantined, pending }. */
 async function emitMany(events) {
   if (REMOTE) remoteSetup();
   const db = REMOTE ? null : localDb();
-  let posted = 0;
-  for (const e of events) if (await emitOne(e, db)) posted++;
-  return posted;
+  const settled = []; let posted = 0, quarantined = 0, pending = 0;
+  for (const e of events) {
+    const res = await emitOne(e, db);
+    if (res === 'ok') { settled.push(e.key); posted++; }
+    else if (res === 'permanent') { quarantine('cfo', e, 'permanent_reject'); settled.push(e.key); quarantined++; }
+    else pending++;   // transient → NOT settled → retried next tick (no silent loss)
+  }
+  return { settled, posted, quarantined, pending };
 }
+const mergeSeen = (prev, settled) => Array.from(new Set([...((prev && prev.seen) || []), ...settled]));
 
 async function tick() {
   const cur = collect();
   if (EMIT_ALL) {
     if (DRY) return previewAll(cur);
-    const posted = await emitMany(cur);
-    saveState({ seen: cur.map(e => e.key) });
-    console.log(`[emit-cfo] --emit-all (${REMOTE ? 'via gateway ' + REMOTE : 'local'}): posted ${posted}/${cur.length} CFO event(s)`);
+    const r = await emitMany(cur);
+    saveState({ seen: mergeSeen(loadState(), r.settled) });   // only settled marked seen — transient failures retry
+    console.log(`[emit-cfo] --emit-all (${REMOTE ? 'via gateway ' + REMOTE : 'local'}): ${r.posted} posted, ${r.quarantined} quarantined, ${r.pending} pending(retry) of ${cur.length}`);
     return;
   }
   const prev = loadState();
@@ -106,9 +125,10 @@ async function tick() {
   const seen = new Set(prev.seen || []);
   const fresh = cur.filter(e => !seen.has(e.key));
   if (DRY) return previewAll(fresh);
-  const posted = await emitMany(fresh);
-  saveState({ seen: cur.map(e => e.key) });
-  if (posted) console.log(`[emit-cfo] posted ${posted} new CFO event(s)${REMOTE ? ' via gateway' : ''}`);
+  if (!fresh.length) return;
+  const r = await emitMany(fresh);
+  saveState({ seen: mergeSeen(prev, r.settled) });   // failed-transient fresh events stay un-seen → retried next tick
+  if (r.posted || r.quarantined || r.pending) console.log(`[emit-cfo] ${r.posted} posted, ${r.quarantined} quarantined, ${r.pending} pending${REMOTE ? ' (gateway)' : ''}`);
 }
 
 function previewAll(list) {
