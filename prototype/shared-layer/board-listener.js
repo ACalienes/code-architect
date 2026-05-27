@@ -21,8 +21,8 @@ fs.mkdirSync(DIR, { recursive: true });
 const db = openDb(process.env.HOME + '/.kameha/kameha-mesh.db');
 
 const rec = (agent, f) => fs.appendFileSync(path.join(DIR, agent + '.ndjson'), JSON.stringify({
-  received_at: new Date().toISOString(), kind: f.kind, fact_type: f.fact_type,
-  subject_id: f.subject_id, payload: f.payload,
+  received_at: new Date().toISOString(), delivery_id: f.delivery_id, fact_id: f.fact_id,
+  kind: f.kind, fact_type: f.fact_type, subject_id: f.subject_id, payload: f.payload,
 }) + '\n');
 
 const agents = () => db.prepare('SELECT DISTINCT agent FROM subscriptions').all().map(r => r.agent);

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<!-- Architecture audit: is the laptop<->Mini mirror model still real? 2026-05-27 -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Architecture audit · the laptop↔Mini mirror · 2026-05-27</title>
+<style>
+  :root{--bg:#0a0d12;--card:#151b25;--panel:#11161e;--brief:#0c1016;--border:#232c3a;--border-b:#2f3a4a;
+    --text:#e6edf3;--text-2:#aab6c4;--muted:#7d8a99;--dim:#5a6573;--accent:#6ea8fe;--green:#4ade80;--yellow:#facc15;--orange:#fb923c;--red:#f87171;--purple:#c084fc;--teal:#5eead4;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);font-family:-apple-system,"SF Pro Text",sans-serif;line-height:1.5;min-height:100vh}
+  body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellipse 1100px 560px at 50% -8%,rgba(248,113,113,.06),transparent 55%);pointer-events:none;z-index:0}
+  .wrap{position:relative;z-index:1;max-width:1000px;margin:0 auto;padding:44px 24px 80px}
+  code{font-family:"JetBrains Mono",Menlo,monospace;font-size:.82em;background:var(--brief);border:1px solid var(--border);border-radius:5px;padding:1px 6px;color:var(--teal)}
+  .eyebrow{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:var(--red);margin-bottom:13px}
+  h1{font-size:36px;font-weight:800;letter-spacing:-1.2px;line-height:1.07;background:linear-gradient(180deg,#fff,#b8c5d3);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{font-size:16px;color:var(--text-2);max-width:830px;margin:11px 0 26px}.sub b{color:var(--text)}
+  h2{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.4px;color:var(--text-2);margin:34px 0 14px;display:flex;gap:10px;align-items:center}h2::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent)}
+
+  /* claim cards */
+  .claims{display:flex;flex-direction:column;gap:11px}
+  .claim{display:flex;gap:16px;background:var(--card);border:1px solid var(--border);border-radius:13px;padding:16px 19px}
+  .claim .mark{font-size:26px;flex-shrink:0;width:34px;text-align:center}
+  .claim.ok{border-left:3px solid var(--green)}
+  .claim.bad{border-left:3px solid var(--red)}
+  .claim .ct{font-size:16px;font-weight:800;margin-bottom:3px}
+  .claim.ok .ct{color:var(--green)}.claim.bad .ct{color:var(--red)}
+  .claim .cb{font-size:13px;color:var(--text-2)}.claim .cb b{color:var(--text)}
+  .verdict{display:inline-block;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;padding:2px 9px;border-radius:20px;margin-left:8px;vertical-align:middle}
+  .verdict.h{background:rgba(74,222,128,.14);color:var(--green)}
+  .verdict.x{background:rgba(248,113,113,.14);color:var(--red)}
+
+  .ev{background:var(--brief);border:1px solid var(--border-b);border-radius:9px;padding:10px 13px;margin-top:9px;font-size:12px;color:var(--text-2);font-family:"JetBrains Mono",monospace;line-height:1.7}
+  .ev .k{color:var(--red);font-weight:700}.ev .g{color:var(--green)}
+
+  /* drift table */
+  table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:4px}
+  th,td{text-align:left;padding:8px 11px;border-bottom:1px solid var(--border)}
+  th{font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:700}
+  td b{color:var(--text)}
+  .stale{color:var(--red);font-weight:700}.fresh{color:var(--green);font-weight:700}
+  .mono{font-family:"JetBrains Mono",monospace;font-size:11.5px;color:var(--text-2)}
+
+  /* reframe layers */
+  .layers{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+  @media(max-width:680px){.layers{grid-template-columns:1fr}}
+  .layer{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:15px 17px}
+  .layer .lt{font-size:14px;font-weight:800;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+  .layer .ls{font-size:11px;color:var(--muted);margin-bottom:9px}
+  .layer p{font-size:12.5px;color:var(--text-2)}.layer p b{color:var(--text)}
+  .layer.l1{border-top:3px solid var(--green)}.layer.l1 .lt{color:var(--green)}
+  .layer.l2{border-top:3px solid var(--accent)}.layer.l2 .lt{color:var(--accent)}
+  .layer.l3{border-top:3px solid var(--purple)}.layer.l3 .lt{color:var(--purple)}
+  .layer.l4{border-top:3px solid var(--yellow)}.layer.l4 .lt{color:var(--yellow)}
+  .state{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:2px 8px;border-radius:20px;margin-left:auto}
+  .state.broke{background:rgba(248,113,113,.13);color:var(--red)}
+  .state.ok{background:rgba(74,222,128,.13);color:var(--green)}
+  .state.todo{background:rgba(250,204,21,.13);color:var(--yellow)}
+
+  .fix{display:flex;gap:12px;align-items:flex-start;background:var(--brief);border:1px solid var(--border-b);border-radius:10px;padding:12px 15px;margin-bottom:8px}
+  .fix .n{font-family:"JetBrains Mono",monospace;font-size:12px;font-weight:700;color:var(--accent);flex-shrink:0;width:22px}
+  .fix .ft{font-size:13px;color:var(--text-2)}.fix .ft b{color:var(--text)}
+  .fix .eff{font-size:10.5px;font-weight:700;text-transform:uppercase;padding:2px 8px;border-radius:20px;margin-left:auto;flex-shrink:0;background:rgba(74,222,128,.13);color:var(--green)}
+
+  .bignote{background:linear-gradient(135deg,rgba(110,168,254,.08),rgba(110,168,254,.02));border:1px solid rgba(110,168,254,.3);border-left:3px solid var(--accent);border-radius:12px;padding:16px 19px;margin-top:6px}
+  .bignote .t{font-size:14px;font-weight:800;color:var(--accent);margin-bottom:5px}
+  .bignote p{font-size:13px;color:var(--text-2)}.bignote p b{color:var(--text)}
+  .foot{margin-top:34px;font-size:11px;color:var(--dim);font-family:"JetBrains Mono",monospace;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">Architecture audit · 2026-05-27</div>
+  <h1>Is the original plan still real?</h1>
+  <p class="sub">You asked the right question before we build anything. The plan was: <b>agents live headless on the Mini · you work on the laptop · everything mirrors to the Mini for safety.</b> I audited all three claims against the live machines. Two hold. <b>The third — the safety mirror — is broken, and has been for ~2.5 weeks.</b></p>
+
+  <h2>The three claims, scored</h2>
+  <div class="claims">
+    <div class="claim ok">
+      <div class="mark">✅</div>
+      <div><div class="ct">1 · Agents live headless on the Mini <span class="verdict h">holds</span></div>
+        <div class="cb">22 processes running always-on under <code>pm2</code> (mesh-api, Conductor, CFO, the Board trio, KMG…). The Mini genuinely is the dedicated, always-on home. This part of the design works.</div></div>
+    </div>
+    <div class="claim ok">
+      <div class="mark">✅</div>
+      <div><div class="ct">2 · You work on the laptop <span class="verdict h">holds</span></div>
+        <div class="cb">The laptop has every fresh commit and all the in-flight work. That's where the real activity is — confirmed across 21 repos.</div></div>
+    </div>
+    <div class="claim bad">
+      <div class="mark">❌</div>
+      <div><div class="ct">3 · Everything mirrors to the Mini for safety <span class="verdict x">broken</span></div>
+        <div class="cb">The hourly sync that's supposed to keep the Mini current <b>has never run successfully.</b> The script lost its executable permission, so cron fails instantly every hour.</div>
+        <div class="ev"><span class="k">$ ls -l sync-repos.sh</span> → <span class="k">-rw-r--r--</span> (not executable, last touched May 11)<br><span class="k">$ grep -c "SYNC COMPLETE" log</span> → <span class="k">0</span> &nbsp;(zero successful runs, ever)<br>log contents → <span class="k">"Permission denied"</span> × every hourly attempt</div>
+      </div>
+    </div>
+  </div>
+
+  <h2>What "broken" actually cost — the Mini is weeks stale</h2>
+  <table>
+    <tr><th>Repo</th><th>Mini has</th><th>Laptop has</th><th>Gap</th></tr>
+    <tr><td><b>Kai Executive Assistant</b></td><td class="mono">af263b71</td><td class="mono">982d9777</td><td class="stale">9 weeks behind</td></tr>
+    <tr><td><b>CFO</b></td><td class="mono">c236ebc</td><td class="mono">c72da0a (+1 unpushed)</td><td class="stale">2 weeks behind</td></tr>
+    <tr><td><b>Code Architect</b></td><td class="mono">5cf290c</td><td class="mono">0abcbc4</td><td class="stale">2 weeks behind</td></tr>
+    <tr><td><b>ACD · Enso</b></td><td class="mono">2–3 wk old</td><td class="mono">recent</td><td class="stale">2–3 weeks behind</td></tr>
+    <tr><td><b>kai</b> (the hub)</td><td class="mono">8841bd81</td><td class="mono">—</td><td class="fresh">fresh (edited on the Mini itself)</td></tr>
+  </table>
+  <p class="sub" style="margin:12px 0 0">Only <code>kai</code> is current on the Mini — because it's worked on <i>there</i> directly, not mirrored. Everything else the agents run is a <b>weeks-old snapshot.</b></p>
+
+  <h2>Two deeper truths the audit surfaced</h2>
+  <div class="layers">
+    <div class="layer l1" style="border-top-color:var(--red)"><div class="lt" style="color:var(--red)">The mirror was always git-only</div><p>Even when it ran, the sync was <b>pull-only</b>, covered <b>10 of 21 repos</b>, and only ever moved <b>committed + pushed</b> code. Your large in-flight volume (CFO 50, DAGDC 63, Framer 122 uncommitted files) was <b>never</b> in scope — it can't mirror, by design.</p></div>
+    <div class="layer l1" style="border-top-color:var(--orange)"><div class="lt" style="color:var(--orange)">The Mini isn't off-site safety</div><p>The Mini's hourly <code>~/.kameha</code> backup commits <b>locally only — no remote.</b> It's version history on the same disk, not a copy somewhere else. If the Mini's drive fails, that backup fails with it. The real off-site safety net is <b>GitHub</b>, not the Mini.</p></div>
+  </div>
+
+  <h2>So — pivot, or fix? The model is sound; the wiring is wrong</h2>
+  <div class="bignote"><div class="t">Don't abandon the concept — correct what "safety" means.</div><p>Headless-agents-on-the-Mini + laptop-workstation is a good design. The mistake was treating <b>"the Mini mirrors me"</b> as the safety story. It never could be — the Mini is a <b>runtime host</b>, not a backup. Safety is <b>commit + push to GitHub</b>. Once we name the layers correctly, each gets the right fix — and the Board "door" we were about to build is one of four distinct things, not a patch over a broken mirror.</p></div>
+
+  <div class="layers" style="margin-top:13px">
+    <div class="layer l1"><div class="lt">① Source safety <span class="state todo">needs discipline</span></div><div class="ls">protecting your actual work</div><p><b>Commit + push to GitHub.</b> That's the only real off-site copy. The big uncommitted volume on the laptop is protected only by your local Mac backup (Time Machine?) — not by this system.</p></div>
+    <div class="layer l2"><div class="lt">② Mini currency <span class="state broke">broken — quick fix</span></div><div class="ls">keeping running agents up to date</div><p><b>Fix <code>sync-repos.sh</code></b> (make it executable, add the missing repos, handle feature branches). One small fix restarts the hourly pull. This is an <i>operational</i> need, not safety.</p></div>
+    <div class="layer l3"><div class="lt">③ Runtime visibility <span class="state todo">the Board door</span></div><div class="ls">seeing what agents actually do</div><p><b>Option A.</b> A separate layer entirely — git mirroring would never show "CFO drafted an invoice." Still the right next build, now correctly scoped as its own thing.</p></div>
+    <div class="layer l4"><div class="lt">④ Runtime-state safety <span class="state todo">gap</span></div><div class="ls">the live databases</div><p><b>Give <code>~/.kameha</code> a remote</b> so the Board DB + conductor.db are pushed off the Mini. Today they live on one disk only.</p></div>
+  </div>
+
+  <h2>Recommended order</h2>
+  <div class="fix"><div class="n">1</div><div class="ft"><b>Re-arm the safety net first.</b> Make <code>sync-repos.sh</code> executable + expand its repo list → the Mini starts catching up hourly again. Confirm a clean run.</div><div class="eff">5 min</div></div>
+  <div class="fix"><div class="n">2</div><div class="ft"><b>Push <code>~/.kameha</code> to a private remote</b> → the live agent state stops being single-disk.</div><div class="eff">10 min</div></div>
+  <div class="fix"><div class="n">3</div><div class="ft"><b>Then build the Board door (Option A)</b> — now clearly a visibility layer, not a backup substitute. Codex + DA before it goes live.</div><div class="eff">the build</div></div>
+
+  <div class="foot">Code Architect · architecture audit · laptop↔Mini mirror · 2026-05-27 · triangulated: cron config + sync log + live HEADs</div>
+</div>
+</body>
+</html>

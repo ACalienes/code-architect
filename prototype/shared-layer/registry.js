@@ -63,6 +63,16 @@ const defaultRegistry = {
     S(['status'], { status: { type: 'string' }, detail: { type: 'string' } }) } },
   work_order: { current: '1', versions: { '1':
     S(['task'], { task: { type: 'string' }, priority: { type: 'string', enum: ['low', 'med', 'high'] } }) } },
+  // Added 2026-05-27 with the new coordination types. Kept PERMISSIVE (no tight status enums) to match
+  // what board-publish.js actually emits ({status, detail, owner?}); tighter contracts — e.g. question
+  // status ∈ {open,answered} + a required answer on close, task status ∈ {open,in-progress,done} — are
+  // deferred to the consumption-contract build under Codex review (docs/spec-board-consumption-contract).
+  objective: { current: '1', versions: { '1':
+    S(['detail'], { detail: { type: 'string' }, status: { type: 'string' }, owner: { type: 'string' } }) } },
+  question: { current: '1', versions: { '1':
+    S(['detail'], { detail: { type: 'string' }, status: { type: 'string' }, answer: { type: 'string' }, owner: { type: 'string' } }) } },
+  task: { current: '1', versions: { '1':
+    S(['detail'], { detail: { type: 'string' }, status: { type: 'string' }, owner: { type: 'string' }, due: { type: 'string' } }) } },
 };
 
 /** Validate a payload against a fact_type's schema (a specific version, else its current). */

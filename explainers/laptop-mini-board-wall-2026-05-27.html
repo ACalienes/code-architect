@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<!-- Why the Board felt empty: the laptop <-> Mini wall. 2026-05-27 -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The wall between your laptop and the Board · 2026-05-27</title>
+<style>
+  :root{--bg:#0a0d12;--card:#151b25;--panel:#11161e;--brief:#0c1016;--border:#232c3a;--border-b:#2f3a4a;
+    --text:#e6edf3;--text-2:#aab6c4;--muted:#7d8a99;--dim:#5a6573;--accent:#6ea8fe;--green:#4ade80;--yellow:#facc15;--orange:#fb923c;--red:#f87171;--purple:#c084fc;--teal:#5eead4;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);font-family:-apple-system,"SF Pro Text",sans-serif;line-height:1.5;min-height:100vh}
+  body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellipse 1100px 560px at 50% -8%,rgba(110,168,254,.07),transparent 55%);pointer-events:none;z-index:0}
+  .wrap{position:relative;z-index:1;max-width:1000px;margin:0 auto;padding:44px 24px 80px}
+  code{font-family:"JetBrains Mono",Menlo,monospace;font-size:.82em;background:var(--brief);border:1px solid var(--border);border-radius:5px;padding:1px 6px;color:var(--teal)}
+  .eyebrow{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:var(--accent);margin-bottom:13px}
+  h1{font-size:36px;font-weight:800;letter-spacing:-1.2px;line-height:1.07;background:linear-gradient(180deg,#fff,#b8c5d3);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{font-size:16px;color:var(--text-2);max-width:820px;margin:11px 0 26px}.sub b{color:var(--text)}
+  h2{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.4px;color:var(--text-2);margin:34px 0 14px;display:flex;gap:10px;align-items:center}h2::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent)}
+
+  /* live banner */
+  .live{display:flex;gap:13px;align-items:center;background:linear-gradient(135deg,rgba(74,222,128,.10),rgba(74,222,128,.02));border:1px solid rgba(74,222,128,.30);border-left:3px solid var(--green);border-radius:11px;padding:14px 17px;margin-bottom:6px}
+  .live .dot{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 9px rgba(74,222,128,.6);animation:b 1.6s infinite;flex-shrink:0}@keyframes b{50%{opacity:.35}}
+  .live .tx{font-size:13.5px;color:var(--text-2)}.live .tx b{color:var(--green)}
+
+  /* the wall diagram */
+  .scene{display:grid;grid-template-columns:1fr 64px 1fr;gap:0;align-items:stretch;margin-top:6px}
+  @media(max-width:720px){.scene{grid-template-columns:1fr;gap:10px}}
+  .zone{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 18px 16px}
+  .zone .zh{font-size:15px;font-weight:800;display:flex;align-items:center;gap:9px;margin-bottom:3px}
+  .zone .zs{font-size:11.5px;color:var(--muted);margin-bottom:13px}
+  .zone.laptop{border-top:3px solid var(--accent)}.zone.laptop .zh{color:var(--accent)}
+  .zone.mini{border-top:3px solid var(--purple)}.zone.mini .zh{color:var(--purple)}
+  .chip{display:flex;align-items:center;gap:9px;background:var(--brief);border:1px solid var(--border-b);border-radius:9px;padding:9px 12px;margin-bottom:7px;font-size:12.5px}
+  .chip .i{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;background:rgba(255,255,255,.04);border:1px solid var(--border)}
+  .chip b{color:var(--text)}.chip .m{color:var(--muted);font-size:11px;margin-left:auto;font-family:"JetBrains Mono",monospace}
+  .chip.work{border-color:rgba(110,168,254,.35)}.chip.work .i{color:var(--accent);border-color:rgba(110,168,254,.4)}
+  .chip.board{border-color:rgba(192,132,252,.35)}.chip.board .i{color:var(--purple);border-color:rgba(192,132,252,.4)}
+  .chip.dead{opacity:.55}
+  /* the wall */
+  .wallcol{display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative}
+  .wall{width:6px;border-radius:6px;background:repeating-linear-gradient(180deg,var(--red),var(--red) 8px,transparent 8px,transparent 15px);flex:1;min-height:120px;opacity:.55}
+  .wall-lab{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(0deg);background:var(--bg);border:1px solid var(--red);color:var(--red);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:4px 7px;border-radius:20px;white-space:nowrap}
+  @media(max-width:720px){.wallcol{height:54px}.wall{width:60%;height:6px;min-height:0;background:repeating-linear-gradient(90deg,var(--red),var(--red) 8px,transparent 8px,transparent 15px)}}
+
+  .why{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  @media(max-width:720px){.why{grid-template-columns:1fr}}
+  .fact{background:var(--brief);border:1px solid var(--border-b);border-radius:11px;padding:14px 15px}
+  .fact .n{font-size:11px;font-weight:700;color:var(--red);font-family:"JetBrains Mono",monospace;margin-bottom:5px}
+  .fact .t{font-size:13.5px;font-weight:700;margin-bottom:4px}
+  .fact p{font-size:12px;color:var(--text-2)}
+
+  .opts{display:flex;flex-direction:column;gap:11px}
+  .opt{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:16px 19px;position:relative;overflow:hidden}
+  .opt .rec{position:absolute;top:0;right:0;background:var(--green);color:#06140a;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;padding:4px 11px;border-bottom-left-radius:9px}
+  .opt .oh{font-size:16px;font-weight:800;margin-bottom:5px;display:flex;align-items:center;gap:9px}
+  .opt.a{border-left:3px solid var(--green)}.opt.a .oh{color:var(--green)}
+  .opt.b{border-left:3px solid var(--yellow)}.opt.b .oh{color:var(--yellow)}
+  .opt.c{border-left:3px solid var(--dim)}.opt.c .oh{color:var(--text-2)}
+  .opt p{font-size:13px;color:var(--text-2)}.opt p b{color:var(--text)}
+  .opt .mini-flow{display:flex;align-items:center;gap:0;flex-wrap:wrap;margin-top:11px;font-size:11.5px}
+  .nd{background:var(--brief);border:1px solid var(--border-b);border-radius:8px;padding:7px 11px}
+  .nd.ok{border-color:rgba(74,222,128,.4)}.nd b{font-size:11.5px}
+  .ar{color:var(--green);padding:0 9px;font-weight:700}
+  .tag{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:2px 8px;border-radius:20px;margin-left:auto}
+  .tag.t3{background:rgba(248,113,113,.13);color:var(--red)}
+
+  .foot{margin-top:34px;font-size:11px;color:var(--dim);font-family:"JetBrains Mono",monospace;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">Diagnosis · The Board · 2026-05-27</div>
+  <h1>Why the Board felt empty.</h1>
+  <p class="sub">You worked all morning and saw nothing land. You were right to be suspicious — but nothing is broken. There's a <b>wall</b> between where you work and where the Board lives, and almost nothing was crossing it. Here's the picture, what we just fixed, and the one decision that opens it up.</p>
+
+  <div class="live"><span class="dot"></span><div class="tx"><b>Live as of this session:</b> CFO is now posting to the Board. The feed went 17 → 18, and the newest line is a real, current CFO signal — <i>"5 critical, 1 warning"</i> overdue invoices. That's the <b>second</b> auto-feed (after Conductor).</div></div>
+
+  <h2>The shape of it</h2>
+  <div class="scene">
+    <div class="zone laptop">
+      <div class="zh">💻 Your laptop</div>
+      <div class="zs">where you actually work · ~/Desktop/Code</div>
+      <div class="chip work"><span class="i">📝</span><div><b>CFO</b> — invoices, payments, VCM backfill</div><span class="m">50 uncommitted</span></div>
+      <div class="chip work"><span class="i">🎬</span><div><b>VCM Production</b> — ShotRunOfShow fix</div><span class="m">commit 11m ago</span></div>
+      <div class="chip work"><span class="i">🎨</span><div><b>ACD</b> — creative work</div><span class="m">10 uncommitted</span></div>
+      <div class="chip work"><span class="i">🛠️</span><div><b>Code Architect</b> — this session</div><span class="m">committed</span></div>
+    </div>
+    <div class="wallcol"><div class="wall"></div><div class="wall-lab">no bridge</div></div>
+    <div class="zone mini">
+      <div class="zh">🖥️ The Mac Mini</div>
+      <div class="zs">where the Board + all agents live · always-on</div>
+      <div class="chip board"><span class="i">📋</span><div><b>The Board</b> — <code>kameha-mesh.db</code></div><span class="m">on the Mini</span></div>
+      <div class="chip board"><span class="i">🔄</span><div><b>Conductor feed</b> — the one live emit hook</div><span class="m">working</span></div>
+      <div class="chip board"><span class="i">💸</span><div><b>CFO feed</b> — alerts (added today)</div><span class="m">NEW · live</span></div>
+      <div class="chip dead"><span class="i">·</span><div>everyone else — <b>no feed yet</b></div><span class="m">silent</span></div>
+    </div>
+  </div>
+
+  <h2>What we found — three plain facts</h2>
+  <div class="why">
+    <div class="fact"><div class="n">FACT 1</div><div class="t">One feed, not many</div><p>Until today the Board had a single auto-source: <b>Conductor</b>. Every other agent — CFO, ACD, NAMI, Framer — posted <b>nothing</b>. No feeds = an empty-looking Board.</p></div>
+    <div class="fact"><div class="n">FACT 2</div><div class="t">Your work stays on the laptop</div><p>This morning's CFO drafts, ACD edits — all <b>laptop-local and uncommitted</b>. They're real, but they live only on your machine.</p></div>
+    <div class="fact"><div class="n">FACT 3</div><div class="t">The Mini can't reach across</div><p>The Board is a database <b>file on the Mini</b>. It can only see what's <b>on the Mini</b>. Laptop work never arrives — so it can't be shown.</p></div>
+  </div>
+
+  <h2>Why the wall exists (the honest mechanics)</h2>
+  <p class="sub" style="margin-bottom:14px">The Board is a <code>SQLite</code> file on the Mini. SQLite is <b>local-only</b> — you can't write to it across a network. Your laptop work is <b>uncommitted</b> (and some of it, like CFO's draft files, is the kind of output that never gets committed at all). Even when you <i>do</i> commit and push, it only reaches the Mini if something pulls it — and the Mini's copies of these repos are stale, static checkouts. So there is simply <b>no path today</b> from your keyboard to the Board.</p>
+
+  <h2>Three ways to open the wall</h2>
+  <div class="opts">
+    <div class="opt a">
+      <div class="rec">Recommended</div>
+      <div class="oh">A · A door in the wall <span class="tag t3">new infra</span></div>
+      <p>Add a small <b>"post to the Board" address</b> on the Mini — a sibling to the live ledger you already open, but for <i>writing</i>. Then a feed running <b>anywhere</b> — your laptop, the Mini, any repo — can publish over the secure Tailscale link. This is exactly your north-star: <b>type a fact in one place, it propagates to where it's needed.</b> Build once, every future agent uses it.</p>
+      <div class="mini-flow"><span class="nd ok"><b>💻 laptop work</b></span><span class="ar">→</span><span class="nd ok"><b>🔒 Board door (HTTPS)</b></span><span class="ar">→</span><span class="nd ok"><b>📋 the Board</b></span></div>
+    </div>
+    <div class="opt b">
+      <div class="oh">B · Run the feeds on your laptop</div>
+      <p>Put the per-agent feeds <b>where you work</b> so they see your real activity first-hand. Higher-fidelity to what you actually do — but they still need a way to reach the Mini's Board, so <b>this depends on the door in Option A anyway.</b> Best thought of as "A, plus laptop-first feeds."</p>
+    </div>
+    <div class="opt c">
+      <div class="oh">C · Keep it Mini-only for now</div>
+      <p>Accept that the Board reflects <b>Mini-side agent activity</b> — live alert feeds, Conductor, the always-on daemons — and not your laptop editing. We wire more Mini feeds (ACD next) and revisit the laptop gap later. Lowest effort; leaves the "see my morning" gap open.</p>
+    </div>
+  </div>
+
+  <h2>The recommendation</h2>
+  <p class="sub" style="margin-bottom:0"><b>Option A — build the door.</b> It's the only one that actually answers "I worked all morning, show it," it's modest to build (a small write endpoint mirroring the ledger), and it's the foundation the whole fleet has been missing: a real publish path so any repo, on any machine, can put a fact on the Board. Options B and C both sit on top of it. <b>Your call — and I'll run the Codex + DA gates on it before anything goes live, since it touches how every agent writes to the Board.</b></p>
+
+  <div class="foot">Code Architect · The Board · diagnosis + path · 2026-05-27 · second emit hook (CFO) live on the Mini</div>
+</div>
+</body>
+</html>

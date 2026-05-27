@@ -34,6 +34,16 @@ The Board is a great **visibility** system (post → deliver → mark "read") bu
 5. **Ledger upgrade:** `board-ledger.js` shows per item: delivered N · read N · **acked N (names)**. Visible confirmation.
 6. **CA's own consumption:** CA is single-shot → consumes + acks its inbox at **session start** (no daemon).
 
+## 3a. Phase 1 concrete design — grounded in the live code (2026-05-27)
+After reading the deployed code (`shared-layer.js`, `board-listener.js`, `board-ledger.js`, `board-publish.js`), the open choices in §3.3 resolve and one prerequisite the plan missed surfaces:
+
+- **Delivery lifecycle today is `pending → read` (or `dead`).** The deployed drainer (`board-listener.js`) calls `drain()`, which flips `pending → read` and appends to the inbox. So "read" already = mailman-pulled. We add a distinct terminal state **`acked`** (agent-absorbed), via `deliveries.acked_at` + `deliveries.acked_by` (nullable `ALTER TABLE ADD COLUMN` — no rebuild, safe on the live DB). `read` (mailman) stays distinct from `acked` (agent).
+- **PREREQUISITE — the inbox record can't be acked as written.** `board-listener.js:23-26` writes `{received_at, kind, fact_type, subject_id, payload}` with **no `delivery_id`/`fact_id`**. A consumer reading its inbox has no handle to ack. **Fix:** `rec()` must include `delivery_id` + `fact_id`. (Pure addition; existing readers ignore unknown keys.)
+- **Ack transport = ack-file folded by the existing single writer (resolves §3.3 → option A, refined).** The consuming agent appends `{delivery_id, fact_id, acked_by, acked_at, logged:true}` to `~/.kameha/board-acks/<agent>.ndjson` (file write — zero DB contention). The **existing `board-drainer` loop** (already the sole writer, already ticking every 30s) folds pending ack-files into the DB each tick: `UPDATE deliveries SET status='acked', acked_at=?, acked_by=? WHERE delivery_id=? AND status!='acked'` (idempotent; double-ack is a no-op). No new process. WAL+`busy_timeout` (added to `db.js` this session) is the safety net, not the mechanism — single-writer discipline holds literally.
+- **Absorbed-log** = `~/.kameha/board-absorbed/<agent>.ndjson` (the agent's own record of what it took in) for v1; live-daemon agents may instead write into their native memory. The ack is emitted **only after** the absorbed-log append succeeds (§2.2 — proof from the agent, not the mailman).
+- **`board-consume.js`** (reusable): read `board-inbox/<agent>.ndjson` → for each line whose `delivery_id` is not already in `board-acks/<agent>.ndjson` → append to absorbed-log → append ack. Idempotent on re-run via the acks-file dedup. Daemons call it on a loop; CA (single-shot) calls it once at session start.
+- **Ledger upgrade** (`board-ledger.js`): per fact show `delivered N · acked M (names)` by grouping `deliveries` on `status`/`acked_by`.
+
 ## 4. Phase 2 — Action layer (after ack proven)
 **Goal:** consuming agents take the right action per fact type, gated.
 

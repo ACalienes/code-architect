@@ -58,6 +58,8 @@ CREATE TABLE IF NOT EXISTS deliveries (
   kind            TEXT NOT NULL DEFAULT 'fact',
   status          TEXT NOT NULL DEFAULT 'pending',
   created_at      TEXT NOT NULL,
+  acked_at        TEXT,                 -- consumption layer: set when the agent confirms it absorbed+logged the fact
+  acked_by        TEXT,                 -- the agent that acked (proof comes from the agent, not the mailman)
   UNIQUE(fact_id, recipient_agent, kind)
 );
 CREATE TABLE IF NOT EXISTS subscriptions (
@@ -93,7 +95,20 @@ function applySchema(db) {
 function openDb(path = ':memory:', opts = {}) {
   const db = openDatabase(path, opts);
   db.exec('PRAGMA journal_mode = WAL;');
-  return applySchema(db);
+  applySchema(db);
+  return migrate(db);
+}
+
+/** Additive, idempotent column migrations for existing DBs (CREATE TABLE IF NOT EXISTS won't add
+ *  columns to a table that already exists). ALTER ADD COLUMN throws if the column is already there —
+ *  swallow that one case so re-runs are no-ops. Fresh DBs get the columns from SCHEMA above; this
+ *  converges already-deployed DBs to the same surface. */
+function migrate(db) {
+  for (const col of ['acked_at TEXT', 'acked_by TEXT']) {
+    try { db.exec(`ALTER TABLE deliveries ADD COLUMN ${col}`); }
+    catch (e) { if (!/duplicate column/i.test(e.message)) throw e; }
+  }
+  return db;
 }
 
 function audit(db, event, detail) {
@@ -195,6 +210,7 @@ function drain(db, agent) {
   }
   audit(db, 'drained', { agent, count: rows.length });
   return rows.map(r => ({
+    delivery_id: r.delivery_id,                       // needed so a consumer can ack this exact delivery
     kind: r.kind, fact_id: r.fact_id, fact_type: r.fact_type,
     client_id: r.client_id, subject_id: r.subject_id,
     payload: JSON.parse(r.payload), revoked: !!r.revoked_at,
@@ -272,4 +288,4 @@ function revoke(db, fact_id, reason) {
   });
 }
 
-module.exports = { openDb, applySchema, subscribe, writeFact, drain, revoke, FACT_TYPES, peek, ack, deadLetterDelivery, pendingStats };
+module.exports = { openDb, applySchema, migrate, subscribe, writeFact, drain, revoke, FACT_TYPES, peek, ack, deadLetterDelivery, pendingStats };

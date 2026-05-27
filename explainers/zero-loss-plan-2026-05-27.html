@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<!-- Zero-loss revision: re-arm the mirror without losing any data/memory/context. 2026-05-27 -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zero-loss plan · nothing valuable gets lost · 2026-05-27</title>
+<style>
+  :root{--bg:#0a0d12;--card:#151b25;--panel:#11161e;--brief:#0c1016;--border:#232c3a;--border-b:#2f3a4a;
+    --text:#e6edf3;--text-2:#aab6c4;--muted:#7d8a99;--dim:#5a6573;--accent:#6ea8fe;--green:#4ade80;--yellow:#facc15;--orange:#fb923c;--red:#f87171;--purple:#c084fc;--teal:#5eead4;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);font-family:-apple-system,"SF Pro Text",sans-serif;line-height:1.5;min-height:100vh}
+  body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellipse 1100px 560px at 50% -8%,rgba(74,222,128,.07),transparent 55%);pointer-events:none;z-index:0}
+  .wrap{position:relative;z-index:1;max-width:1000px;margin:0 auto;padding:44px 24px 80px}
+  code{font-family:"JetBrains Mono",Menlo,monospace;font-size:.82em;background:var(--brief);border:1px solid var(--border);border-radius:5px;padding:1px 6px;color:var(--teal)}
+  .eyebrow{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:var(--green);margin-bottom:13px}
+  h1{font-size:35px;font-weight:800;letter-spacing:-1.1px;line-height:1.08;background:linear-gradient(180deg,#fff,#b8c5d3);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{font-size:16px;color:var(--text-2);max-width:840px;margin:11px 0 26px}.sub b{color:var(--text)}
+  h2{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.4px;color:var(--text-2);margin:32px 0 13px;display:flex;gap:10px;align-items:center}h2::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent)}
+
+  .promise{display:flex;gap:15px;align-items:center;background:linear-gradient(135deg,rgba(74,222,128,.10),rgba(74,222,128,.02));border:1px solid rgba(74,222,128,.32);border-left:3px solid var(--green);border-radius:13px;padding:17px 20px}
+  .promise .big{font-size:30px;flex-shrink:0}
+  .promise .t{font-size:15px;font-weight:800;color:var(--green);margin-bottom:3px}
+  .promise p{font-size:13.5px;color:var(--text-2)}.promise p b{color:var(--text)}
+
+  /* safe grid */
+  .safe{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:680px){.safe{grid-template-columns:1fr}}
+  .sc{display:flex;gap:12px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;border-left:3px solid var(--green)}
+  .sc .ic{font-size:20px;flex-shrink:0}
+  .sc .t{font-size:13.5px;font-weight:700;margin-bottom:2px}
+  .sc p{font-size:12px;color:var(--text-2)}.sc p b{color:var(--text)}
+
+  .keyfact{background:var(--brief);border:1px solid var(--border-b);border-radius:11px;padding:15px 18px;margin-top:4px}
+  .keyfact .t{font-size:13px;font-weight:800;color:var(--teal);margin-bottom:5px;font-family:"JetBrains Mono",monospace}
+  .keyfact p{font-size:13px;color:var(--text-2)}.keyfact p b{color:var(--text)}
+
+  .removed{background:linear-gradient(135deg,rgba(248,113,113,.07),rgba(248,113,113,.02));border:1px solid rgba(248,113,113,.28);border-radius:12px;padding:15px 18px}
+  .removed .t{font-size:14px;font-weight:800;color:var(--red);margin-bottom:5px}
+  .removed p{font-size:13px;color:var(--text-2)}.removed p b{color:var(--text)}
+  .strike{text-decoration:line-through;color:var(--dim)}
+
+  .vault{display:flex;flex-direction:column;gap:9px}
+  .v{display:flex;gap:14px;align-items:flex-start;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 17px;border-left:3px solid var(--accent)}
+  .v .num{width:28px;height:28px;border-radius:8px;background:rgba(110,168,254,.13);color:var(--accent);font-weight:800;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .v .vt{font-size:14px;font-weight:700;margin-bottom:2px}
+  .v p{font-size:12.5px;color:var(--text-2)}.v p b{color:var(--text)}
+  .v .badge{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:2px 8px;border-radius:20px;background:rgba(74,222,128,.13);color:var(--green);margin-left:auto;flex-shrink:0}
+
+  /* flow */
+  .flow{display:flex;align-items:center;flex-wrap:wrap;gap:0;background:var(--brief);border:1px solid var(--border-b);border-radius:12px;padding:16px 14px;margin-top:4px}
+  .node{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:9px 13px;text-align:center;border-bottom:2px solid var(--green)}
+  .node b{font-size:12.5px}.node .s{font-size:10px;color:var(--green);text-transform:uppercase;letter-spacing:.4px}
+  .arr{color:var(--dim);padding:0 9px;font-size:15px}
+  @media(max-width:680px){.arr{transform:rotate(90deg)}.flow{flex-direction:column}}
+
+  .foot{margin-top:34px;font-size:11px;color:var(--dim);font-family:"JetBrains Mono",monospace;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">Zero-loss revision · 2026-05-27</div>
+  <h1>Nothing valuable gets lost. Guaranteed by design.</h1>
+  <p class="sub">You said it plainly: the last few weeks are too valuable to risk. So I rebuilt the plan around one rule — <b>back up first, then only do things that <i>add</i>, never things that delete.</b> Here's why that's not just a promise but how the mechanics actually work.</p>
+
+  <div class="promise">
+    <div class="big">🛡️</div>
+    <div><div class="t">The revised plan has zero destructive operations.</div><p>No <code>reset</code>. No <code>delete</code>. No force-anything. Every step either <b>copies</b> data to safety or <b>fast-forwards</b> code that has no local changes to lose. We end up <b>more</b> protected than we are right now.</p></div>
+  </div>
+
+  <h2>What this plan does not even touch</h2>
+  <div class="safe">
+    <div class="sc"><div class="ic">🗄️</div><div><div class="t">The Board · Conductor · mesh data</div><p><code>~/.kameha</code> holds the last few weeks of work. It lives <b>separate from any code repo</b> — the catch-up operates on code checkouts and never goes near it.</p></div></div>
+    <div class="sc"><div class="ic">🧠</div><div><div class="t">CA's session memory</div><p>This whole thread — every decision, every card — lives on the <b>laptop</b> at <code>~/.claude/projects/…</code>. Nowhere near the Mini operations.</p></div></div>
+    <div class="sc"><div class="ic">⚙️</div><div><div class="t">The live hub <code>~/kai</code></div><p>Runs mesh-api, Conductor, every core agent. It's already in sync, so the plan <b>leaves it completely alone.</b></p></div></div>
+    <div class="sc"><div class="ic">📂</div><div><div class="t">All your uncommitted work</div><p>Drafts, logs, agent memory dirs, data files — the in-flight bulk. Protected by a fact of how git works ↓</p></div></div>
+  </div>
+
+  <div class="keyfact" style="margin-top:10px">
+    <div class="t">// the fact that makes this safe</div>
+    <p><b><code>git pull</code> and <code>git reset</code> cannot delete untracked files.</b> Anything you haven't committed — memory, logs, drafts, data — is <b>invisible</b> to these commands. They only ever move <i>tracked</i> code to match GitHub. The mountain of in-flight work simply isn't in their reach.</p>
+  </div>
+
+  <h2>The one risky step — removed</h2>
+  <div class="removed">
+    <div class="t">✕ <span class="strike">git reset --hard the duplicate checkouts</span></div>
+    <p>The earlier plan reset a few stale <b>duplicate</b> checkouts to match GitHub. That was the <i>only</i> step that could drop anything. <b>It's gone.</b> Instead, the hardened sync script will simply <b>skip</b> diverged repos and leave them untouched — they sit harmlessly stale, and nothing runs from them anyway. No reset means no risk.</p>
+  </div>
+
+  <h2>Step 0 — lock everything in, before anything moves</h2>
+  <div class="vault">
+    <div class="v"><div class="num">1</div><div><div class="vt">Snapshot <code>~/.kameha</code> → dated archive</div><p>The Board + Conductor + mesh DBs — the heart of these weeks — copied to a safe tarball. <b>Kept off GitHub</b> (it holds the agent signing keys, which must never leave the box) — a local/offline copy.</p></div><span class="badge">copy only</span></div>
+    <div class="v"><div class="num">2</div><div><div class="vt">Bundle every diverged Mini repo</div><p><code>git bundle</code> captures <b>all</b> local commits — including the unpushed Lead Engine fix — into archive files. Even work that never reached GitHub is preserved before we touch a thing.</p></div><span class="badge">copy only</span></div>
+    <div class="v"><div class="num">3</div><div><div class="vt">Push the Code Architect branch off the laptop</div><p>This session's docs, explainers, and code get an off-laptop copy on GitHub.</p></div><span class="badge">additive</span></div>
+    <div class="v"><div class="num">4</div><div><div class="vt">Verify CA's laptop memory is intact</div><p>Confirm the session-memory directory is whole and readable before any other action.</p></div><span class="badge">read only</span></div>
+  </div>
+
+  <h2>Then — the non-destructive catch-up</h2>
+  <div class="flow">
+    <div class="node"><b>Push Lead Engine fix</b><div class="s">adds to GitHub</div></div>
+    <span class="arr">→</span>
+    <div class="node"><b>Fast-forward clean agents</b><div class="s">advance only</div></div>
+    <span class="arr">→</span>
+    <div class="node"><b>Harden sync-repos.sh</b><div class="s">ff-only · skip-diverged</div></div>
+    <span class="arr">→</span>
+    <div class="node"><b>Re-arm + verify</b><div class="s">confirm clean run</div></div>
+  </div>
+  <p class="sub" style="margin:13px 0 0">Every node above is <b>add</b> or <b>advance</b> — none is <b>remove</b>. The Lead Engine fix reaches GitHub (safer than now). The clean agents move forward with nothing to lose. The script can never silently rot again.</p>
+
+  <h2>The net</h2>
+  <p class="sub" style="margin-bottom:0">You don't just avoid loss — you come out <b>ahead</b>: <code>~/.kameha</code> finally has an off-box copy, the Lead Engine fix is preserved on GitHub, every diverged repo is bundled to an archive, and the mirror is re-armed so the Mini stops drifting. <b>If anything looks wrong at any step, I stop and show you — and the backups mean we can always walk it back.</b></p>
+
+  <div class="foot">Code Architect · zero-loss revision · 2026-05-27 · back up first · add &amp; advance, never delete</div>
+</div>
+</body>
+</html>

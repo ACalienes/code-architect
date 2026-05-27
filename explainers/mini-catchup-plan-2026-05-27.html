@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<!-- Mini catch-up plan: re-arm the mirror safely. 2026-05-27 -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mini catch-up plan · re-arm the mirror · 2026-05-27</title>
+<style>
+  :root{--bg:#0a0d12;--card:#151b25;--panel:#11161e;--brief:#0c1016;--border:#232c3a;--border-b:#2f3a4a;
+    --text:#e6edf3;--text-2:#aab6c4;--muted:#7d8a99;--dim:#5a6573;--accent:#6ea8fe;--green:#4ade80;--yellow:#facc15;--orange:#fb923c;--red:#f87171;--purple:#c084fc;--teal:#5eead4;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);font-family:-apple-system,"SF Pro Text",sans-serif;line-height:1.5;min-height:100vh}
+  body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellipse 1100px 560px at 50% -8%,rgba(74,222,128,.06),transparent 55%);pointer-events:none;z-index:0}
+  .wrap{position:relative;z-index:1;max-width:1000px;margin:0 auto;padding:44px 24px 80px}
+  code{font-family:"JetBrains Mono",Menlo,monospace;font-size:.82em;background:var(--brief);border:1px solid var(--border);border-radius:5px;padding:1px 6px;color:var(--teal)}
+  .eyebrow{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:var(--green);margin-bottom:13px}
+  h1{font-size:34px;font-weight:800;letter-spacing:-1.1px;line-height:1.08;background:linear-gradient(180deg,#fff,#b8c5d3);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{font-size:16px;color:var(--text-2);max-width:830px;margin:11px 0 26px}.sub b{color:var(--text)}
+  h2{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.4px;color:var(--text-2);margin:32px 0 13px;display:flex;gap:10px;align-items:center}h2::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent)}
+
+  /* spotlight */
+  .spot{background:linear-gradient(135deg,rgba(250,204,21,.09),rgba(250,204,21,.02));border:1px solid rgba(250,204,21,.32);border-left:3px solid var(--yellow);border-radius:13px;padding:18px 20px}
+  .spot .st{font-size:17px;font-weight:800;color:var(--yellow);margin-bottom:8px}
+  .spot p{font-size:13.5px;color:var(--text-2);margin-bottom:6px}.spot p b{color:var(--text)}
+  .threecol{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:12px}
+  @media(max-width:680px){.threecol{grid-template-columns:1fr}}
+  .mini-card{background:var(--brief);border:1px solid var(--border-b);border-radius:10px;padding:12px 14px}
+  .mini-card .h{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+  .mini-card.prod .h{color:var(--green)}.mini-card.git .h{color:var(--red)}.mini-card.risk .h{color:var(--orange)}
+  .mini-card p{font-size:12px;color:var(--text-2)}.mini-card code{font-size:11px}
+
+  /* repo table */
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--border);vertical-align:top}
+  th{font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:700}
+  td b{color:var(--text)}
+  .pill{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:2px 8px;border-radius:20px;white-space:nowrap}
+  .pill.ff{background:rgba(74,222,128,.13);color:var(--green)}
+  .pill.keep{background:rgba(250,204,21,.14);color:var(--yellow)}
+  .pill.reset{background:rgba(248,113,113,.13);color:var(--red)}
+  .pill.none{background:rgba(125,138,153,.15);color:var(--muted)}
+  .pill.live{background:rgba(110,168,254,.14);color:var(--accent)}
+  .pill.dup{background:rgba(125,138,153,.13);color:var(--dim)}
+  .mono{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--text-2)}
+
+  /* steps */
+  .steps{display:flex;flex-direction:column;gap:9px}
+  .step{display:flex;gap:14px;align-items:flex-start;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 17px}
+  .step .num{width:28px;height:28px;border-radius:8px;background:rgba(74,222,128,.13);color:var(--green);font-weight:800;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .step .stt{font-size:14px;font-weight:700;margin-bottom:2px}
+  .step p{font-size:12.5px;color:var(--text-2)}.step p b{color:var(--text)}
+  .step.safe{border-left:3px solid var(--green)}
+  .step.care{border-left:3px solid var(--yellow)}
+
+  .harden{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  @media(max-width:680px){.harden{grid-template-columns:1fr}}
+  .hb{background:var(--brief);border:1px solid var(--border-b);border-radius:9px;padding:11px 14px;font-size:12.5px;color:var(--text-2)}
+  .hb b{color:var(--text)}.hb .x{color:var(--red)}.hb .ok{color:var(--green)}
+  .foot{margin-top:34px;font-size:11px;color:var(--dim);font-family:"JetBrains Mono",monospace;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">Plan · re-arm the mirror safely · 2026-05-27</div>
+  <h1>The catch-up plan — before I touch the Mini.</h1>
+  <p class="sub">The mirror's been dead ~2.5 weeks. Re-arming it isn't one button — a blind restart would merge weeks of mess into live agents. Here's exactly what I'd do to each repo, what to <b>protect</b>, and the one piece of real work hiding on the Mini that we must not lose.</p>
+
+  <h2>⚠ The one thing we must not lose — Lead Engine</h2>
+  <div class="spot">
+    <div class="st">A real fix is running in production but exists nowhere else.</div>
+    <p>3 weeks ago, a fix was made <b>directly on the Mini</b>: <code>fix(mesh): wire lead-engine heartbeat to mesh-api PATCH</code>. Before it, Lead Engine wrote its heartbeat to a file but never told the mesh — so <code>/health</code> showed <code>last_heartbeat: null</code>. The fix adds the mesh ping. <b>23 lines in <code>shared/delegation.py</code>. Verified working.</b></p>
+    <div class="threecol">
+      <div class="mini-card prod"><div class="h">✓ Running in prod</div><p>The live Lead Engine agent runs from <b>this exact checkout</b>. The fix is active right now.</p></div>
+      <div class="mini-card git"><div class="h">✗ Not on GitHub</div><p>It was never pushed. <code>origin/main</code> has <b>no</b> heartbeat commit. GitHub doesn't know it exists.</p></div>
+      <div class="mini-card risk"><div class="h">⟳ Reset would break it</div><p>"Sync to GitHub" naively = <b>revert this fix</b> and re-break the heartbeat on a live agent.</p></div>
+    </div>
+    <p style="margin-top:11px"><b>Recommendation: push it to GitHub first.</b> Then the fix is preserved, propagated to your laptop, and safe to sync around. (Discarding is the only wrong move here.)</p>
+  </div>
+
+  <h2>Every repo in the sync list — what happens to each</h2>
+  <table>
+    <tr><th>Repo</th><th>Role</th><th>State</th><th>Action</th></tr>
+    <tr><td><b>kai</b> (the hub)</td><td><span class="pill live">live core</span></td><td class="mono">in sync</td><td><span class="pill none">leave alone</span></td></tr>
+    <tr><td><b>Enso</b></td><td><span class="pill live">live</span></td><td class="mono">behind 1, clean</td><td><span class="pill ff">fast-forward</span></td></tr>
+    <tr><td><b>Pitch Deck Engine</b></td><td><span class="pill live">live</span></td><td class="mono">behind 7</td><td><span class="pill ff">fast-forward</span></td></tr>
+    <tr><td><b>ACD</b></td><td><span class="pill live">live</span></td><td class="mono">behind 1</td><td><span class="pill ff">fast-forward</span></td></tr>
+    <tr><td><b>Code Architect</b></td><td><span class="pill dup">mirror only</span></td><td class="mono">behind 62, clean</td><td><span class="pill ff">fast-forward</span></td></tr>
+    <tr><td><b>Lead Engine</b></td><td><span class="pill live">live</span></td><td class="mono">has the prod fix ↑</td><td><span class="pill keep">push, then sync</span></td></tr>
+    <tr><td><b>CFO</b> (Desktop copy)</td><td><span class="pill dup">duplicate</span></td><td class="mono">"ahead" = auto-backup cruft</td><td><span class="pill reset">reset to origin</span></td></tr>
+    <tr><td><b>Offer Architect</b> (Desktop)</td><td><span class="pill dup">duplicate</span></td><td class="mono">"ahead" = auto-backup cruft</td><td><span class="pill reset">reset to origin</span></td></tr>
+    <tr><td><b>Kai EA</b> (Desktop copy)</td><td><span class="pill dup">dead duplicate</span></td><td class="mono">2,621 behind</td><td><span class="pill reset">reset / retire</span></td></tr>
+    <tr><td><b>Chronicle</b></td><td><span class="pill dup">on a side branch</span></td><td class="mono">behind 2</td><td><span class="pill none">leave (off-board)</span></td></tr>
+  </table>
+  <p class="sub" style="margin:11px 0 0;font-size:13.5px">The scary numbers all sit on <b>duplicate checkouts nothing runs from.</b> The <b>live</b> agents are at most a handful of commits behind — quick, clean fast-forwards.</p>
+
+  <h2>Then: harden the sync script so this can't rot again</h2>
+  <div class="harden">
+    <div class="hb"><b>Today it does:</b> <span class="x">git add -A && commit</span> any local change, then <span class="x">git pull</span> (merge). On a diverged repo that's an instant mess — and it wasn't even executable, so it never ran.</div>
+    <div class="hb"><b>Hardened:</b> make it <span class="ok">executable</span>, <span class="ok">fast-forward-only</span> (never auto-merge), <span class="ok">skip + warn</span> on diverged repos instead of committing cruft, <span class="ok">branch-aware</span>, and add the missing live repos (framer, kmg).</div>
+  </div>
+
+  <h2>Execution order</h2>
+  <div class="steps">
+    <div class="step care"><div class="num">1</div><div><div class="stt">Preserve the Lead Engine fix</div><p>Push that one commit to GitHub. <b>Nothing else proceeds until your work is safe.</b></p></div></div>
+    <div class="step safe"><div class="num">2</div><div><div class="stt">Fast-forward the clean live agents</div><p>Enso, PDE, ACD, Code-Architect mirror — pull only, no merges, watch each agent stay up after.</p></div></div>
+    <div class="step safe"><div class="num">3</div><div><div class="stt">Reset the disposable / dead duplicates</div><p>CFO &amp; OA Desktop copies and the 2,621-behind Kai EA copy → match GitHub. (Their only local "work" is auto-backup cruft.)</p></div></div>
+    <div class="step safe"><div class="num">4</div><div><div class="stt">Harden + re-arm <code>sync-repos.sh</code></div><p>Fast-forward-only, branch-aware, skip-diverged, executable. Re-enable the cron, confirm one clean run.</p></div></div>
+  </div>
+
+  <div class="foot">Code Architect · Mini catch-up plan · 2026-05-27 · live path = ~/kai (current) · the stale numbers are all duplicates</div>
+</div>
+</body>
+</html>
