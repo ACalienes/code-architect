@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<!-- The Board door is live. Session arc + result. 2026-05-27 -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Board door is live · 2026-05-27</title>
+<style>
+  :root{--bg:#0a0d12;--card:#151b25;--panel:#11161e;--brief:#0c1016;--border:#232c3a;--border-b:#2f3a4a;
+    --text:#e6edf3;--text-2:#aab6c4;--muted:#7d8a99;--dim:#5a6573;--accent:#6ea8fe;--green:#4ade80;--yellow:#facc15;--orange:#fb923c;--red:#f87171;--purple:#c084fc;--teal:#5eead4;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);font-family:-apple-system,"SF Pro Text",sans-serif;line-height:1.5;min-height:100vh}
+  body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellipse 1200px 600px at 50% -8%,rgba(74,222,128,.09),transparent 55%);pointer-events:none;z-index:0}
+  .wrap{position:relative;z-index:1;max-width:1000px;margin:0 auto;padding:44px 24px 80px}
+  code{font-family:"JetBrains Mono",Menlo,monospace;font-size:.82em;background:var(--brief);border:1px solid var(--border);border-radius:5px;padding:1px 6px;color:var(--teal)}
+  .eyebrow{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:var(--green);display:flex;align-items:center;gap:9px;margin-bottom:13px}
+  .eyebrow .live{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 9px rgba(74,222,128,.6);animation:b 1.6s infinite}@keyframes b{50%{opacity:.35}}
+  h1{font-size:39px;font-weight:800;letter-spacing:-1.3px;line-height:1.05;background:linear-gradient(180deg,#fff,#b8c5d3);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{font-size:16.5px;color:var(--text-2);max-width:840px;margin:12px 0 28px}.sub b{color:var(--text)}
+  h2{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.4px;color:var(--text-2);margin:34px 0 14px;display:flex;gap:10px;align-items:center}h2::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent)}
+
+  /* the live proof card */
+  .proof{background:linear-gradient(135deg,rgba(74,222,128,.10),rgba(74,222,128,.02));border:1px solid rgba(74,222,128,.32);border-radius:15px;padding:22px 24px}
+  .proof .tag{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--green);margin-bottom:9px}
+  .ledger-line{display:flex;gap:13px;align-items:flex-start;background:var(--card);border:1px solid var(--border);border-radius:11px;padding:14px 16px;margin-top:4px}
+  .ledger-line .ic{width:34px;height:34px;border-radius:9px;border:1px solid rgba(110,168,254,.4);background:rgba(110,168,254,.08);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+  .ledger-line .l{font-size:14.5px;font-weight:700}
+  .ledger-line .d{font-size:13px;color:var(--text-2);font-style:italic;margin:3px 0}
+  .ledger-line .m{font-size:12px;color:var(--green)}
+
+  /* the journey: laptop -> door -> board -> agents */
+  .pipe{display:flex;align-items:center;flex-wrap:wrap;gap:0;background:var(--brief);border:1px solid var(--border-b);border-radius:12px;padding:18px 16px;margin-top:14px}
+  .pnode{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:11px 14px;text-align:center;border-bottom:2px solid var(--green)}
+  .pnode b{font-size:13px}.pnode .s{font-size:10px;color:var(--muted);display:block;margin-top:2px}
+  .parr{color:var(--green);padding:0 11px;font-size:16px;font-weight:700}
+  @media(max-width:720px){.parr{transform:rotate(90deg)}.pipe{flex-direction:column}}
+
+  /* arc timeline */
+  .arc{display:flex;flex-direction:column;gap:0}
+  .step{display:flex;gap:15px;position:relative;padding-bottom:16px}
+  .step:not(:last-child)::before{content:"";position:absolute;left:15px;top:30px;bottom:-2px;width:2px;background:var(--border)}
+  .step .dot{width:32px;height:32px;border-radius:50%;background:var(--card);border:2px solid var(--green);color:var(--green);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;flex-shrink:0;z-index:1}
+  .step .body{padding-top:3px}
+  .step .t{font-size:15px;font-weight:700}
+  .step p{font-size:13px;color:var(--text-2);margin-top:2px}.step p b{color:var(--text)}
+
+  /* security guarantees */
+  .guards{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  @media(max-width:680px){.guards{grid-template-columns:1fr}}
+  .g{display:flex;gap:11px;background:var(--brief);border:1px solid var(--border-b);border-radius:10px;padding:11px 14px}
+  .g .ck{color:var(--green);font-weight:800;flex-shrink:0}
+  .g .gt{font-size:13px;font-weight:600}.g p{font-size:11.5px;color:var(--muted);margin-top:1px}
+
+  /* now vs next */
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:680px){.cols{grid-template-columns:1fr}}
+  .col{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:16px 18px}
+  .col.now{border-top:3px solid var(--green)}.col.next{border-top:3px solid var(--accent)}
+  .col h3{font-size:14px;font-weight:800;margin-bottom:9px}.col.now h3{color:var(--green)}.col.next h3{color:var(--accent)}
+  .col ul{list-style:none;display:flex;flex-direction:column;gap:7px}
+  .col li{font-size:12.5px;color:var(--text-2);padding-left:18px;position:relative}
+  .col li::before{position:absolute;left:0}
+  .col.now li::before{content:"✓";color:var(--green)}
+  .col.next li::before{content:"→";color:var(--accent)}
+  .col li b{color:var(--text)}
+  .foot{margin-top:34px;font-size:11px;color:var(--dim);font-family:"JetBrains Mono",monospace;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow"><span class="live"></span>Live · Mac Mini · :3351 · Tailscale</div>
+  <h1>The Board door is open.</h1>
+  <p class="sub">This morning you said: <i>“I worked all morning and see nothing on the Board.”</i> You were right — there was a <b>wall</b> between your laptop and the Board. Tonight a fact typed on the laptop traveled through an authenticated door, onto the Board, and out to <b>12 agents</b>. The wall is gone.</p>
+
+  <div class="proof">
+    <div class="tag">✓ Proven live — on the ledger right now</div>
+    <div class="ledger-line">
+      <div class="ic">📊</div>
+      <div>
+        <div class="l">CFO posted a status update about Board Door</div>
+        <div class="d">“The Board door is live — first laptop→Board post over Tailscale.”</div>
+        <div class="m">→ delivered to 12 agents · seconds ago</div>
+      </div>
+    </div>
+    <div class="pipe">
+      <div class="pnode"><b>💻 Laptop</b><span class="s">board-post.js</span></div>
+      <span class="parr">→</span>
+      <div class="pnode"><b>🔒 The Door</b><span class="s">authenticated · :3351</span></div>
+      <span class="parr">→</span>
+      <div class="pnode"><b>📋 The Board</b><span class="s">kameha-mesh.db</span></div>
+      <span class="parr">→</span>
+      <div class="pnode"><b>👥 12 agents</b><span class="s">routed</span></div>
+    </div>
+  </div>
+
+  <h2>How tonight got here — the arc</h2>
+  <div class="arc">
+    <div class="step"><div class="dot">1</div><div class="body"><div class="t">You asked the hard question</div><p>“Before we build, is the original plan — agents on the Mini, work on the laptop, everything mirrors for safety — still real?” <b>The right instinct.</b></p></div></div>
+    <div class="step"><div class="dot">2</div><div class="body"><div class="t">The audit found the safety net was broken</div><p>The hourly laptop→Mini mirror had been <b>dead ~2.5 weeks</b> (the script wasn’t even executable). The Mini’s copies were weeks stale. The real lesson: <b>GitHub is the safety net, not the Mini.</b></p></div></div>
+    <div class="step"><div class="dot">3</div><div class="body"><div class="t">We backed up everything, then re-armed the mirror</div><p>Zero-loss: the Board DB, every diverged repo, and the session’s work copied across laptop + Mini + GitHub. Then a <b>hardened, fail-safe</b> sync — fast-forward-only, never destructive — restored hourly currency.</p></div></div>
+    <div class="step"><div class="dot">4</div><div class="body"><div class="t">We built the door — through every gate</div><p><b>Design → Codex review (REVISE, 8 findings) → folded → devil’s-advocate pass → 24/24 tests → deploy.</b> Codex caught a real spoofing hole; we closed it before a line shipped.</p></div></div>
+    <div class="step"><div class="dot">5</div><div class="body"><div class="t">It went live — and we proved it</div><p>A laptop-side post reached the Board and fanned out to 12 agents. <b>Done, verified, off-boxed.</b></p></div></div>
+  </div>
+
+  <h2>What the door guarantees</h2>
+  <div class="guards">
+    <div class="g"><span class="ck">✓</span><div><div class="gt">No impersonation</div><p>Identity comes from the token, server-side — a caller can’t pretend to be another agent.</p></div></div>
+    <div class="g"><span class="ck">✓</span><div><div class="gt">Closed by default</div><p>Tailscale-only, token-required, and it refuses to run if no token is enrolled. No open write hole.</p></div></div>
+    <div class="g"><span class="ck">✓</span><div><div class="gt">Validated input</div><p>Every fact is shape-checked and sanitized before it touches the Board; junk is rejected at the door.</p></div></div>
+    <div class="g"><span class="ck">✓</span><div><div class="gt">Safe retries</div><p>A network retry can’t double-post — the door recognizes and de-duplicates it.</p></div></div>
+    <div class="g"><span class="ck">✓</span><div><div class="gt">Seeing ≠ doing</div><p>Posting a work-order is just a recorded fact — nothing executes. The approval gate is untouched.</p></div></div>
+    <div class="g"><span class="ck">✓</span><div><div class="gt">Nothing else disturbed</div><p>Deployed additively — the running fleet kept humming; all 15 agents stayed online.</p></div></div>
+  </div>
+
+  <h2>Where it stands</h2>
+  <div class="cols">
+    <div class="col now">
+      <h3>Live now</h3>
+      <ul>
+        <li><b>The door</b> — running, saved, survives reboot</li>
+        <li><b>Laptop → Board</b> posting, proven over Tailscale</li>
+        <li><b>The safety mirror</b> — re-armed, hourly, fail-safe</li>
+        <li><b>Everything off-boxed</b> — laptop + Mini + GitHub</li>
+        <li><b>CFO’s alert feed</b> on the Board (earlier today)</li>
+      </ul>
+    </div>
+    <div class="col next">
+      <h3>Next (none blocking)</h3>
+      <ul>
+        <li>Point the <b>emit hooks at the door</b> → laptop work appears automatically</li>
+        <li>Route the Mini-side writers through the door (one write owner)</li>
+        <li>Merge the Lead Engine fix into <code>main</code> (a reviewed PR)</li>
+        <li>Resume the <b>acknowledgement layer</b> (the receive half)</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="foot">Code Architect · the Board door · live on the Mini · 2026-05-27 · design → Codex → DA → 24/24 → deployed → proven</div>
+</div>
+</body>
+</html>
