@@ -15,15 +15,21 @@
 const http = require('node:http');
 const { DatabaseSync } = require('node:sqlite');
 
+const fs = require('node:fs');
 const HOME = process.env.HOME;
 const BOARD_DB     = process.env.BOARD_DB     || `${HOME}/.kameha/kameha-mesh.db`;
 const CONDUCTOR_DB = process.env.CONDUCTOR_DB || `${HOME}/.kameha/conductor.db`;
 const PORT = Number(process.env.SUPERVISOR_PORT || 3352);
 const HOST = process.env.SUPERVISOR_HOST || '100.64.114.13';
+// v2 — Approve / Reject / Comment buttons fire here, post a decision/status_update fact through the gateway under the 'alex' token.
+const GATEWAY_URL = process.env.GATEWAY_URL || 'http://127.0.0.1:3351';
+const SUPERVISOR_TOKEN_FILE = process.env.SUPERVISOR_TOKEN_FILE || `${HOME}/.kameha/board-gateway.tokens/alex`;
+let _superToken = null;
+const supervisorToken = () => _superToken || (_superToken = fs.readFileSync(SUPERVISOR_TOKEN_FILE, 'utf8').trim());
 
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const ago = ts => { const s = Math.max(0, (Date.now() - new Date(ts).getTime()) / 1000); if (s < 60) return Math.floor(s) + 's'; if (s < 3600) return Math.floor(s / 60) + 'm'; if (s < 86400) return Math.floor(s / 3600) + 'h'; return Math.floor(s / 86400) + 'd'; };
-const NAME = { kai: 'Kai', cfo: 'CFO', enso: 'Enso', acd: 'ACD', nami: 'NAMI', framer: 'Framer', conductor: 'Conductor', 'lead-engine': 'Lead Engine', 'offer-architect': 'Offer Architect', 'code-architect': 'Code Architect', 'pitch-deck': 'Pitch Deck', kmg: 'KMG', 'dag-repo': 'DAG', 'tdb-repo': 'Dental Boutique', chronicle: 'Chronicle' };
+const NAME = { kai: 'Kai', cfo: 'CFO', enso: 'Enso', acd: 'ACD', nami: 'NAMI', framer: 'Framer', conductor: 'Conductor', 'lead-engine': 'Lead Engine', 'offer-architect': 'Offer Architect', 'code-architect': 'Code Architect', 'pitch-deck': 'Pitch Deck', kmg: 'KMG', 'dag-repo': 'DAG', 'tdb-repo': 'Dental Boutique', chronicle: 'Chronicle', alex: 'Alex' };
 const who = a => NAME[a] || a || '—';
 const title = slug => String(slug || '').replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 const detailOf = p => { try { const o = JSON.parse(p || '{}'); return o.detail || o.text || o.task || o.summary || o.content || o.status || ''; } catch (_) { return ''; } };
@@ -172,7 +178,9 @@ async function render() {
           : n.kind === 'work_order' ? `<span class="tg w">WORK ORDER</span> <b>${esc(who(n.from))}</b> → <b>${esc(who(n.to))}</b>`
           : n.kind === 'ca-mesh'    ? `<span class="tg ca">CA WO · QUEUED</span> <b>${esc(who(n.from))}</b> → <b>Code Architect</b><span class="st">${esc(n.status||'')}</span>`
           : `<span class="tg c">CFO DRAFT</span> <b>CFO</b> needs your nod`;
-        return `<div class="need"><div class="nh">${head}<span class="ag">${ago(n.age)} ago</span></div><div class="nd">${esc(n.detail) || '—'}</div><div class="na"><button class="ok" title="v2 wires this through the gateway">Approve</button><button class="rj">Reject</button><button class="cm">Comment</button></div></div>`;
+        const idArg = JSON.stringify(String(n.fact_id || ''));
+        const kArg = JSON.stringify(n.kind);
+        return `<div class="need"><div class="nh">${head}<span class="ag">${ago(n.age)} ago</span></div><div class="nd">${esc(n.detail) || '—'}</div><div class="na"><button class="ok" onclick='act(${kArg},${idArg},"approve")'>Approve</button><button class="rj" onclick='act(${kArg},${idArg},"reject")'>Reject</button><button class="cm" onclick='act(${kArg},${idArg},"comment")'>Comment</button></div></div>`;
       }).join('')
     : `<div class="empty">Nothing waiting on you right now. The fleet's running unattended.</div>`;
 
@@ -201,8 +209,16 @@ h2{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:1.4p
 .nh .st{margin-left:6px;font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--orange);text-transform:uppercase}
 .nd{font-size:13.5px;color:var(--text);margin:7px 0;font-style:italic}
 .na{display:flex;gap:6px;margin-top:6px}
-.na button{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:5px 12px;border-radius:6px;border:1px solid;background:transparent;cursor:not-allowed;font-family:inherit;opacity:.55}
-.na .ok{color:var(--green);border-color:rgba(74,222,128,.45)}.na .rj{color:var(--red);border-color:rgba(248,113,113,.4)}.na .cm{color:var(--text-2);border-color:var(--border)}
+.na{display:flex;gap:6px;margin-top:6px;align-items:center}
+.na button{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:5px 12px;border-radius:6px;border:1px solid;background:transparent;cursor:pointer;font-family:inherit;transition:background .15s}
+.na button:hover{background:rgba(255,255,255,.06)}
+.na button:disabled{cursor:wait;opacity:.55}
+.na .ok{color:var(--green);border-color:rgba(74,222,128,.45)}.na .ok:hover{background:rgba(74,222,128,.10)}
+.na .rj{color:var(--red);border-color:rgba(248,113,113,.4)}.na .rj:hover{background:rgba(248,113,113,.10)}
+.na .cm{color:var(--text-2);border-color:var(--border)}
+.na .dn{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;padding:5px 10px;border-radius:6px;background:rgba(74,222,128,.13);color:var(--green)}
+.na .dn.x{background:rgba(248,113,113,.13);color:var(--red)}
+.na .dn.c{background:rgba(110,168,254,.13);color:var(--accent)}
 
 .projs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px}
 @media(max-width:780px){.projs{grid-template-columns:1fr 1fr}}
@@ -242,12 +258,91 @@ h2{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:1.4p
 <h2>Real activity · agents talking <span class="c">filtered</span></h2>
 <div>${feedHtml}</div>
 
-<div class="foot">The Board · supervisor · ${esc(new Date().toLocaleTimeString('en-US', { timeZone: 'America/New_York' }))} ET · v1 read-only · approve/reject lands in v2</div>
+<div class="foot">The Board · supervisor · ${esc(new Date().toLocaleTimeString('en-US', { timeZone: 'America/New_York' }))} ET · v2 — buttons live</div>
+<script>
+async function act(kind, id, action) {
+  const btn = event.currentTarget;
+  const card = btn.closest('.need');
+  let comment = '';
+  if (action === 'comment') { comment = prompt('Comment:'); if (!comment) return; }
+  const siblings = Array.from(btn.parentElement.querySelectorAll('button'));
+  siblings.forEach(b => b.disabled = true);
+  const orig = btn.textContent; btn.textContent = '…';
+  try {
+    const r = await fetch('/action', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ kind, id, action, comment }) });
+    const j = await r.json();
+    if (j.ok) {
+      const label = action === 'approve' ? '✓ approved' : action === 'reject' ? '✕ rejected' : '+ commented';
+      const cls = action === 'approve' ? 'dn' : action === 'reject' ? 'dn x' : 'dn c';
+      btn.parentElement.innerHTML = '<span class="' + cls + '">' + label + '</span><span style="margin-left:auto;font-size:10px;color:var(--muted);font-family:JetBrains Mono,monospace">fact ' + (j.fact_id ? j.fact_id.slice(0,8) : '') + '</span>';
+      card.style.opacity = '0.55';
+      setTimeout(() => location.reload(), 2000);
+    } else {
+      siblings.forEach(b => b.disabled = false); btn.textContent = orig;
+      alert('Failed: ' + (j.error || ('status ' + j.status)));
+    }
+  } catch (e) {
+    siblings.forEach(b => b.disabled = false); btn.textContent = orig;
+    alert('Error: ' + e.message);
+  }
+}
+</script>
 </body></html>`;
+}
+
+// v2 action surface — the buttons POST here. Click Approve → posts a 'decision' fact via the
+// gateway as 'alex' (server-side identity, no spoofing). Click Comment → posts a status_update.
+async function readBody(req, max = 64 * 1024) {
+  return new Promise((resolve, reject) => {
+    let len = 0; const chunks = [];
+    req.on('data', c => { len += c.length; if (len > max) { req.destroy(); reject(new Error('body too large')); } else chunks.push(c); });
+    req.on('end', () => { try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}')); } catch (_) { reject(new Error('bad json')); } });
+    req.on('error', reject);
+  });
+}
+async function postSupervisorAction({ kind, id, action, comment }) {
+  if (!['approve', 'reject', 'comment'].includes(action)) throw new Error('unknown action');
+  const safeKind = String(kind || 'item').slice(0, 32);
+  const safeId   = String(id || '').slice(0, 80);
+  let fact_type, payload;
+  if (action === 'comment') {
+    if (!comment || !String(comment).trim()) throw new Error('comment required');
+    fact_type = 'status_update';
+    payload = { status: 'comment', detail: `re ${safeKind} ${safeId.slice(0,12)}: ${String(comment).slice(0, 400)}` };
+  } else {
+    fact_type = 'decision';
+    payload = {
+      text: action === 'approve' ? 'Approved' : 'Rejected',
+      rationale: `Alex ${action}d ${safeKind} ${safeId.slice(0, 40)} via supervisor`,
+    };
+  }
+  const body = {
+    fact_type, visibility: 'internal', data_class: 'internal',
+    subject_type: safeKind, subject_id: safeId,
+    payload, idempotency_key: `alex:${action}:${safeId}`.slice(0, 180),
+  };
+  const r = await fetch(GATEWAY_URL + '/publish', {
+    method: 'POST',
+    headers: { 'authorization': 'Bearer ' + supervisorToken(), 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(5000),
+  });
+  let j = {}; try { j = await r.json(); } catch (_) {}
+  return { ok: r.status === 200, status: r.status, ...j };
 }
 
 http.createServer(async (req, res) => {
   if (req.url === '/health') { res.writeHead(200); return res.end('ok'); }
+  if (req.method === 'POST' && req.url === '/action') {
+    try {
+      const out = await postSupervisorAction(await readBody(req));
+      res.writeHead(out.ok ? 200 : 400, { 'content-type': 'application/json' });
+      return res.end(JSON.stringify(out));
+    } catch (e) {
+      res.writeHead(400, { 'content-type': 'application/json' });
+      return res.end(JSON.stringify({ ok: false, error: e.message }));
+    }
+  }
   res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
   res.end(await render());
 }).listen(PORT, HOST, () => console.log(`[supervisor] live on ${HOST}:${PORT}`));

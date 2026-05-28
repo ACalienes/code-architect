@@ -25,7 +25,7 @@ const ago = ts => {
 const NAME = { kai: 'Kai', cfo: 'CFO', enso: 'Enso', acd: 'ACD', nami: 'NAMI', framer: 'Framer',
   conductor: 'Conductor', 'lead-engine': 'Lead Engine', 'offer-architect': 'Offer Architect',
   'code-architect': 'Code Architect', 'pitch-deck': 'Pitch Deck', kmg: 'KMG',
-  'dag-repo': 'DAG', 'tdb-repo': 'Dental Boutique', chronicle: 'Chronicle', 'mesh-adapter': 'Mesh Bridge' };
+  'dag-repo': 'DAG', 'tdb-repo': 'Dental Boutique', chronicle: 'Chronicle', 'mesh-adapter': 'Mesh Bridge', alex: 'Alex' };
 const who = a => NAME[a] || a || 'someone';
 // Plain phrasing per fact type.
 const KIND = {
