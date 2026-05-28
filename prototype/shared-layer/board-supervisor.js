@@ -28,6 +28,33 @@ const SUPERVISOR_TOKEN_FILE = process.env.SUPERVISOR_TOKEN_FILE || `${HOME}/.kam
 let _superToken = null;
 const supervisorToken = () => _superToken || (_superToken = fs.readFileSync(SUPERVISOR_TOKEN_FILE, 'utf8').trim());
 
+// Auth for the supervisor's /action endpoint itself (DA-a — critical: without this, any tailnet
+// device can POST forged 'Alex approved' facts). Token auto-generated on first run, persisted 0600,
+// then embedded SERVER-SIDE in the rendered HTML so the browser sends it back as
+// `X-Supervisor-Action` on every /action POST. Rotate by deleting the file and restarting.
+const { randomBytes, timingSafeEqual } = require('node:crypto');
+const path = require('node:path');
+const SUPERVISOR_ACTION_TOKEN_FILE = process.env.SUPERVISOR_ACTION_TOKEN_FILE || `${HOME}/.kameha/supervisor.token`;
+let _supActionToken = null;
+function supervisorActionToken() {
+  if (_supActionToken) return _supActionToken;
+  try { const t = fs.readFileSync(SUPERVISOR_ACTION_TOKEN_FILE, 'utf8').trim(); if (t.length >= 32) { _supActionToken = t; return t; } } catch (_) {}
+  const t = randomBytes(32).toString('base64url');
+  try { fs.mkdirSync(path.dirname(SUPERVISOR_ACTION_TOKEN_FILE), { recursive: true, mode: 0o700 }); } catch (_) {}
+  fs.writeFileSync(SUPERVISOR_ACTION_TOKEN_FILE, t, { mode: 0o600 });
+  _supActionToken = t;
+  console.log(`[supervisor] generated new /action auth token → ${SUPERVISOR_ACTION_TOKEN_FILE}`);
+  return t;
+}
+function actionAuthOK(req) {
+  const provided = req.headers['x-supervisor-action'];
+  if (!provided || typeof provided !== 'string') return false;
+  const a = Buffer.from(provided);
+  const b = Buffer.from(supervisorActionToken());
+  if (a.length !== b.length) return false;
+  try { return timingSafeEqual(a, b); } catch (_) { return false; }
+}
+
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const ago = ts => { const s = Math.max(0, (Date.now() - new Date(ts).getTime()) / 1000); if (s < 60) return Math.floor(s) + 's'; if (s < 3600) return Math.floor(s / 60) + 'm'; if (s < 86400) return Math.floor(s / 3600) + 'h'; return Math.floor(s / 86400) + 'd'; };
 const NAME = { kai: 'Kai', cfo: 'CFO', enso: 'Enso', acd: 'ACD', nami: 'NAMI', framer: 'Framer', conductor: 'Conductor', 'lead-engine': 'Lead Engine', 'offer-architect': 'Offer Architect', 'code-architect': 'Code Architect', 'pitch-deck': 'Pitch Deck', kmg: 'KMG', 'dag-repo': 'DAG', 'tdb-repo': 'Dental Boutique', chronicle: 'Chronicle', alex: 'Alex' };
@@ -385,9 +412,12 @@ ${agedHtml}
 <div class="foot">The Board · supervisor · ${esc(new Date().toLocaleTimeString('en-US', { timeZone: 'America/New_York' }))} ET · v2.2 — buttons live (delegation + no-cache)</div>
 <div id="cl" style="position:fixed;left:0;right:0;bottom:0;background:#0c1016;color:#aab6c4;font-family:JetBrains Mono,monospace;font-size:11.5px;padding:7px 14px;border-top:1px solid #232c3a;z-index:99;display:flex;gap:14px"><span id="clt">supervisor ready — click any button</span></div>
 <script>
+// SUPERVISOR_ACTION token embedded server-side so the browser sends it back as the X-Supervisor-Action
+// header on every /action POST. Without this the endpoint is anonymous (DA-a critical fix).
+window.__SUP_TOK = ${JSON.stringify(supervisorActionToken())};
 (function(){
   function log(m){ var n=document.getElementById('clt'); if(n){ var ts=new Date().toLocaleTimeString(); n.textContent='['+ts+'] '+m; } console.log('[supervisor]', m); }
-  log('JS loaded, click handler armed (delegation)');
+  log('JS loaded, click handler armed (delegation, auth-bound)');
 
   document.body.addEventListener('click', async function(e){
     var btn = e.target.closest('button[data-action]');
@@ -405,7 +435,7 @@ ${agedHtml}
     var orig = btn.textContent; btn.textContent = '…';
     try {
       log('posting /action…');
-      var r = await fetch('/action', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ kind: kind, id: id, action: action, comment: comment }) });
+      var r = await fetch('/action', { method:'POST', headers:{'content-type':'application/json', 'x-supervisor-action': window.__SUP_TOK || ''}, body: JSON.stringify({ kind: kind, id: id, action: action, comment: comment }) });
       var j = {}; try { j = await r.json(); } catch(_){}
       log('server returned '+r.status+' ok='+(j.ok===true));
       if (j.ok) {
@@ -486,6 +516,10 @@ async function postSupervisorAction({ kind, id, action, comment }) {
 http.createServer(async (req, res) => {
   if (req.url === '/health') { res.writeHead(200); return res.end('ok'); }
   if (req.method === 'POST' && req.url === '/action') {
+    if (!actionAuthOK(req)) {
+      res.writeHead(401, { 'content-type': 'application/json' });
+      return res.end(JSON.stringify({ ok: false, error: 'unauthorized — supervisor action token missing or invalid' }));
+    }
     try {
       const out = await postSupervisorAction(await readBody(req));
       res.writeHead(out.ok ? 200 : 400, { 'content-type': 'application/json' });
