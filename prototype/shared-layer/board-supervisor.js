@@ -31,9 +31,27 @@ const supervisorToken = () => _superToken || (_superToken = fs.readFileSync(SUPE
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const ago = ts => { const s = Math.max(0, (Date.now() - new Date(ts).getTime()) / 1000); if (s < 60) return Math.floor(s) + 's'; if (s < 3600) return Math.floor(s / 60) + 'm'; if (s < 86400) return Math.floor(s / 3600) + 'h'; return Math.floor(s / 86400) + 'd'; };
 const NAME = { kai: 'Kai', cfo: 'CFO', enso: 'Enso', acd: 'ACD', nami: 'NAMI', framer: 'Framer', conductor: 'Conductor', 'lead-engine': 'Lead Engine', 'offer-architect': 'Offer Architect', 'code-architect': 'Code Architect', 'pitch-deck': 'Pitch Deck', kmg: 'KMG', 'dag-repo': 'DAG', 'tdb-repo': 'Dental Boutique', chronicle: 'Chronicle', alex: 'Alex' };
+// Client slugs → display names. CEO-readable everywhere a slug appears.
+const CLIENT_NAME = {
+  tdb: 'Dental Boutique', 'tdb-repo': 'Dental Boutique', dental: 'Dental Boutique', 'the-dental-boutique': 'Dental Boutique',
+  dagdc: 'DAGDC', 'dag-repo': 'DAGDC', dag: 'DAGDC', 'dag-development-construction': 'DAGDC',
+  jmm: 'JMM Law', 'jmm-law': 'JMM Law', 'jmm-law-jimenez-mazzitelli-mordes': 'JMM Law',
+  'hannah-goldy': 'Hannah Goldy', 'hannah goldy': 'Hannah Goldy',
+  gort: 'Gort Productions', 'gort-productions': 'Gort Productions',
+  vcm: 'VCM Production', 'vcm-production': 'VCM Production',
+  baptist: 'Baptist Health', 'baptist-health': 'Baptist Health', 'baptist-health-south-florida': 'Baptist Health',
+  'cynthia-demos': 'Cynthia Demos', 'cynthia-demos-communications': 'Cynthia Demos',
+  'dr-pratt': 'Dr. Pratt', tenet: 'Tenet', 'george-villalba': 'George Villalba',
+  'christian-rodriguez': 'Christian Rodriguez', malaga: 'Townhomes on Malaga',
+};
+const clientName = slug => CLIENT_NAME[String(slug || '').toLowerCase()] || null;
+// Replace slug tokens inside free text with display names ("drafted vcm 2026 04" → "VCM Production 2026 04").
+const SLUG_RX = new RegExp('\\b(' + Object.keys(CLIENT_NAME).map(s => s.replace(/[-]/g, '[-\\s]?')).join('|') + ')\\b', 'gi');
+const expandSlugs = s => String(s || '').replace(SLUG_RX, m => CLIENT_NAME[m.toLowerCase().replace(/\s+/g, '-')] || CLIENT_NAME[m.toLowerCase()] || m);
+const isUUID = s => /^[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}$/i.test(String(s || ''));
 const who = a => NAME[a] || a || '—';
 const title = slug => String(slug || '').replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-const detailOf = p => { try { const o = JSON.parse(p || '{}'); return o.detail || o.text || o.task || o.summary || o.content || o.status || ''; } catch (_) { return ''; } };
+const detailOf = p => { try { const o = JSON.parse(p || '{}'); return o.detail || o.text || o.task || o.note || o.summary || o.content || o.status || ''; } catch (_) { return ''; } };
 const statusOf = p => { try { return JSON.parse(p || '{}').status || ''; } catch (_) { return ''; } };
 // Highlight @agent mentions so the eye catches who a note is for.
 const renderMentions = s => esc(s).replace(/@([A-Za-z][A-Za-z0-9_-]*)/g, (_, a) => `<span class="mn">@${esc(NAME[a.toLowerCase()] || a)}</span>`);
@@ -74,35 +92,62 @@ function snapshot() {
   } finally { b.close(); }
 }
 
-// What needs you: open questions (no resolution yet), recent work_orders not yet completed,
-// CFO drafts (invoices/payments). Heuristic v1; the consumption layer will tighten it.
+// Drop the inter-agent "reply: ..." chatter — it's system traffic, not a CEO decision.
+const NOISE_DETAIL = /^(reply:|Daily production snapshot|Received but requires manual action: \w+_\w+$|status update$)/i;
+const isNoise = d => NOISE_DETAIL.test(String(d || '').trim());
+
+// CFO "drafted X" detail signals an actual draft awaiting send.
+const CFO_DRAFT_RX = /^drafted\b/i;
+
 function needsYou(facts) {
   const items = [];
   const completedSubjects = new Set();
-  // a 'reply: ... complete' or status_update with 'done' against a subject signals completion
   for (const f of facts) {
     const d = detailOf(f.payload).toLowerCase();
     if (f.fact_type === 'status_update' && (d.includes('complete') || d.includes('done') || d.startsWith('reply'))) completedSubjects.add(f.subject_id + '|' + f.source_agent);
   }
-  for (const f of facts.slice(0, 90)) {
+  for (const f of facts.slice(0, 120)) {
+    const d = detailOf(f.payload);
+    if (isNoise(d)) continue;
     if (f.fact_type === 'question') {
-      items.push({ kind: 'question', from: f.source_agent, to: f.subject_id, detail: detailOf(f.payload), age: f.created_at, fact_id: f.fact_id });
+      items.push({ kind: 'question', from: f.source_agent, to: f.subject_id, detail: d, age: f.created_at, fact_id: f.fact_id });
     } else if (f.fact_type === 'work_order') {
-      // skip if there's a recent 'done/complete' going the other way for the same pair
-      if (!completedSubjects.has(f.source_agent + '|' + f.subject_id)) items.push({ kind: 'work_order', from: f.source_agent, to: f.subject_id, detail: detailOf(f.payload), age: f.created_at, fact_id: f.fact_id });
-    } else if (f.source_agent === 'cfo' && /draft|invoice|payment|estimate/i.test(detailOf(f.payload))) {
-      items.push({ kind: 'cfo-draft', from: 'cfo', to: 'alex', detail: detailOf(f.payload), age: f.created_at, fact_id: f.fact_id });
+      if (!completedSubjects.has(f.source_agent + '|' + f.subject_id)) items.push({ kind: 'work_order', from: f.source_agent, to: f.subject_id, detail: d, age: f.created_at, fact_id: f.fact_id });
+    } else if (f.source_agent === 'cfo' && f.fact_type === 'status_update' && CFO_DRAFT_RX.test(d)) {
+      items.push({ kind: 'cfo-draft', from: 'cfo', to: 'alex', detail: d, age: f.created_at, fact_id: f.fact_id });
     }
   }
-  // dedupe by (kind|from|to|detail) — keep newest
-  const seen = new Set(); const dedup = [];
-  for (const it of items) { const k = `${it.kind}|${it.from}|${it.to}|${it.detail.slice(0, 80)}`; if (!seen.has(k)) { seen.add(k); dedup.push(it); } }
-  return dedup.slice(0, 12);
+  // group by (kind|from|first-2-words-of-detail) so repeated drafts/WOs of the same kind collapse with a count.
+  const groupKey = it => {
+    if (it.kind === 'cfo-draft') { const m = it.detail.toLowerCase().match(/^drafted\s+(\S+)/); return `cfo-draft|${m ? 'drafted ' + m[1] : it.detail.slice(0, 28).toLowerCase()}`; }
+    return `${it.kind}|${it.from}|${it.detail.slice(0, 50).toLowerCase()}`;
+  };
+  const groups = new Map();
+  for (const it of items) {
+    const k = groupKey(it);
+    if (groups.has(k)) { const g = groups.get(k); g.count++; g.others.push(it); } else { groups.set(k, { ...it, count: 1, others: [] }); }
+  }
+  return Array.from(groups.values()).slice(0, 14);
 }
 // Drop anything Alex has already decided on (an alex decision fact with matching subject_id exists).
 function dropDecided(items, decided) {
   if (!decided || !decided.size) return items;
   return items.filter(it => !decided.has(String(it.fact_id || '')));
+}
+
+// CEO-readable headline for each need card — reads as a sentence the way an office update would.
+const friendlyName = id => NAME[id] || clientName(id) || (id ? title(expandSlugs(String(id))) : '—');
+function cardSentence(n) {
+  const fromName = esc(friendlyName(n.from));
+  let detail = expandSlugs(String(n.detail || '')).replace(/[_]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (detail.length > 200) detail = detail.slice(0, 198) + '…';
+  const toName = esc(friendlyName(n.to));
+  const more = n.count > 1 ? ` <span class="cnt">+${n.count - 1} similar</span>` : '';
+  if (n.kind === 'question')   return `<b>${fromName}</b> asked <b>${toName}</b>: ${esc(detail) || '—'}${more}`;
+  if (n.kind === 'work_order') return `<b>${fromName}</b> sent <b>${toName}</b> a work order: ${esc(detail) || '—'}${more}`;
+  if (n.kind === 'cfo-draft')  return `<b>CFO</b> drafted ${esc(detail.replace(/^drafted\s+/i, '')) || 'an item'} — needs your nod to send${more}`;
+  if (n.kind === 'ca-mesh')    return `<b>${fromName}</b> queued a work order for <b>Code Architect</b>: ${esc(detail) || 'mesh request'}${more}`;
+  return `<b>${fromName}</b>: ${esc(detail) || '—'}${more}`;
 }
 
 function activityFeed(facts) {
@@ -154,6 +199,7 @@ function projectsBlock(projects, cycles, facts) {
 
 function row(f) {
   const target = NAME[f.subject_id];
+  const cname = clientName(f.subject_id);
   let verb = ({ status_update: 'updated', work_order: 'sent a work order', question: 'asked', decision: 'made a decision', task: 'added a task', creative_brief: 'shared a brief', client_feedback: 'logged feedback', objective: 'set an objective' }[f.fact_type]) || ('posted ' + f.fact_type);
   let subj = '';
   if (target) {
@@ -161,8 +207,15 @@ function row(f) {
     else if (f.fact_type === 'question') { verb = 'asked'; subj = ` <b>${esc(target)}</b>`; }
     else if (f.fact_type === 'status_update') { verb = 'updated'; subj = ` <b>${esc(target)}</b>`; }
     else subj = ` about <b>${esc(target)}</b>`;
-  } else if (f.subject_id) subj = ` about <b>${esc(title(f.subject_id))}</b>`;
-  const detail = renderMentions(detailOf(f.payload));
+  } else if (cname) {
+    subj = ` about <b>${esc(cname)}</b>`;
+  } else if (f.subject_id && !isUUID(f.subject_id)) {
+    subj = ` about <b>${esc(expandSlugs(title(f.subject_id)))}</b>`;
+  }
+  // For Alex's decisions/comments, replace the raw-UUID detail with something readable.
+  let rawDetail = detailOf(f.payload);
+  if (f.source_agent === 'alex' && /^re ca-mesh [0-9a-f-]+:/i.test(rawDetail)) rawDetail = rawDetail.replace(/^re ca-mesh [0-9a-f-]+:\s*/i, 'Comment: ');
+  const detail = renderMentions(expandSlugs(rawDetail));
   return `<div class="row"><div class="line"><b>${esc(who(f.source_agent))}</b> ${verb}${subj}</div>${detail ? `<div class="d">${detail}</div>` : ''}<div class="m">${ago(f.created_at)} ago</div></div>`;
 }
 
@@ -183,13 +236,13 @@ async function render() {
 
   const needsHtml = needs.length
     ? needs.map(n => {
-        const head = n.kind === 'question' ? `<span class="tg q">QUESTION</span> <b>${esc(who(n.from))}</b> → <b>${esc(who(n.to))}</b>`
-          : n.kind === 'work_order' ? `<span class="tg w">WORK ORDER</span> <b>${esc(who(n.from))}</b> → <b>${esc(who(n.to))}</b>`
-          : n.kind === 'ca-mesh'    ? `<span class="tg ca">CA WO · QUEUED</span> <b>${esc(who(n.from))}</b> → <b>Code Architect</b><span class="st">${esc(n.status||'')}</span>`
-          : `<span class="tg c">CFO DRAFT</span> <b>CFO</b> needs your nod`;
+        const badge = n.kind === 'question'  ? '<span class="tg q">QUESTION</span>'
+                    : n.kind === 'work_order'? '<span class="tg w">WORK ORDER</span>'
+                    : n.kind === 'ca-mesh'   ? '<span class="tg ca">QUEUED FOR CA</span>'
+                    :                          '<span class="tg c">CFO DRAFT</span>';
         const dk = esc(n.kind);
         const di = esc(String(n.fact_id || ''));
-        return `<div class="need"><div class="nh">${head}<span class="ag">${ago(n.age)} ago</span></div><div class="nd">${esc(n.detail) || '—'}</div><div class="na"><button class="ok" data-kind="${dk}" data-id="${di}" data-action="approve">Approve</button><button class="rj" data-kind="${dk}" data-id="${di}" data-action="reject">Reject</button><button class="cm" data-kind="${dk}" data-id="${di}" data-action="comment">Comment</button></div></div>`;
+        return `<div class="need"><div class="nh">${badge}<span class="ag">${ago(n.age)} ago</span></div><div class="nd">${cardSentence(n)}</div><div class="na"><button class="ok" data-kind="${dk}" data-id="${di}" data-action="approve">Approve</button><button class="rj" data-kind="${dk}" data-id="${di}" data-action="reject">Reject</button><button class="cm" data-kind="${dk}" data-id="${di}" data-action="comment">Comment</button></div></div>`;
       }).join('')
     : `<div class="empty">Nothing waiting on you right now. The fleet's running unattended.</div>`;
 
@@ -216,7 +269,8 @@ h2{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:1.4p
 .tg{font-size:10px;font-weight:800;letter-spacing:.6px;padding:2px 7px;border-radius:20px}
 .tg.q{background:rgba(56,189,248,.15);color:#38bdf8} .tg.w{background:rgba(250,204,21,.15);color:var(--yellow)} .tg.c{background:rgba(94,234,212,.15);color:var(--teal)} .tg.ca{background:rgba(251,146,60,.16);color:var(--orange)}
 .nh .st{margin-left:6px;font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--orange);text-transform:uppercase}
-.nd{font-size:13.5px;color:var(--text);margin:7px 0;font-style:italic}
+.nd{font-size:14px;color:var(--text);margin:7px 0;line-height:1.45}.nd b{color:var(--text);font-weight:700}
+.cnt{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:1px 7px;border-radius:20px;background:var(--brief);border:1px solid var(--border-b);color:var(--accent);margin-left:4px;vertical-align:middle}
 .na{display:flex;gap:6px;margin-top:6px}
 .na{display:flex;gap:6px;margin-top:6px;align-items:center}
 .na button{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:5px 12px;border-radius:6px;border:1px solid;background:transparent;cursor:pointer;font-family:inherit;transition:background .15s}
