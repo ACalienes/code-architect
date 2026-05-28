@@ -181,7 +181,7 @@ async function render() {
           : `<span class="tg c">CFO DRAFT</span> <b>CFO</b> needs your nod`;
         const idArg = JSON.stringify(String(n.fact_id || ''));
         const kArg = JSON.stringify(n.kind);
-        return `<div class="need"><div class="nh">${head}<span class="ag">${ago(n.age)} ago</span></div><div class="nd">${esc(n.detail) || '—'}</div><div class="na"><button class="ok" onclick='act(${kArg},${idArg},"approve")'>Approve</button><button class="rj" onclick='act(${kArg},${idArg},"reject")'>Reject</button><button class="cm" onclick='act(${kArg},${idArg},"comment")'>Comment</button></div></div>`;
+        return `<div class="need"><div class="nh">${head}<span class="ag">${ago(n.age)} ago</span></div><div class="nd">${esc(n.detail) || '—'}</div><div class="na"><button class="ok" onclick='act(this,${kArg},${idArg},"approve")'>Approve</button><button class="rj" onclick='act(this,${kArg},${idArg},"reject")'>Reject</button><button class="cm" onclick='act(this,${kArg},${idArg},"comment")'>Comment</button></div></div>`;
       }).join('')
     : `<div class="empty">Nothing waiting on you right now. The fleet's running unattended.</div>`;
 
@@ -261,8 +261,8 @@ h2{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:1.4p
 
 <div class="foot">The Board · supervisor · ${esc(new Date().toLocaleTimeString('en-US', { timeZone: 'America/New_York' }))} ET · v2 — buttons live</div>
 <script>
-async function act(kind, id, action) {
-  const btn = event.currentTarget;
+async function act(btn, kind, id, action) {
+  if (!btn) { alert('act() missing button — page may be stale, please reload'); return; }
   const card = btn.closest('.need');
   let comment = '';
   if (action === 'comment') { comment = prompt('Comment:'); if (!comment) return; }
@@ -270,14 +270,14 @@ async function act(kind, id, action) {
   siblings.forEach(b => b.disabled = true);
   const orig = btn.textContent; btn.textContent = '…';
   try {
-    const r = await fetch('/action', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ kind, id, action, comment }) });
+    const r = await fetch('/action', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ kind: kind, id: id, action: action, comment: comment }) });
     const j = await r.json();
     if (j.ok) {
       const label = action === 'approve' ? '✓ approved' : action === 'reject' ? '✕ rejected' : '+ commented';
       const cls = action === 'approve' ? 'dn' : action === 'reject' ? 'dn x' : 'dn c';
-      btn.parentElement.innerHTML = '<span class="' + cls + '">' + label + '</span><span style="margin-left:auto;font-size:10px;color:var(--muted);font-family:JetBrains Mono,monospace">fact ' + (j.fact_id ? j.fact_id.slice(0,8) : '') + '</span>';
-      card.style.opacity = '0.55';
-      setTimeout(() => location.reload(), 2000);
+      btn.parentElement.innerHTML = '<span class="' + cls + '">' + label + '</span><span style="margin-left:auto;font-size:10px;color:#7d8a99;font-family:JetBrains Mono,monospace">fact ' + (j.fact_id ? j.fact_id.slice(0,8) : '') + '</span>';
+      if (card) card.style.opacity = '0.55';
+      setTimeout(function(){ location.reload(); }, 1800);
     } else {
       siblings.forEach(b => b.disabled = false); btn.textContent = orig;
       alert('Failed: ' + (j.error || ('status ' + j.status)));
