@@ -27,6 +27,9 @@ const NAME = { kai: 'Kai', cfo: 'CFO', enso: 'Enso', acd: 'ACD', nami: 'NAMI', f
 const who = a => NAME[a] || a || '—';
 const title = slug => String(slug || '').replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 const detailOf = p => { try { const o = JSON.parse(p || '{}'); return o.detail || o.text || o.task || o.summary || o.content || o.status || ''; } catch (_) { return ''; } };
+const statusOf = p => { try { return JSON.parse(p || '{}').status || ''; } catch (_) { return ''; } };
+// Highlight @agent mentions so the eye catches who a note is for.
+const renderMentions = s => esc(s).replace(/@([A-Za-z][A-Za-z0-9_-]*)/g, (_, a) => `<span class="mn">@${esc(NAME[a.toLowerCase()] || a)}</span>`);
 
 function snapshot() {
   const b = new DatabaseSync(BOARD_DB, { readOnly: true });
@@ -88,6 +91,25 @@ function activityFeed(facts) {
   return out;
 }
 
+// Recent notes — organic awareness posts (status_update with status='note' OR containing @mentions),
+// distinct from the reply-chain status_updates the mesh bridge surfaces.
+function notesFeed(facts) {
+  const out = [];
+  const seen = new Set();
+  for (const f of facts) {
+    if (f.fact_type !== 'status_update') continue;
+    const d = detailOf(f.payload);
+    const s = statusOf(f.payload);
+    const hasMention = /@[A-Za-z][A-Za-z0-9_-]*/.test(d);
+    if (!(s === 'note' || hasMention)) continue;
+    const k = f.source_agent + '|' + d.slice(0, 80);
+    if (seen.has(k)) continue; seen.add(k);
+    out.push({ ...f, _detail: d });
+    if (out.length >= 8) break;
+  }
+  return out;
+}
+
 function projectsBlock(projects, cycles, facts) {
   // attach last activity per project (by client_slug match against subject_id)
   const lastBySlug = new Map();
@@ -110,15 +132,20 @@ function row(f) {
     else if (f.fact_type === 'status_update') { verb = 'updated'; subj = ` <b>${esc(target)}</b>`; }
     else subj = ` about <b>${esc(target)}</b>`;
   } else if (f.subject_id) subj = ` about <b>${esc(title(f.subject_id))}</b>`;
-  const detail = esc(detailOf(f.payload));
+  const detail = renderMentions(detailOf(f.payload));
   return `<div class="row"><div class="line"><b>${esc(who(f.source_agent))}</b> ${verb}${subj}</div>${detail ? `<div class="d">${detail}</div>` : ''}<div class="m">${ago(f.created_at)} ago</div></div>`;
 }
 
 function render() {
   let d; try { d = snapshot(); } catch (e) { return `<pre>supervisor error: ${esc(e.message)}</pre>`; }
   const needs = needsYou(d.facts);
+  const notes = notesFeed(d.facts);
   const proj = projectsBlock(d.projects, d.cycles, d.facts);
   const feed = activityFeed(d.facts);
+
+  const notesHtml = notes.length
+    ? notes.map(n => `<div class="note"><div class="nhd"><b>${esc(who(n.source_agent))}</b><span class="nag">${ago(n.created_at)} ago</span></div><div class="ntx">${renderMentions(n._detail)}</div></div>`).join('')
+    : `<div class="empty">No recent notes. (Any agent can drop one with <code>board-note &lt;from&gt; "&lt;text&gt;" --for=…</code>.)</div>`;
 
   const needsHtml = needs.length
     ? needs.map(n => {
@@ -167,6 +194,13 @@ h2{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:1.4p
 .row .m{font-size:11px;color:var(--muted);font-family:"JetBrains Mono",monospace;grid-column:2;grid-row:1 / span 2}
 
 .empty{color:var(--muted);text-align:center;padding:24px 14px;font-size:13px;background:var(--brief);border:1px dashed var(--border);border-radius:10px}
+.empty code{font-family:"JetBrains Mono",monospace;font-size:11.5px;background:var(--card);border:1px solid var(--border);border-radius:5px;padding:1px 6px;color:var(--teal)}
+.notes{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:6px}
+@media(max-width:780px){.notes{grid-template-columns:1fr}}
+.note{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--teal);border-radius:10px;padding:11px 14px}
+.nhd{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-2)}.nhd .nag{margin-left:auto;font-family:"JetBrains Mono",monospace;color:var(--muted);font-size:11px}
+.ntx{font-size:13.5px;color:var(--text);margin-top:5px;line-height:1.45}
+.mn{color:var(--accent);font-weight:700;background:rgba(110,168,254,.10);padding:0 5px;border-radius:4px}
 .foot{margin-top:30px;font-size:11px;color:var(--dim);font-family:"JetBrains Mono",monospace;text-align:center}
 </style></head><body>
 <div class="eyebrow"><span class="live"></span>Live · supervisor view · refreshes every 30s</div>
@@ -175,6 +209,9 @@ h2{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:1.4p
 
 <h2>What needs you <span class="c">${needs.length} open</span></h2>
 <div class="needs">${needsHtml}</div>
+
+<h2>Recent notes · FYI <span class="c">${notes.length}</span></h2>
+<div class="notes">${notesHtml}</div>
 
 <h2>Active projects <span class="c">${proj.length}</span></h2>
 <div class="projs">${projHtml}</div>
