@@ -60,7 +60,19 @@ function snapshot() {
 
 function row(f) {
   const k = KIND[f.fact_type] || { icon: '•', verb: 'posted ' + f.fact_type, color: '#7d8a99' };
-  const subj = f.subject_id ? ` about <b>${esc(title(f.subject_id))}</b>` : '';
+  // Conversation-aware phrasing: when subject_id is an agent name, render directed talk
+  // ("Kai sent a work order to CFO", "Kai asked CFO") instead of "about <topic>".
+  const target = NAME[f.subject_id];
+  let verb = k.verb, subj;
+  if (target) {
+    if (f.fact_type === 'question')         { verb = 'asked';            subj = ` <b>${esc(target)}</b>`; }
+    else if (f.fact_type === 'work_order')  {                             subj = ` to <b>${esc(target)}</b>`; }
+    else if (f.fact_type === 'task')        { verb = 'assigned a task';  subj = ` to <b>${esc(target)}</b>`; }
+    else if (f.fact_type === 'status_update'){ verb = 'updated';          subj = ` <b>${esc(target)}</b>`; }
+    else                                    {                             subj = ` about <b>${esc(target)}</b>`; }
+  } else {
+    subj = f.subject_id ? ` about <b>${esc(title(f.subject_id))}</b>` : '';
+  }
   const detail = detailOf(f.payload);
   const recips = f.recipients || [];
   let delivery;
@@ -70,7 +82,7 @@ function row(f) {
   return `<div class="row${f.revoked_at ? ' dim' : ''}">
     <div class="ic" style="background:${k.color}1f;border-color:${k.color}55">${k.icon}</div>
     <div class="body">
-      <div class="line"><b>${esc(who(f.source_agent))}</b> ${esc(k.verb)}${subj}</div>
+      <div class="line"><b>${esc(who(f.source_agent))}</b> ${esc(verb)}${subj}</div>
       ${detail ? `<div class="detail">“${esc(detail)}”</div>` : ''}
       <div class="meta">${delivery} <span class="t">· ${esc(ago(f.created_at))}</span></div>
     </div></div>`;
