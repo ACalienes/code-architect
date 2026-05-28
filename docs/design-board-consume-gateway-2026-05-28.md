@@ -1,6 +1,6 @@
 # Design — Board Consume via Gateway (the read+ack half of the door)
 
-**Status:** DESIGN v1. Codex review next, then DA, then build. Date: 2026-05-28.
+**Status:** DESIGN v2 — Codex round 1 = REVISE (8 findings, **5 P0**), all folded in §"v2 fold" below. CA-internal DA on v2 next. Date: 2026-05-28.
 **Classification:** T3, DA-mandatory — extends the mesh-contract surface (the gateway), adds reads + acks, defines per-agent handler contract.
 **Origin:** Alex chose this path explicitly (the long-term decision in this session): every agent reads the Board *through the gateway it already uses to publish*, so the gateway becomes the **single HTTP interface** for the Board — write, read, ack. Closes the supervisor-decisions → agent-actions loop.
 
@@ -97,3 +97,90 @@ A handler is `(fact, ctx) => Promise<{ ok, reason? }>` where:
 
 ## 11. Definition of done (v1)
 A Board fact you approved on the supervisor view (CFO's TDB invoice draft) reaches CFO's gateway-consume handler within 30s; CFO acts on it (or surfaces the action) using its own logic, without any per-fact-type bridge wiring. The same path works the moment we register a handler for any other (agent, fact_type) pair.
+
+---
+
+## v2 fold — Codex round 1 (2026-05-28), all 8 findings
+
+### Auth & scopes (Codex P0 #1)
+- **`gateway_tokens` gains a `scopes` column** (JSON array). Allowed values: `publish`, `read`, `ack`, `act`. Default for the existing rows (idempotent migration): `["publish"]` — so today's tokens *cannot* read or ack until explicitly re-enrolled with broader scopes.
+- `gateway-enroll.js` gains a `--scopes` flag (e.g. `--scopes=read,ack,act` for consumer agents).
+- `GET /inbox` requires `read` scope on the token; `POST /ack/<id>` requires `ack`; the `act` scope (see #5) governs whether a handler is allowed to invoke an external action on Alex's behalf.
+- **Client-bound token** (`token.client_id != null`) filters `/inbox` and `/ack` to deliveries whose **fact** has `client_id` matching the token's binding, OR `client_id IS NULL` (internal). Strict, additive to agent match.
+
+### Claim/lease before handler executes (Codex P0 #2 — the action-amplification fix)
+The original "GET then ack" pattern lets two consumers race. **Pure idempotent acks don't prevent double-sends.** Adding a claim phase:
+- **New endpoint: `POST /claim/<delivery_id>`** — atomic UPDATE: `SET claimed_by=?, claimed_at=now() WHERE delivery_id=? AND recipient_agent=token.agent AND claimed_at IS NULL AND acked_at IS NULL`. Returns `200 {ok:true, lease_until}` on success, `409 {ok:false, claimed_by, lease_until}` on already-claimed.
+- **Lease has a TTL** (default 5 min). After lease expires without ack, `claimed_at` is treated as null again so a crashed consumer's items reclaimable.
+- **Consumer flow:** `GET /inbox` → for each delivery `POST /claim/<id>` → if 200, run handler; if 409, skip → on handler success `POST /ack/<id>` → on transient fail leave (lease will expire, retried next tick) → on permanent fail post to quarantine then ack.
+- Adds two columns to `deliveries`: `claimed_by TEXT`, `claimed_at TEXT`. Idempotent migration via the existing `migrate()` pattern.
+- **Per-agent action ledger** (`gateway_actions` table) records every external action a handler took, keyed by `(decision_fact_id, subject_fact_id, action_type)`. A handler MUST check the ledger before invoking the external action — even with claim/lease, this is the second wall against double-execution.
+
+### Drainer / status semantics (Codex P0 #3)
+The old `board-drainer` calls `drain()` which unconditionally sets `status='read'`. That breaks our `status != 'acked'` filter (drainer would resurrect acked deliveries as `read`). Fixes:
+- **`/inbox` filter changes to `acked_at IS NULL`**, not a status check. Status mutations from the drainer no longer affect inbox membership.
+- **Drainer's `drain()` is patched to guard:** `UPDATE deliveries SET status='read' WHERE delivery_id=? AND acked_at IS NULL`. (Surgical edit to the live `board-listener.js`; safe additive.) If a delivery is already acked, the drainer leaves it alone.
+- **Better still — long-term:** stop the drainer from mutating delivery status at all. It only needs to *read* pending deliveries and append to ndjson; status changes belong to the gateway. Schedule that change for the consumer-rollout phase (after CFO is live on gateway-consume) so we don't disturb existing observability mid-build.
+
+### Single executor per agent (Codex P0 #4)
+- **No ndjson consumer runs alongside the gateway consumer for the same agent.** Today there are no ndjson *consumers* (the file is written, not read by any agent code), so this is preventive: the rollout contract for each agent is "stop any ndjson reader BEFORE starting the gateway consumer."
+- **The drainer keeps writing ndjson** — that's pure audit/fallback, not a consumer. Clear in the spec: "drainer writes; only the gateway consumer reads and acts."
+- **One pm2 process per `board-consume-<agent>`** — second instance refused by pm2's name uniqueness. The claim/lease in #2 makes a hypothetical accidental second instance safe even if the operator screws up.
+
+### Supervisor-decision provenance (Codex P0 #5 — the forgery fix)
+The lenient `board-publish.js` (which trusts CLI `--from`) and the mesh-bridge (which classifies messages as `decision`) mean **`fact_type='decision' AND source_agent='alex'` is not a strong enough authorization signal.** Fix:
+- **New fact_type: `supervisor_decision`** — registered in `FACT_TYPES`, schema in `registry.js`. Payload contract:
+  ```
+  required: ['decision', 'subject_fact_id', 'supervisor_action_id']
+  decision: enum ['approve','reject','dismiss']
+  subject_fact_id: string (the fact being decided on)
+  supervisor_action_id: string (UUID generated by the supervisor /action endpoint per click)
+  rationale?: string
+  ```
+- **Only the supervisor's `/action` endpoint produces this fact type.** The gateway refuses any other source from posting `supervisor_decision` (enforced server-side: only the token *bound to identity 'alex'* with `scopes` including `supervise` may publish this `fact_type`).
+- Handlers check for `supervisor_decision` (with the typed `decision: 'approve'` payload) — not for plain `decision` facts. Plain `decision` facts retain their existing semantic (an agent declaring a decision); they do NOT authorize action.
+- **Defense in depth:** handlers MUST verify (a) the subject_fact_id was emitted by *this same agent* and (b) the action is registered as awaiting-approval in the agent's own state. If both pass, the supervisor_decision authorizes execution; the action ledger (#2) records the result.
+- Migration: existing `decision` facts from `alex` (today's session) are NOT auto-promoted — they stay as audit-only. New approvals through the updated supervisor will produce `supervisor_decision` facts that handlers honor.
+
+### Atomic ack (Codex P1 #6)
+- **Ack UPDATE is conditional:** `UPDATE deliveries SET acked_at=?, acked_by=?, status='acked' WHERE delivery_id=? AND recipient_agent=? AND acked_at IS NULL`.
+- If 0 rows affected → SELECT to determine: (a) delivery doesn't exist (404), (b) wrong recipient (403), (c) already acked by same agent (200, idempotent). First-writer-wins on `acked_by` and `acked_at`; subsequent acks are no-ops.
+
+### Quarantine — durable, surfaced, distinct from ack (Codex P1 #7)
+- **New `gateway_quarantine` table:** `(delivery_id, fact_id, agent, handler, error, ts, reviewed_at)` — persistent log of handler-permanent-failures.
+- A permanent failure: write quarantine row → set `deliveries.status='dead'`, `dead_reason=<handler error>` → **do NOT ack**. Dead deliveries don't appear in `/inbox` (we already exclude `status='dead'`) but they're distinct from acked, surface separately.
+- **Supervisor view surfaces the quarantine count** as part of "What needs you" or a dedicated row. Operator can click to review and either retry (un-quarantine + reset status to 'pending') or confirm-dead. Closes the human-review loop.
+
+### Pagination, ordering, starvation (Codex P2 #8)
+- **Order:** `ORDER BY created_at ASC, delivery_id ASC` — deterministic on ties.
+- **Page semantics:** handler-failure on one delivery does NOT stop processing the page; consumer iterates all returned deliveries, ack/claim each independently.
+- **Retry policy:** `deliveries.delivery_attempts` already exists (from the schema). Increment on transient handler failures. After N attempts (default 5), promote to quarantine + dead.
+
+---
+
+## §10b — Codex-review surface for the BUILT CODE (per Alex's "include codex in the build")
+The above is the design. Code-level Codex passes are scoped to:
+1. **Gateway extensions** (`board-gateway.js` additions): scope check coverage, atomic SQL, the supervisor-decision publish guard, claim/lease TTL, idempotent migrations, no fact-type smuggling.
+2. **`board-consume-lib.js`**: claim-then-handler-then-ack ordering, transient vs permanent classification, action-ledger check before external invocation, no auto-execution paths.
+3. **First per-agent handler (CFO)**: subject-fact-belongs-to-me check, supervisor_decision-payload-shape check, action-ledger write before external send, handler returns shape conformance.
+
+---
+
+## §10c — CA-internal DA verdict on v2 — **PASS with 5 binding conditions** (2026-05-28)
+
+Adversarial self-review of the Codex-folded v2 surfaced five additional constraints that *must* land in the implementation. None block the v2 design — they refine it.
+
+- **DA-a (CRITICAL — supervisor `/action` must itself authenticate before publishing `supervisor_decision`).** The fold (#5) makes `supervisor_decision` the only authorization-grade fact, gated by the token bound to identity `alex`. But the supervisor's `POST /action` endpoint *currently has no auth* — any device on the tailnet can POST to it. v2 must add: (a) require an env-set `SUPERVISOR_TOKEN` header on `/action`, (b) the supervisor reads this from `~/.kameha/supervisor.token` (0600), (c) the served page embeds the token in the click JS (server-rendered, never exposed in source URL). Without this, any tailnet device could forge "Alex approved X" today. Tailscale ACLs are belt-and-braces, not the primary gate.
+
+- **DA-b (action ledger ambiguity policy).** The `gateway_actions` ledger records *intent* before the external action runs. Network-timeout on the external API (e.g. QuickBooks send-invoice) means: did it complete or not? The ledger row must be `status='intent'` pre-call, `'completed'` post-success, `'failed'` post-known-failure, **`'ambiguous'` on timeout/uncertainty.** The consumer must NOT retry an ambiguous row; it must surface for operator review (same quarantine UX). This is at-most-once external semantics with explicit human reconciliation — the only honest pattern.
+
+- **DA-c (today's existing alex `decision` facts are audit-only — confirm + announce).** This session produced ~10 `decision` facts from alex via the supervisor (which only knew about plain `decision`, not the new `supervisor_decision`). Codex #5's fix means handlers must NOT honor those as authorizations. Operator (Alex) may need to re-approve via the updated supervisor for any of those clicks to actually trigger downstream action. State this *in the v2 deploy notes* so it's not a surprise.
+
+- **DA-d (lease TTL specification — slow handlers).** Default 5 min is fine for invoice sends; a Framer carousel render or a long-running CFO reconciliation may exceed. Spec:
+  - `POST /claim/<id>` supports optional `?lease=<seconds>` (cap 1800 = 30 min).
+  - `POST /claim/<id>` on an already-self-claimed delivery acts as a *renewal*: bumps `claimed_at` to now, returns the new `lease_until`. Other agents still see 409.
+  - Document handlers' obligation to either pick the right lease at claim time or renew before expiry.
+
+- **DA-e (`gateway_actions` schema — fully specified).** Concrete: `gateway_actions(decision_fact_id TEXT NOT NULL, subject_fact_id TEXT NOT NULL, action_type TEXT NOT NULL, status TEXT NOT NULL CHECK (status IN ('intent','completed','failed','ambiguous')), agent TEXT NOT NULL, ts TEXT NOT NULL, error TEXT, ext_ref TEXT, PRIMARY KEY(decision_fact_id, subject_fact_id, action_type))`. `ext_ref` records the external system's receipt/ID where applicable (QuickBooks invoice id, send receipt id, etc.) for human reconciliation.
+
+**Verdict:** PASS to build with DA-a through DA-e as binding implementation constraints. Re-audit against them before deploy.
