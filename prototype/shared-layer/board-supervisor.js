@@ -22,7 +22,8 @@ const CONDUCTOR_DB = process.env.CONDUCTOR_DB || `${HOME}/.kameha/conductor.db`;
 const PORT = Number(process.env.SUPERVISOR_PORT || 3352);
 const HOST = process.env.SUPERVISOR_HOST || '100.64.114.13';
 // v2 — Approve / Reject / Comment buttons fire here, post a decision/status_update fact through the gateway under the 'alex' token.
-const GATEWAY_URL = process.env.GATEWAY_URL || 'http://127.0.0.1:3351';
+// Gateway binds the Tailscale IP only (never loopback). Same URL the emit hooks use.
+const GATEWAY_URL = process.env.GATEWAY_URL || 'http://100.64.114.13:3351';
 const SUPERVISOR_TOKEN_FILE = process.env.SUPERVISOR_TOKEN_FILE || `${HOME}/.kameha/board-gateway.tokens/alex`;
 let _superToken = null;
 const supervisorToken = () => _superToken || (_superToken = fs.readFileSync(SUPERVISOR_TOKEN_FILE, 'utf8').trim());
