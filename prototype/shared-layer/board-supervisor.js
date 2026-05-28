@@ -179,9 +179,9 @@ async function render() {
           : n.kind === 'work_order' ? `<span class="tg w">WORK ORDER</span> <b>${esc(who(n.from))}</b> → <b>${esc(who(n.to))}</b>`
           : n.kind === 'ca-mesh'    ? `<span class="tg ca">CA WO · QUEUED</span> <b>${esc(who(n.from))}</b> → <b>Code Architect</b><span class="st">${esc(n.status||'')}</span>`
           : `<span class="tg c">CFO DRAFT</span> <b>CFO</b> needs your nod`;
-        const idArg = JSON.stringify(String(n.fact_id || ''));
-        const kArg = JSON.stringify(n.kind);
-        return `<div class="need"><div class="nh">${head}<span class="ag">${ago(n.age)} ago</span></div><div class="nd">${esc(n.detail) || '—'}</div><div class="na"><button class="ok" onclick='act(this,${kArg},${idArg},"approve")'>Approve</button><button class="rj" onclick='act(this,${kArg},${idArg},"reject")'>Reject</button><button class="cm" onclick='act(this,${kArg},${idArg},"comment")'>Comment</button></div></div>`;
+        const dk = esc(n.kind);
+        const di = esc(String(n.fact_id || ''));
+        return `<div class="need"><div class="nh">${head}<span class="ag">${ago(n.age)} ago</span></div><div class="nd">${esc(n.detail) || '—'}</div><div class="na"><button class="ok" data-kind="${dk}" data-id="${di}" data-action="approve">Approve</button><button class="rj" data-kind="${dk}" data-id="${di}" data-action="reject">Reject</button><button class="cm" data-kind="${dk}" data-id="${di}" data-action="comment">Comment</button></div></div>`;
       }).join('')
     : `<div class="empty">Nothing waiting on you right now. The fleet's running unattended.</div>`;
 
@@ -259,34 +259,51 @@ h2{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:1.4p
 <h2>Real activity · agents talking <span class="c">filtered</span></h2>
 <div>${feedHtml}</div>
 
-<div class="foot">The Board · supervisor · ${esc(new Date().toLocaleTimeString('en-US', { timeZone: 'America/New_York' }))} ET · v2 — buttons live</div>
+<div class="foot">The Board · supervisor · ${esc(new Date().toLocaleTimeString('en-US', { timeZone: 'America/New_York' }))} ET · v2.2 — buttons live (delegation + no-cache)</div>
+<div id="cl" style="position:fixed;left:0;right:0;bottom:0;background:#0c1016;color:#aab6c4;font-family:JetBrains Mono,monospace;font-size:11.5px;padding:7px 14px;border-top:1px solid #232c3a;z-index:99;display:flex;gap:14px"><span id="clt">supervisor ready — click any button</span></div>
 <script>
-async function act(btn, kind, id, action) {
-  if (!btn) { alert('act() missing button — page may be stale, please reload'); return; }
-  const card = btn.closest('.need');
-  let comment = '';
-  if (action === 'comment') { comment = prompt('Comment:'); if (!comment) return; }
-  const siblings = Array.from(btn.parentElement.querySelectorAll('button'));
-  siblings.forEach(b => b.disabled = true);
-  const orig = btn.textContent; btn.textContent = '…';
-  try {
-    const r = await fetch('/action', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ kind: kind, id: id, action: action, comment: comment }) });
-    const j = await r.json();
-    if (j.ok) {
-      const label = action === 'approve' ? '✓ approved' : action === 'reject' ? '✕ rejected' : '+ commented';
-      const cls = action === 'approve' ? 'dn' : action === 'reject' ? 'dn x' : 'dn c';
-      btn.parentElement.innerHTML = '<span class="' + cls + '">' + label + '</span><span style="margin-left:auto;font-size:10px;color:#7d8a99;font-family:JetBrains Mono,monospace">fact ' + (j.fact_id ? j.fact_id.slice(0,8) : '') + '</span>';
-      if (card) card.style.opacity = '0.55';
-      setTimeout(function(){ location.reload(); }, 1800);
-    } else {
-      siblings.forEach(b => b.disabled = false); btn.textContent = orig;
-      alert('Failed: ' + (j.error || ('status ' + j.status)));
+(function(){
+  function log(m){ var n=document.getElementById('clt'); if(n){ var ts=new Date().toLocaleTimeString(); n.textContent='['+ts+'] '+m; } console.log('[supervisor]', m); }
+  log('JS loaded, click handler armed (delegation)');
+
+  document.body.addEventListener('click', async function(e){
+    var btn = e.target.closest('button[data-action]');
+    if (!btn) return;
+    e.preventDefault();
+    var kind   = btn.getAttribute('data-kind');
+    var id     = btn.getAttribute('data-id');
+    var action = btn.getAttribute('data-action');
+    log('clicked '+action+' on '+kind+' '+(id||'').slice(0,8));
+    var card = btn.closest('.need');
+    var comment = '';
+    if (action === 'comment'){ comment = prompt('Comment:'); if (!comment){ log('cancelled'); return; } }
+    var siblings = Array.prototype.slice.call(btn.parentElement.querySelectorAll('button'));
+    siblings.forEach(function(b){ b.disabled = true; });
+    var orig = btn.textContent; btn.textContent = '…';
+    try {
+      log('posting /action…');
+      var r = await fetch('/action', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ kind: kind, id: id, action: action, comment: comment }) });
+      var j = {}; try { j = await r.json(); } catch(_){}
+      log('server returned '+r.status+' ok='+(j.ok===true));
+      if (j.ok) {
+        var label = action === 'approve' ? '✓ approved' : action === 'reject' ? '✕ rejected' : '+ commented';
+        var cls   = action === 'approve' ? 'dn'        : action === 'reject' ? 'dn x'      : 'dn c';
+        btn.parentElement.innerHTML = '<span class="'+cls+'">'+label+'</span><span style="margin-left:auto;font-size:10px;color:#7d8a99;font-family:JetBrains Mono,monospace">fact '+(j.fact_id?j.fact_id.slice(0,8):'')+'</span>';
+        if (card) card.style.opacity = '0.55';
+        log('OK — fact '+(j.fact_id||'?').slice(0,8)+'; reloading in 1.8s');
+        setTimeout(function(){ location.reload(); }, 1800);
+      } else {
+        siblings.forEach(function(b){ b.disabled = false; }); btn.textContent = orig;
+        log('FAILED '+(j.error||r.status));
+        alert('Failed: '+(j.error||('status '+r.status)));
+      }
+    } catch (err) {
+      siblings.forEach(function(b){ b.disabled = false; }); btn.textContent = orig;
+      log('threw: '+err.message);
+      alert('Error: '+err.message);
     }
-  } catch (e) {
-    siblings.forEach(b => b.disabled = false); btn.textContent = orig;
-    alert('Error: ' + e.message);
-  }
-}
+  });
+})();
 </script>
 </body></html>`;
 }
@@ -344,6 +361,6 @@ http.createServer(async (req, res) => {
       return res.end(JSON.stringify({ ok: false, error: e.message }));
     }
   }
-  res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+  res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store, no-cache, must-revalidate', 'pragma': 'no-cache' });
   res.end(await render());
 }).listen(PORT, HOST, () => console.log(`[supervisor] live on ${HOST}:${PORT}`));
