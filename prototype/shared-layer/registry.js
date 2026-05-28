@@ -73,6 +73,16 @@ const defaultRegistry = {
     S(['detail'], { detail: { type: 'string' }, status: { type: 'string' }, answer: { type: 'string' }, owner: { type: 'string' } }) } },
   task: { current: '1', versions: { '1':
     S(['detail'], { detail: { type: 'string' }, status: { type: 'string' }, owner: { type: 'string' }, due: { type: 'string' } }) } },
+  // Added 2026-05-28 — supervisor_decision contract (v2 of board-consume). Strictly typed so handlers
+  // can pattern-match. `decision` is enum-constrained; `subject_fact_id` ties to the fact being decided;
+  // `supervisor_action_id` is the UUID the supervisor /action endpoint generates per click (trace/audit).
+  supervisor_decision: { current: '1', versions: { '1':
+    S(['decision', 'subject_fact_id', 'supervisor_action_id'], {
+      decision:              { type: 'string', enum: ['approve', 'reject', 'dismiss'] },
+      subject_fact_id:       { type: 'string' },
+      supervisor_action_id:  { type: 'string' },
+      rationale:             { type: 'string' },
+    }) } },
 };
 
 /** Validate a payload against a fact_type's schema (a specific version, else its current). */

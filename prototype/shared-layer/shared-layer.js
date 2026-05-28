@@ -31,6 +31,11 @@ const FACT_TYPES = new Set([
   //               work_order (one-off delegation) — this is the persistent shared task list.
   // Lifecycle lives in payload + revoke; no schema change. action-gate still governs execution.
   'objective', 'question', 'task',
+  // Added 2026-05-28 (board-consume v2, Codex P0 #5): supervisor_decision is the ONLY authorization-grade
+  // fact type. Only the 'alex' identity with the 'supervise' scope may publish it (gateway-enforced).
+  // Plain `decision` facts retain their original audit-only meaning. Handlers must check for THIS
+  // fact type with payload.decision in {approve,reject,dismiss} — see docs/design-board-consume-gateway.
+  'supervisor_decision',
 ]);
 const VISIBILITY = new Set(['client', 'internal', 'fleet']);
 
@@ -206,7 +211,9 @@ function drain(db, agent) {
       ORDER BY d.created_at`
   ).all(agent);
   for (const r of rows) {
-    db.prepare('UPDATE deliveries SET status = ? WHERE delivery_id = ?').run('read', r.delivery_id);
+    // v2 guard (board-consume Codex P0 #3): never overwrite an already-acked or dead delivery's status.
+    // Old drainer unconditionally set status='read'; that resurrected acked deliveries on race.
+    db.prepare("UPDATE deliveries SET status = 'read' WHERE delivery_id = ? AND status = 'pending' AND acked_at IS NULL").run(r.delivery_id);
   }
   audit(db, 'drained', { agent, count: rows.length });
   return rows.map(r => ({

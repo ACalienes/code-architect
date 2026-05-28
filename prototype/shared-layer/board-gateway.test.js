@@ -121,3 +121,203 @@ test('HTTP end-to-end: board-post → gateway → Board; bad token 401; /health 
     assert.equal(hj.ok, true); assert.equal(hj.writable, true);
   } finally { server.close(); }
 });
+
+
+// ── v2 consume side (read/claim/ack/quarantine + supervisor_decision guard) ────────────────────────
+const { subscribe, FACT_TYPES, drain } = require('./shared-layer');
+const {
+  handleInbox, handleClaim, handleAck, handleQuarantine,
+  SCOPE_PUBLISH, SCOPE_READ, SCOPE_ACK, SCOPE_SUPERVISE,
+} = require('./board-gateway');
+
+function setupConsume() {
+  const db = openDb(':memory:');
+  ensureGatewayTables(db);
+  subscribe(db, 'cfo',   'status_update',       '*');
+  subscribe(db, 'cfo',   'supervisor_decision', '*');
+  subscribe(db, 'kai',   'status_update',       '*');
+  subscribe(db, 'cfo',   'client_feedback',     '*');     // CFO subscribed to client work generally
+  // Publish-only tokens (default scope) and consume-capable tokens (read+ack):
+  const cfoPubTok = enrollToken(db, { agent: 'cfo' });                                                    // legacy default: publish only
+  const cfoConsTok = enrollToken(db, { agent: 'cfo', scopes: [SCOPE_PUBLISH, SCOPE_READ, SCOPE_ACK] });   // consumer
+  const kaiConsTok = enrollToken(db, { agent: 'kai', scopes: [SCOPE_PUBLISH, SCOPE_READ, SCOPE_ACK] });   // consumer
+  const alexSupTok = enrollToken(db, { agent: 'alex', scopes: [SCOPE_PUBLISH, SCOPE_SUPERVISE] });        // supervisor
+  return { db, cfoPubTok, cfoConsTok, kaiConsTok, alexSupTok };
+}
+const trow = (db, t) => resolveToken(db, t);
+// Seed a fact that routes to a specific agent so we have something in their inbox.
+function seedFor(db, sourceTok, recipientAgent) {
+  const r = handlePublish(db, trow(db, sourceTok), {
+    fact_type: 'status_update', visibility: 'internal',
+    subject_type: 'topic', subject_id: 'x', payload: { status: 'update', detail: 'hello' },
+  });
+  assert.equal(r.status, 200, 'seed publish should succeed');
+  // The fact routes to whoever's subscribed; tests assert the specific recipient is in deliveries.
+  const delivery = db.prepare("SELECT delivery_id FROM deliveries WHERE fact_id = ? AND recipient_agent = ?").get(r.json.fact_id, recipientAgent);
+  assert.ok(delivery, `expected a delivery to ${recipientAgent} for ${r.json.fact_id}`);
+  return { fact_id: r.json.fact_id, delivery_id: delivery.delivery_id };
+}
+
+test('default-enrolled token has publish-only scope (legacy compat)', () => {
+  const { db, cfoPubTok } = setupConsume();
+  const r = handleInbox(db, trow(db, cfoPubTok), {});
+  assert.equal(r.status, 403);
+  assert.match(r.json.error, /read scope/);
+});
+
+test('inbox: token without read scope → 403', () => {
+  const { db, cfoPubTok } = setupConsume();
+  seedFor(db, cfoPubTok, 'cfo');
+  const r = handleInbox(db, trow(db, cfoPubTok), {});
+  assert.equal(r.status, 403);
+});
+
+test('inbox: read scope returns own-agent unacked deliveries', () => {
+  const { db, cfoPubTok, cfoConsTok } = setupConsume();
+  seedFor(db, cfoPubTok, 'cfo');
+  const r = handleInbox(db, trow(db, cfoConsTok), {});
+  assert.equal(r.status, 200);
+  assert.equal(r.json.agent, 'cfo');
+  assert.ok(r.json.count >= 1, 'expected at least one delivery');
+  for (const d of r.json.deliveries) assert.equal(d.fact_type, 'status_update');
+});
+
+test('inbox: filters on acked_at IS NULL (Codex P0 #3 — drainer race fix)', () => {
+  const { db, cfoPubTok, cfoConsTok } = setupConsume();
+  const { delivery_id } = seedFor(db, cfoPubTok, 'cfo');
+  // Gateway acks first.
+  const a = handleAck(db, trow(db, cfoConsTok), delivery_id);
+  assert.equal(a.status, 200);
+  // Then drainer runs (simulating the existing board-listener tick). Old code would flip status='read'.
+  drain(db, 'cfo');
+  // Verify the delivery is STILL marked acked, NOT resurrected to 'read'.
+  const row = db.prepare('SELECT status, acked_at FROM deliveries WHERE delivery_id = ?').get(delivery_id);
+  assert.equal(row.status, 'acked', 'drainer must not overwrite acked status');
+  assert.ok(row.acked_at);
+  // And inbox no longer returns it.
+  const inbox = handleInbox(db, trow(db, cfoConsTok), {});
+  assert.ok(!inbox.json.deliveries.find(d => d.delivery_id === delivery_id), 'acked delivery should not appear in inbox');
+});
+
+test('claim: first wins 200, second-by-other 409', () => {
+  const { db, cfoPubTok, cfoConsTok, kaiConsTok } = setupConsume();
+  // need a fact that routes to BOTH cfo and kai so they could race over their own copies — easier: test that kai can't claim cfo's delivery.
+  const { delivery_id } = seedFor(db, cfoPubTok, 'cfo');
+  const a = handleClaim(db, trow(db, cfoConsTok), delivery_id, {});
+  assert.equal(a.status, 200);
+  assert.ok(a.json.lease_until);
+  // Different agent trying to claim someone else's delivery → 403 (not 409), per design.
+  const b = handleClaim(db, trow(db, kaiConsTok), delivery_id, {});
+  assert.equal(b.status, 403);
+});
+
+test('claim: same-agent renewal returns 200 with renewal:true', () => {
+  const { db, cfoPubTok, cfoConsTok } = setupConsume();
+  const { delivery_id } = seedFor(db, cfoPubTok, 'cfo');
+  const a = handleClaim(db, trow(db, cfoConsTok), delivery_id, { lease: '600' });
+  assert.equal(a.status, 200); assert.equal(a.json.renewal, false);
+  const b = handleClaim(db, trow(db, cfoConsTok), delivery_id, { lease: '600' });
+  assert.equal(b.status, 200); assert.equal(b.json.renewal, true);
+});
+
+test('claim: rejected on wrong recipient (token agent != delivery recipient)', () => {
+  const { db, cfoPubTok, kaiConsTok } = setupConsume();
+  const { delivery_id } = seedFor(db, cfoPubTok, 'cfo');
+  const r = handleClaim(db, trow(db, kaiConsTok), delivery_id, {});
+  assert.equal(r.status, 403);
+});
+
+test('claim: rejected on already-acked delivery (410)', () => {
+  const { db, cfoPubTok, cfoConsTok } = setupConsume();
+  const { delivery_id } = seedFor(db, cfoPubTok, 'cfo');
+  handleAck(db, trow(db, cfoConsTok), delivery_id);
+  const r = handleClaim(db, trow(db, cfoConsTok), delivery_id, {});
+  assert.equal(r.status, 410);
+});
+
+test('ack: first-writer wins; same-agent re-ack idempotent (200, first_ack:false)', () => {
+  const { db, cfoPubTok, cfoConsTok } = setupConsume();
+  const { delivery_id } = seedFor(db, cfoPubTok, 'cfo');
+  const a = handleAck(db, trow(db, cfoConsTok), delivery_id);
+  assert.equal(a.status, 200); assert.equal(a.json.first_ack, true);
+  const b = handleAck(db, trow(db, cfoConsTok), delivery_id);
+  assert.equal(b.status, 200); assert.equal(b.json.first_ack, false);
+});
+
+test('ack: 403 on wrong agent, 404 on missing delivery', () => {
+  const { db, cfoPubTok, cfoConsTok, kaiConsTok } = setupConsume();
+  const { delivery_id } = seedFor(db, cfoPubTok, 'cfo');
+  const wrong = handleAck(db, trow(db, kaiConsTok), delivery_id);
+  assert.equal(wrong.status, 403);
+  const missing = handleAck(db, trow(db, cfoConsTok), 'no-such-delivery-id');
+  assert.equal(missing.status, 404);
+});
+
+test('quarantine: writes durable row + sets status=dead, distinct from acked', () => {
+  const { db, cfoPubTok, cfoConsTok } = setupConsume();
+  const { fact_id, delivery_id } = seedFor(db, cfoPubTok, 'cfo');
+  const r = handleQuarantine(db, trow(db, cfoConsTok), delivery_id, { error: 'permanent: validation failed', handler: 'cfo-draft' });
+  assert.equal(r.status, 200);
+  const drow = db.prepare('SELECT status, dead_reason, acked_at FROM deliveries WHERE delivery_id=?').get(delivery_id);
+  assert.equal(drow.status, 'dead'); assert.equal(drow.acked_at, null); assert.match(drow.dead_reason, /validation/);
+  const qrow = db.prepare('SELECT * FROM gateway_quarantine WHERE delivery_id=?').get(delivery_id);
+  assert.ok(qrow); assert.equal(qrow.fact_id, fact_id); assert.equal(qrow.agent, 'cfo');
+});
+
+test('supervisor_decision: non-alex token REJECTED (Codex P0 #5 forgery guard)', () => {
+  const { db, kaiConsTok } = setupConsume();
+  const r = handlePublish(db, trow(db, kaiConsTok), {
+    fact_type: 'supervisor_decision', visibility: 'internal',
+    subject_id: 'whatever',
+    payload: { decision: 'approve', subject_fact_id: 'f1', supervisor_action_id: 'a1' },
+  });
+  assert.equal(r.status, 403);
+  assert.match(r.json.error, /supervisor_decision/);
+});
+
+test('supervisor_decision: alex WITHOUT supervise scope REJECTED', () => {
+  const { db } = setupConsume();
+  const alexNoSup = enrollToken(db, { agent: 'alex', scopes: [SCOPE_PUBLISH] });   // alex but no supervise
+  const r = handlePublish(db, trow(db, alexNoSup), {
+    fact_type: 'supervisor_decision', visibility: 'internal',
+    subject_id: 'whatever',
+    payload: { decision: 'approve', subject_fact_id: 'f1', supervisor_action_id: 'a1' },
+  });
+  assert.equal(r.status, 403);
+});
+
+test('supervisor_decision: alex+supervise ACCEPTED, schema enforced', () => {
+  const { db, alexSupTok } = setupConsume();
+  const ok = handlePublish(db, trow(db, alexSupTok), {
+    fact_type: 'supervisor_decision', visibility: 'internal',
+    subject_id: 'cfo-draft-3d0f57e1',
+    payload: { decision: 'approve', subject_fact_id: 'f-xyz', supervisor_action_id: 'sa-1' },
+  });
+  assert.equal(ok.status, 200); assert.ok(ok.json.fact_id);
+  // Schema enforced: missing required field rejected.
+  const bad = handlePublish(db, trow(db, alexSupTok), {
+    fact_type: 'supervisor_decision', visibility: 'internal',
+    subject_id: 'x',
+    payload: { decision: 'approve' /* missing subject_fact_id + supervisor_action_id */ },
+  });
+  assert.equal(bad.status, 422);
+  // Schema: enum on decision.
+  const badEnum = handlePublish(db, trow(db, alexSupTok), {
+    fact_type: 'supervisor_decision', visibility: 'internal',
+    subject_id: 'x',
+    payload: { decision: 'maybe', subject_fact_id: 'f-xyz', supervisor_action_id: 'sa-2' },
+  });
+  assert.equal(badEnum.status, 422);
+});
+
+test('publish without publish scope is now blocked', () => {
+  const { db } = setupConsume();
+  const readOnly = enrollToken(db, { agent: 'observer', scopes: [SCOPE_READ] });
+  const r = handlePublish(db, trow(db, readOnly), {
+    fact_type: 'status_update', visibility: 'internal', subject_id: 'x',
+    payload: { status: 'update', detail: 'should fail' },
+  });
+  assert.equal(r.status, 403);
+  assert.match(r.json.error, /publish scope/);
+});
+
