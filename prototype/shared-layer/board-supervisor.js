@@ -68,7 +68,9 @@ function snapshot() {
     const facts = b.prepare("SELECT fact_id, fact_type, source_agent, subject_id, payload, created_at, revoked_at FROM facts WHERE revoked_at IS NULL ORDER BY created_at DESC LIMIT 200").all();
     const recipStmt = b.prepare('SELECT recipient_agent FROM deliveries WHERE fact_id = ?');
     for (const f of facts) f.recipients = recipStmt.all(f.fact_id).map(r => r.recipient_agent);
-    return { facts, projects, cycles };
+    // Subject_ids Alex has already decided on (approved/rejected) — used to drop them from "needs you".
+    const decided = new Set(b.prepare("SELECT DISTINCT subject_id FROM facts WHERE fact_type='decision' AND source_agent='alex' AND revoked_at IS NULL").all().map(r => r.subject_id).filter(Boolean));
+    return { facts, projects, cycles, decided };
   } finally { b.close(); }
 }
 
@@ -96,6 +98,11 @@ function needsYou(facts) {
   const seen = new Set(); const dedup = [];
   for (const it of items) { const k = `${it.kind}|${it.from}|${it.to}|${it.detail.slice(0, 80)}`; if (!seen.has(k)) { seen.add(k); dedup.push(it); } }
   return dedup.slice(0, 12);
+}
+// Drop anything Alex has already decided on (an alex decision fact with matching subject_id exists).
+function dropDecided(items, decided) {
+  if (!decided || !decided.size) return items;
+  return items.filter(it => !decided.has(String(it.fact_id || '')));
 }
 
 function activityFeed(facts) {
@@ -164,7 +171,8 @@ async function render() {
   const caQueued = await caInbox();
   // CA's queued mesh WOs go to the TOP of "what needs you" — they're stuck until you approve / open a session.
   const caItems = caQueued.map(m => ({ kind: 'ca-mesh', from: m.from, to: 'code-architect', detail: m.title, age: m.created_at, fact_id: m.message_id, action: m.action, status: m.status }));
-  const needs = [...caItems, ...needsYou(d.facts)];
+  // Drop items Alex has already decided on (approved/rejected). Heuristic items use fact_id; ca-mesh items use message_id — both stored as subject_id on the decision fact.
+  const needs = dropDecided([...caItems, ...needsYou(d.facts)], d.decided);
   const notes = notesFeed(d.facts);
   const proj = projectsBlock(d.projects, d.cycles, d.facts);
   const feed = activityFeed(d.facts);
@@ -346,6 +354,19 @@ async function postSupervisorAction({ kind, id, action, comment }) {
     signal: AbortSignal.timeout(5000),
   });
   let j = {}; try { j = await r.json(); } catch (_) {}
+  // For ca-mesh approve/reject: also tell mesh-api to mark the original WO complete so it leaves CA's inbox.
+  // Non-fatal — the decision fact on the Board is already the authoritative record.
+  if (r.status === 200 && safeKind === 'ca-mesh' && (action === 'approve' || action === 'reject')) {
+    const meshStatus = action === 'approve' ? 'completed' : 'rejected';
+    try {
+      await fetch(`http://127.0.0.1:3341/messages/${encodeURIComponent(safeId)}/status`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ status: meshStatus, actor: 'alex' }),
+        signal: AbortSignal.timeout(3000),
+      });
+    } catch (_) { /* swallow — Board fact is the record */ }
+  }
   return { ok: r.status === 200, status: r.status, ...j };
 }
 
