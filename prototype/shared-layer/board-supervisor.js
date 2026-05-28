@@ -31,6 +31,22 @@ const statusOf = p => { try { return JSON.parse(p || '{}').status || ''; } catch
 // Highlight @agent mentions so the eye catches who a note is for.
 const renderMentions = s => esc(s).replace(/@([A-Za-z][A-Za-z0-9_-]*)/g, (_, a) => `<span class="mn">@${esc(NAME[a.toLowerCase()] || a)}</span>`);
 
+// CA is a single-shot session, not a daemon. Mesh WOs for it sit queued until a session opens.
+// Surface that queue so Alex sees what's waiting and can approve (v2) or open a session himself.
+async function caInbox() {
+  try {
+    const r = await fetch('http://127.0.0.1:3341/inbox/code-architect', { signal: AbortSignal.timeout(2500) });
+    if (!r.ok) return [];
+    const d = await r.json();
+    const open = (d.messages || []).filter(m => m.status !== 'completed' && m.status !== 'rejected' && m.status !== 'failed');
+    return open.map(m => {
+      let p = m.payload; if (typeof p === 'string') { try { p = JSON.parse(p); } catch (_) { p = {}; } }
+      const title = (p && (p.title || p.subject || p.summary)) || m.action || 'mesh request';
+      return { message_id: m.message_id, from: m.from_agent, title: String(title).slice(0, 140), action: m.action, status: m.status, created_at: m.created_at };
+    });
+  } catch (_) { return []; }
+}
+
 function snapshot() {
   const b = new DatabaseSync(BOARD_DB, { readOnly: true });
   let projects = [], cycles = [];
@@ -136,9 +152,12 @@ function row(f) {
   return `<div class="row"><div class="line"><b>${esc(who(f.source_agent))}</b> ${verb}${subj}</div>${detail ? `<div class="d">${detail}</div>` : ''}<div class="m">${ago(f.created_at)} ago</div></div>`;
 }
 
-function render() {
+async function render() {
   let d; try { d = snapshot(); } catch (e) { return `<pre>supervisor error: ${esc(e.message)}</pre>`; }
-  const needs = needsYou(d.facts);
+  const caQueued = await caInbox();
+  // CA's queued mesh WOs go to the TOP of "what needs you" — they're stuck until you approve / open a session.
+  const caItems = caQueued.map(m => ({ kind: 'ca-mesh', from: m.from, to: 'code-architect', detail: m.title, age: m.created_at, fact_id: m.message_id, action: m.action, status: m.status }));
+  const needs = [...caItems, ...needsYou(d.facts)];
   const notes = notesFeed(d.facts);
   const proj = projectsBlock(d.projects, d.cycles, d.facts);
   const feed = activityFeed(d.facts);
@@ -149,7 +168,10 @@ function render() {
 
   const needsHtml = needs.length
     ? needs.map(n => {
-        const head = n.kind === 'question' ? `<span class="tg q">QUESTION</span> <b>${esc(who(n.from))}</b> → <b>${esc(who(n.to))}</b>` : n.kind === 'work_order' ? `<span class="tg w">WORK ORDER</span> <b>${esc(who(n.from))}</b> → <b>${esc(who(n.to))}</b>` : `<span class="tg c">CFO DRAFT</span> <b>CFO</b> needs your nod`;
+        const head = n.kind === 'question' ? `<span class="tg q">QUESTION</span> <b>${esc(who(n.from))}</b> → <b>${esc(who(n.to))}</b>`
+          : n.kind === 'work_order' ? `<span class="tg w">WORK ORDER</span> <b>${esc(who(n.from))}</b> → <b>${esc(who(n.to))}</b>`
+          : n.kind === 'ca-mesh'    ? `<span class="tg ca">CA WO · QUEUED</span> <b>${esc(who(n.from))}</b> → <b>Code Architect</b><span class="st">${esc(n.status||'')}</span>`
+          : `<span class="tg c">CFO DRAFT</span> <b>CFO</b> needs your nod`;
         return `<div class="need"><div class="nh">${head}<span class="ag">${ago(n.age)} ago</span></div><div class="nd">${esc(n.detail) || '—'}</div><div class="na"><button class="ok" title="v2 wires this through the gateway">Approve</button><button class="rj">Reject</button><button class="cm">Comment</button></div></div>`;
       }).join('')
     : `<div class="empty">Nothing waiting on you right now. The fleet's running unattended.</div>`;
@@ -175,7 +197,8 @@ h2{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:1.4p
 .need{background:linear-gradient(135deg,rgba(250,204,21,.07),rgba(250,204,21,.02));border:1px solid rgba(250,204,21,.28);border-left:3px solid var(--yellow);border-radius:11px;padding:13px 16px}
 .nh{font-size:12.5px;color:var(--text-2);display:flex;align-items:center;gap:8px;flex-wrap:wrap}.nh .ag{margin-left:auto;color:var(--muted);font-family:"JetBrains Mono",monospace;font-size:11px}
 .tg{font-size:10px;font-weight:800;letter-spacing:.6px;padding:2px 7px;border-radius:20px}
-.tg.q{background:rgba(56,189,248,.15);color:#38bdf8} .tg.w{background:rgba(250,204,21,.15);color:var(--yellow)} .tg.c{background:rgba(94,234,212,.15);color:var(--teal)}
+.tg.q{background:rgba(56,189,248,.15);color:#38bdf8} .tg.w{background:rgba(250,204,21,.15);color:var(--yellow)} .tg.c{background:rgba(94,234,212,.15);color:var(--teal)} .tg.ca{background:rgba(251,146,60,.16);color:var(--orange)}
+.nh .st{margin-left:6px;font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--orange);text-transform:uppercase}
 .nd{font-size:13.5px;color:var(--text);margin:7px 0;font-style:italic}
 .na{display:flex;gap:6px;margin-top:6px}
 .na button{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:5px 12px;border-radius:6px;border:1px solid;background:transparent;cursor:not-allowed;font-family:inherit;opacity:.55}
@@ -223,8 +246,8 @@ h2{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:1.4p
 </body></html>`;
 }
 
-http.createServer((req, res) => {
+http.createServer(async (req, res) => {
   if (req.url === '/health') { res.writeHead(200); return res.end('ok'); }
   res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-  res.end(render());
+  res.end(await render());
 }).listen(PORT, HOST, () => console.log(`[supervisor] live on ${HOST}:${PORT}`));
