@@ -137,6 +137,45 @@ function dropDecided(items, decided) {
 
 // CEO-readable headline for each need card — reads as a sentence the way an office update would.
 const friendlyName = id => NAME[id] || clientName(id) || (id ? title(expandSlugs(String(id))) : '—');
+
+// Bucket items by recency so what's URGENT stays in the primary pane and the rest moves down.
+const FRESH_MS = 24 * 60 * 60 * 1000;
+const STALE_MS = 7 * 24 * 60 * 60 * 1000;   // hide entirely past a week
+function bucketByAge(items) {
+  const now = Date.now(); const fresh = []; const aged = [];
+  for (const it of items) {
+    const ageMs = now - new Date(it.age).getTime();
+    if (!isFinite(ageMs) || ageMs >= STALE_MS) continue;          // too old → drop
+    (ageMs < FRESH_MS ? fresh : aged).push(it);
+  }
+  return { fresh, aged };
+}
+// Tag for the age pill on each card so the eye can scan urgency.
+function ageTag(ts) {
+  const ms = Date.now() - new Date(ts).getTime();
+  if (ms < 4 * 60 * 60 * 1000) return { cls: 'hot',  txt: ago(ts) };           // < 4h — fresh
+  if (ms < 24 * 60 * 60 * 1000) return { cls: 'warm', txt: ago(ts) };          // < 24h — getting older
+  return { cls: 'cold', txt: ago(ts) };                                        // > 24h — stale
+}
+// For each need item, find the most recent OTHER fact about the same subject/client so the card carries continuity.
+function pickContext(item, facts) {
+  if (!item.fact_id || !facts) return null;
+  const wanted = String(item.detail || '').toLowerCase();
+  const subj = String(item.fact_id || '');
+  const clientSlug = String(item.to || '').toLowerCase();
+  for (const f of facts) {
+    if (f.fact_id === subj) continue;
+    const d = detailOf(f.payload).toLowerCase();
+    if (!d) continue;
+    if (NOISE_DETAIL.test(d)) continue;
+    // related: shares the client/topic
+    if ((clientSlug && (String(f.subject_id || '').toLowerCase() === clientSlug || d.includes(clientSlug))) ||
+        (wanted && d.includes(wanted.split(' ')[0]))) {
+      return { who: who(f.source_agent), detail: expandSlugs(detailOf(f.payload)).slice(0, 120), age: f.created_at };
+    }
+  }
+  return null;
+}
 function cardSentence(n) {
   const fromName = esc(friendlyName(n.from));
   let detail = expandSlugs(String(n.detail || '')).replace(/[_]/g, ' ').replace(/\s+/g, ' ').trim();
@@ -224,8 +263,11 @@ async function render() {
   const caQueued = await caInbox();
   // CA's queued mesh WOs go to the TOP of "what needs you" — they're stuck until you approve / open a session.
   const caItems = caQueued.map(m => ({ kind: 'ca-mesh', from: m.from, to: 'code-architect', detail: m.title, age: m.created_at, fact_id: m.message_id, action: m.action, status: m.status }));
-  // Drop items Alex has already decided on (approved/rejected). Heuristic items use fact_id; ca-mesh items use message_id — both stored as subject_id on the decision fact.
-  const needs = dropDecided([...caItems, ...needsYou(d.facts)], d.decided);
+  // Drop items Alex has already decided on (approved/rejected/dismissed). Heuristic items use fact_id; ca-mesh items use message_id — both stored as subject_id on the decision fact.
+  const allNeeds = dropDecided([...caItems, ...needsYou(d.facts)], d.decided);
+  const buckets = bucketByAge(allNeeds);
+  const needs = buckets.fresh;
+  const aged  = buckets.aged;
   const notes = notesFeed(d.facts);
   const proj = projectsBlock(d.projects, d.cycles, d.facts);
   const feed = activityFeed(d.facts);
@@ -234,17 +276,24 @@ async function render() {
     ? notes.map(n => `<div class="note"><div class="nhd"><b>${esc(who(n.source_agent))}</b><span class="nag">${ago(n.created_at)} ago</span></div><div class="ntx">${renderMentions(n._detail)}</div></div>`).join('')
     : `<div class="empty">No recent notes. (Any agent can drop one with <code>board-note &lt;from&gt; "&lt;text&gt;" --for=…</code>.)</div>`;
 
+  const renderCard = n => {
+    const badge = n.kind === 'question'  ? '<span class="tg q">QUESTION</span>'
+                : n.kind === 'work_order'? '<span class="tg w">WORK ORDER</span>'
+                : n.kind === 'ca-mesh'   ? '<span class="tg ca">QUEUED FOR CA</span>'
+                :                          '<span class="tg c">CFO DRAFT</span>';
+    const dk = esc(n.kind);
+    const di = esc(String(n.fact_id || ''));
+    const at = ageTag(n.age);
+    const ctx = pickContext(n, d.facts);
+    const ctxHtml = ctx ? `<div class="cx">↳ <b>${esc(ctx.who)}</b> ${esc(ago(ctx.age))} ago: <i>${esc(ctx.detail)}</i></div>` : '';
+    return `<div class="need ${at.cls}"><div class="nh">${badge}<span class="ag ${at.cls}">${esc(at.txt)} ago</span></div><div class="nd">${cardSentence(n)}</div>${ctxHtml}<div class="na"><button class="ok" data-kind="${dk}" data-id="${di}" data-action="approve">Approve</button><button class="rj" data-kind="${dk}" data-id="${di}" data-action="reject">Reject</button><button class="dm" data-kind="${dk}" data-id="${di}" data-action="dismiss">Dismiss</button><button class="cm" data-kind="${dk}" data-id="${di}" data-action="comment">Comment</button></div></div>`;
+  };
   const needsHtml = needs.length
-    ? needs.map(n => {
-        const badge = n.kind === 'question'  ? '<span class="tg q">QUESTION</span>'
-                    : n.kind === 'work_order'? '<span class="tg w">WORK ORDER</span>'
-                    : n.kind === 'ca-mesh'   ? '<span class="tg ca">QUEUED FOR CA</span>'
-                    :                          '<span class="tg c">CFO DRAFT</span>';
-        const dk = esc(n.kind);
-        const di = esc(String(n.fact_id || ''));
-        return `<div class="need"><div class="nh">${badge}<span class="ag">${ago(n.age)} ago</span></div><div class="nd">${cardSentence(n)}</div><div class="na"><button class="ok" data-kind="${dk}" data-id="${di}" data-action="approve">Approve</button><button class="rj" data-kind="${dk}" data-id="${di}" data-action="reject">Reject</button><button class="cm" data-kind="${dk}" data-id="${di}" data-action="comment">Comment</button></div></div>`;
-      }).join('')
-    : `<div class="empty">Nothing waiting on you right now. The fleet's running unattended.</div>`;
+    ? needs.map(renderCard).join('')
+    : `<div class="empty">Nothing fresh on your desk. The fleet's running unattended.</div>`;
+  const agedHtml = aged.length
+    ? `<details class="aged"><summary>Older — review or dismiss · ${aged.length} item${aged.length === 1 ? '' : 's'}</summary><div class="needs aged-needs">${aged.map(renderCard).join('')}</div></details>`
+    : '';
 
   const projHtml = proj.length
     ? proj.map(p => `<div class="proj"><div class="pn">${esc(p.name || p.id)}</div><div class="pm">${esc(p.client_slug || '—')} · stage <b>${esc(String(p.stage ?? '–'))}/10</b> · <span class="ps">${esc(p.status)}</span></div><div class="pl">${p.lastTxt}</div></div>`).join('')
@@ -271,6 +320,15 @@ h2{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:1.4p
 .nh .st{margin-left:6px;font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--orange);text-transform:uppercase}
 .nd{font-size:14px;color:var(--text);margin:7px 0;line-height:1.45}.nd b{color:var(--text);font-weight:700}
 .cnt{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:1px 7px;border-radius:20px;background:var(--brief);border:1px solid var(--border-b);color:var(--accent);margin-left:4px;vertical-align:middle}
+.cx{font-size:12px;color:var(--text-2);margin:4px 0 6px;padding-left:8px;border-left:2px solid var(--border-b);line-height:1.4}.cx b{color:var(--text);font-weight:600}.cx i{color:var(--muted);font-style:normal}
+.ag.hot{color:var(--green)}.ag.warm{color:var(--yellow)}.ag.cold{color:var(--red);font-weight:700}
+.need.warm{border-left-color:var(--yellow)}.need.cold{border-left-color:var(--red);opacity:.9}
+details.aged{margin-top:14px;background:var(--card);border:1px solid var(--border);border-radius:11px}
+details.aged summary{cursor:pointer;padding:11px 17px;font-size:13px;color:var(--text-2);font-weight:600;list-style:none;display:flex;align-items:center;gap:8px}
+details.aged summary::-webkit-details-marker{display:none}
+details.aged summary::before{content:"▸";color:var(--muted);font-size:11px;transition:transform .15s}
+details[open].aged summary::before{transform:rotate(90deg)}
+.aged-needs{padding:0 13px 13px}.aged-needs .need{opacity:.7}
 .na{display:flex;gap:6px;margin-top:6px}
 .na{display:flex;gap:6px;margin-top:6px;align-items:center}
 .na button{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:5px 12px;border-radius:6px;border:1px solid;background:transparent;cursor:pointer;font-family:inherit;transition:background .15s}
@@ -278,9 +336,11 @@ h2{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:1.4p
 .na button:disabled{cursor:wait;opacity:.55}
 .na .ok{color:var(--green);border-color:rgba(74,222,128,.45)}.na .ok:hover{background:rgba(74,222,128,.10)}
 .na .rj{color:var(--red);border-color:rgba(248,113,113,.4)}.na .rj:hover{background:rgba(248,113,113,.10)}
+.na .dm{color:var(--muted);border-color:var(--border-b)}.na .dm:hover{background:rgba(125,138,153,.10)}
 .na .cm{color:var(--text-2);border-color:var(--border)}
 .na .dn{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;padding:5px 10px;border-radius:6px;background:rgba(74,222,128,.13);color:var(--green)}
 .na .dn.x{background:rgba(248,113,113,.13);color:var(--red)}
+.na .dn.d{background:rgba(125,138,153,.13);color:var(--muted)}
 .na .dn.c{background:rgba(110,168,254,.13);color:var(--accent)}
 
 .projs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px}
@@ -309,8 +369,9 @@ h2{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:1.4p
 <h1>The Board — what needs you.</h1>
 <p class="sub">The agency's live operating picture. <b>Lead with what's on your desk</b>; the fleet keeps running below. Diagnostic firehose is at <a href="http://${esc(HOST)}:3350">:3350</a>.</p>
 
-<h2>What needs you <span class="c">${needs.length} open</span></h2>
+<h2>What needs you <span class="c">${needs.length} open${aged.length ? ` · ${aged.length} older` : ''}</span></h2>
 <div class="needs">${needsHtml}</div>
+${agedHtml}
 
 <h2>Recent notes · FYI <span class="c">${notes.length}</span></h2>
 <div class="notes">${notesHtml}</div>
@@ -348,8 +409,8 @@ h2{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:1.4p
       var j = {}; try { j = await r.json(); } catch(_){}
       log('server returned '+r.status+' ok='+(j.ok===true));
       if (j.ok) {
-        var label = action === 'approve' ? '✓ approved' : action === 'reject' ? '✕ rejected' : '+ commented';
-        var cls   = action === 'approve' ? 'dn'        : action === 'reject' ? 'dn x'      : 'dn c';
+        var label = action === 'approve' ? '✓ approved' : action === 'reject' ? '✕ rejected' : action === 'dismiss' ? '— dismissed' : '+ commented';
+        var cls   = action === 'approve' ? 'dn'        : action === 'reject' ? 'dn x'      : action === 'dismiss' ? 'dn d'         : 'dn c';
         btn.parentElement.innerHTML = '<span class="'+cls+'">'+label+'</span><span style="margin-left:auto;font-size:10px;color:#7d8a99;font-family:JetBrains Mono,monospace">fact '+(j.fact_id?j.fact_id.slice(0,8):'')+'</span>';
         if (card) card.style.opacity = '0.55';
         log('OK — fact '+(j.fact_id||'?').slice(0,8)+'; reloading in 1.8s');
@@ -381,7 +442,7 @@ async function readBody(req, max = 64 * 1024) {
   });
 }
 async function postSupervisorAction({ kind, id, action, comment }) {
-  if (!['approve', 'reject', 'comment'].includes(action)) throw new Error('unknown action');
+  if (!['approve', 'reject', 'comment', 'dismiss'].includes(action)) throw new Error('unknown action');
   const safeKind = String(kind || 'item').slice(0, 32);
   const safeId   = String(id || '').slice(0, 80);
   let fact_type, payload;
@@ -391,10 +452,8 @@ async function postSupervisorAction({ kind, id, action, comment }) {
     payload = { status: 'comment', detail: `re ${safeKind} ${safeId.slice(0,12)}: ${String(comment).slice(0, 400)}` };
   } else {
     fact_type = 'decision';
-    payload = {
-      text: action === 'approve' ? 'Approved' : 'Rejected',
-      rationale: `Alex ${action}d ${safeKind} ${safeId.slice(0, 40)} via supervisor`,
-    };
+    const text = action === 'approve' ? 'Approved' : action === 'reject' ? 'Rejected' : 'Dismissed (no longer relevant)';
+    payload = { text, rationale: `Alex ${action}d ${safeKind} ${safeId.slice(0, 40)} via supervisor` };
   }
   const body = {
     fact_type, visibility: 'internal', data_class: 'internal',
@@ -408,9 +467,9 @@ async function postSupervisorAction({ kind, id, action, comment }) {
     signal: AbortSignal.timeout(5000),
   });
   let j = {}; try { j = await r.json(); } catch (_) {}
-  // For ca-mesh approve/reject: also tell mesh-api to mark the original WO complete so it leaves CA's inbox.
+  // For ca-mesh approve/reject/dismiss: also tell mesh-api to mark the original WO complete/rejected so it leaves CA's inbox.
   // Non-fatal — the decision fact on the Board is already the authoritative record.
-  if (r.status === 200 && safeKind === 'ca-mesh' && (action === 'approve' || action === 'reject')) {
+  if (r.status === 200 && safeKind === 'ca-mesh' && (action === 'approve' || action === 'reject' || action === 'dismiss')) {
     const meshStatus = action === 'approve' ? 'completed' : 'rejected';
     try {
       await fetch(`http://127.0.0.1:3341/messages/${encodeURIComponent(safeId)}/status`, {
