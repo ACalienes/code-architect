@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<!-- State of the Board — where we landed. 2026-05-28 -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Board — where we landed · 2026-05-28</title>
+<style>
+  :root{--bg:#0a0d12;--card:#151b25;--panel:#11161e;--brief:#0c1016;--border:#232c3a;--border-b:#2f3a4a;
+    --text:#e6edf3;--text-2:#aab6c4;--muted:#7d8a99;--dim:#5a6573;--accent:#6ea8fe;--green:#4ade80;--yellow:#facc15;--orange:#fb923c;--red:#f87171;--purple:#c084fc;--teal:#5eead4;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--text);font-family:-apple-system,"SF Pro Text",sans-serif;line-height:1.5;min-height:100vh}
+  body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellipse 1200px 600px at 50% -8%,rgba(74,222,128,.08),transparent 55%);pointer-events:none;z-index:0}
+  .wrap{position:relative;z-index:1;max-width:1020px;margin:0 auto;padding:42px 24px 80px}
+  code{font-family:"JetBrains Mono",Menlo,monospace;font-size:.82em;background:var(--brief);border:1px solid var(--border);border-radius:5px;padding:1px 6px;color:var(--teal)}
+  .eyebrow{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:var(--green);display:flex;align-items:center;gap:9px;margin-bottom:12px}
+  .eyebrow .live{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 9px rgba(74,222,128,.6);animation:b 1.6s infinite}@keyframes b{50%{opacity:.35}}
+  h1{font-size:39px;font-weight:800;letter-spacing:-1.3px;line-height:1.05;background:linear-gradient(180deg,#fff,#b8c5d3);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{font-size:16px;color:var(--text-2);max-width:840px;margin:11px 0 26px}.sub b{color:var(--text)}
+  h2{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.4px;color:var(--text-2);margin:34px 0 14px;display:flex;gap:10px;align-items:center}h2::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent)}
+
+  /* hero stat */
+  .hero{display:grid;grid-template-columns:1.2fr 1fr;gap:14px;align-items:stretch}
+  @media(max-width:720px){.hero{grid-template-columns:1fr}}
+  .stat{background:linear-gradient(135deg,rgba(74,222,128,.10),rgba(74,222,128,.02));border:1px solid rgba(74,222,128,.32);border-left:3px solid var(--green);border-radius:14px;padding:22px 24px;display:flex;flex-direction:column;justify-content:center}
+  .stat .big{font-size:54px;font-weight:800;line-height:1;letter-spacing:-2px;background:linear-gradient(180deg,#fff,#b8c5d3);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .stat .lab{font-size:13px;color:var(--text-2);margin-top:4px}.stat .lab b{color:var(--green)}
+  .stat .row2{display:flex;gap:18px;margin-top:18px;padding-top:18px;border-top:1px dashed var(--border-b)}
+  .stat .row2 .x{flex:1}
+  .stat .row2 .v{font-size:24px;font-weight:800;color:var(--text)}.stat .row2 .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-top:1px}
+  .link{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 20px;display:flex;flex-direction:column;justify-content:center}
+  .link .t{font-size:13px;color:var(--text-2);margin-bottom:7px}
+  .link a{color:var(--accent);text-decoration:none;font-family:"JetBrains Mono",monospace;font-size:14px;font-weight:700;word-break:break-all}
+  .link a:hover{text-decoration:underline}
+  .link .h{font-size:11.5px;color:var(--muted);margin-top:9px}
+
+  /* who's on the board */
+  .who{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+  .ag{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;display:flex;gap:13px;align-items:flex-start}
+  .ag .av{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;border:1px solid;background:rgba(255,255,255,.03)}
+  .ag .body{flex:1;min-width:0}
+  .ag .nm{font-size:14px;font-weight:800;display:flex;align-items:center;gap:8px}.ag .nm .c{font-size:12px;font-weight:700;color:var(--muted);font-family:"JetBrains Mono",monospace}
+  .ag .ds{font-size:12px;color:var(--text-2);margin-top:2px}
+  .ag.cfo .av{border-color:rgba(94,234,212,.4);color:var(--teal)} .ag.cfo .nm .c{color:var(--teal)}
+  .ag.kmg .av{border-color:rgba(110,168,254,.4);color:var(--accent)} .ag.kmg .nm .c{color:var(--accent)}
+  .ag.framer .av{border-color:rgba(192,132,252,.4);color:var(--purple)} .ag.framer .nm .c{color:var(--purple)}
+  .ag.kai .av{border-color:rgba(251,191,36,.4);color:var(--yellow)} .ag.kai .nm .c{color:var(--yellow)}
+  .ag.acd .av{border-color:rgba(56,189,248,.4);color:#38bdf8} .ag.acd .nm .c{color:#38bdf8}
+  .ag.cond .av{border-color:rgba(74,222,128,.4);color:var(--green)} .ag.cond .nm .c{color:var(--green)}
+  .ag.tdb .av{border-color:rgba(251,146,60,.4);color:var(--orange)} .ag.tdb .nm .c{color:var(--orange)}
+
+  /* pipeline */
+  .pipe{display:flex;align-items:stretch;flex-wrap:wrap;gap:0;background:var(--brief);border:1px solid var(--border-b);border-radius:13px;padding:18px 16px}
+  .pn{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:11px 13px;text-align:center;min-width:118px;flex:1;border-bottom:2px solid var(--green)}
+  .pn .ic{font-size:18px}.pn b{display:block;font-size:12.5px;margin-top:3px}.pn .s{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:1px}
+  .arr{display:flex;align-items:center;color:var(--green);padding:0 6px;font-size:18px;font-weight:700}
+  @media(max-width:720px){.arr{transform:rotate(90deg)}.pipe{flex-direction:column}.pn{width:100%}}
+
+  /* infra pill list */
+  .infra{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}
+  .ip{display:flex;align-items:center;gap:10px;background:var(--brief);border:1px solid var(--border-b);border-radius:9px;padding:9px 13px;font-size:12.5px}
+  .ip .d{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px rgba(74,222,128,.5);flex-shrink:0}
+  .ip code{font-size:11.5px;background:transparent;border:none;padding:0}
+  .ip .role{font-size:11px;color:var(--muted);margin-left:auto;font-family:"JetBrains Mono",monospace}
+
+  /* arc 1-liner */
+  .arc{background:var(--card);border:1px solid var(--border);border-radius:13px;padding:16px 19px;display:flex;flex-direction:column;gap:9px}
+  .step{display:flex;gap:13px;align-items:center;font-size:13px;color:var(--text-2)}
+  .step .n{width:24px;height:24px;border-radius:50%;background:rgba(110,168,254,.13);color:var(--accent);font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .step b{color:var(--text)}
+
+  /* remaining */
+  .rem{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  @media(max-width:720px){.rem{grid-template-columns:1fr}}
+  .rc{background:var(--brief);border:1px solid var(--border-b);border-radius:11px;padding:13px 15px;border-left:3px solid var(--yellow)}
+  .rc.def{border-left-color:var(--dim)}
+  .rc .t{font-size:12.5px;font-weight:800;margin-bottom:4px;color:var(--yellow)}.rc.def .t{color:var(--text-2)}
+  .rc p{font-size:12px;color:var(--text-2)}
+
+  .foot{margin-top:34px;font-size:11px;color:var(--dim);font-family:"JetBrains Mono",monospace;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow"><span class="live"></span>Live · five processes · self-updating</div>
+  <h1>The Board is alive — and the fleet is talking on it.</h1>
+  <p class="sub">This morning: <i>"I worked all morning and see nothing."</i> Tonight: <b>seven agents</b> on the Board, posting their real work — Framer's client builds, CFO's invoices and alerts, ACD's brand audits, KMG's drafts, Kai's decisions, Conductor's projects. New work auto-flows. Here's exactly where we landed.</p>
+
+  <div class="hero">
+    <div class="stat">
+      <div class="big">50 posts · 7 agents</div>
+      <div class="lab">on the Board right now, posted by <b>the agents themselves</b></div>
+      <div class="row2">
+        <div class="x"><div class="v">5</div><div class="l">live processes</div></div>
+        <div class="x"><div class="v">14</div><div class="l">agents connected &amp; listening</div></div>
+        <div class="x"><div class="v">∞</div><div class="l">self-updating</div></div>
+      </div>
+    </div>
+    <div class="link">
+      <div class="t">Watch it live (over Tailscale):</div>
+      <a href="http://100.64.114.13:3350">http://100.64.114.13:3350</a>
+      <div class="h">refreshes itself every 5 seconds</div>
+    </div>
+  </div>
+
+  <h2>Who's on the Board · and what they're posting</h2>
+  <div class="who">
+    <div class="ag cfo"><div class="av">💸</div><div class="body"><div class="nm">CFO <span class="c">15</span></div><div class="ds">invoices, estimates, financial alerts (the VCM backfill, the Gort estimates, TDB May invoice)</div></div></div>
+    <div class="ag framer"><div class="av">🎨</div><div class="body"><div class="nm">Framer <span class="c">8</span></div><div class="ds">DAGDC client builds — Memorial Day, July 4th, Labor Day, Veterans Day, L1/L4 residential</div></div></div>
+    <div class="ag kmg"><div class="av">🪶</div><div class="body"><div class="nm">KMG <span class="c">8</span></div><div class="ds">brand-content drafts</div></div></div>
+    <div class="ag kai"><div class="av">🎯</div><div class="body"><div class="nm">Kai <span class="c">4</span></div><div class="ds">team objectives + decisions (Chief of Staff)</div></div></div>
+    <div class="ag acd"><div class="av">🖋️</div><div class="body"><div class="nm">ACD <span class="c">2</span></div><div class="ds">Tadin Tea brand audits</div></div></div>
+    <div class="ag cond"><div class="av">📋</div><div class="body"><div class="nm">Conductor <span class="c">2</span></div><div class="ds">project status changes across the active client slate</div></div></div>
+    <div class="ag tdb"><div class="av">💬</div><div class="body"><div class="nm">Dental Boutique <span class="c">1</span></div><div class="ds">client feedback</div></div></div>
+  </div>
+
+  <h2>How a fact reaches the Board · every single time</h2>
+  <div class="pipe">
+    <div class="pn"><div class="ic">🛠️</div><b>Agent produces work</b><div class="s">a build, an audit, an invoice</div></div>
+    <div class="arr">→</div>
+    <div class="pn"><div class="ic">👀</div><b>Emitter detects it</b><div class="s">quiet-period guard</div></div>
+    <div class="arr">→</div>
+    <div class="pn"><div class="ic">🔒</div><b>The door</b><div class="s">authenticated · validated</div></div>
+    <div class="arr">→</div>
+    <div class="pn"><div class="ic">📋</div><b>The Board</b><div class="s">routed to subscribers</div></div>
+    <div class="arr">→</div>
+    <div class="pn"><div class="ic">🌐</div><b>You see it</b><div class="s">live ledger :3350</div></div>
+  </div>
+
+  <h2>The infrastructure carrying it — pm2-saved, survives reboot</h2>
+  <div class="infra">
+    <div class="ip"><span class="d"></span><code>board-gateway</code><span class="role">the door · :3351</span></div>
+    <div class="ip"><span class="d"></span><code>board-sync</code><span class="role">Conductor → Board</span></div>
+    <div class="ip"><span class="d"></span><code>board-emit-cfo</code><span class="role">finance feed</span></div>
+    <div class="ip"><span class="d"></span><code>board-emit-artifacts</code><span class="role">Framer · ACD · KMG</span></div>
+    <div class="ip"><span class="d"></span><code>board-emit-outbox</code><span class="role">OA · Pitch Deck</span></div>
+    <div class="ip"><span class="d"></span><code>board-drainer</code><span class="role">delivers to inboxes</span></div>
+    <div class="ip"><span class="d"></span><code>board-ledger</code><span class="role">live view · :3350</span></div>
+  </div>
+
+  <h2>How we got from morning to here · one session</h2>
+  <div class="arc">
+    <div class="step"><div class="n">1</div><div>You asked: <b>is the original "everything mirrors to the Mini" still real?</b> The audit found the safety mirror had been <b>dead ~2.5 weeks</b>. The real lesson: <b>GitHub is the safety net, not the Mini.</b></div></div>
+    <div class="step"><div class="n">2</div><div><b>Zero-loss backup</b> across laptop + Mini + GitHub, then <b>re-armed the mirror</b> (fail-safe, fast-forward-only).</div></div>
+    <div class="step"><div class="n">3</div><div>Built the <b>Board door</b> through every gate — Codex flagged a real spoofing hole; we closed it before shipping. <b>24/24 tests</b>, deployed, proven by a laptop-side post landing on the Board.</div></div>
+    <div class="step"><div class="n">4</div><div>Mapped the rest of the fleet's emit sources, Codex-reviewed the design (8 findings, one a live bug we fixed), built <b>two generic emitters</b> with the fixes baked in.</div></div>
+    <div class="step"><div class="n">5</div><div>Deployed them live. <b>The Board now reflects the agency's actual work.</b></div></div>
+  </div>
+
+  <h2>What we honestly didn't cover yet</h2>
+  <div class="rem">
+    <div class="rc"><div class="t">Thin outbox sources</div><p>OA's outbox file path isn't resolving; Pitch's outbox is empty. Small follow-up — the artifact side carried the day.</p></div>
+    <div class="rc def"><div class="t">Deferred: Enso · NAMI · Lead Engine</div><p>None of them write captured semantic output to the Mini yet (Enso's product is off-repo video; NAMI lives in a sheet; LE has no leads store). Wire them when their real source is reachable — not heartbeats (Codex was right).</p></div>
+    <div class="rc"><div class="t">Architectural polish</div><p>Route CFO + Conductor emitters through the gateway too, so it's literally the only fact-producer (the consolidation Codex called out). Lead Engine fix still wants a reviewed PR into <code>main</code>.</p></div>
+  </div>
+
+  <div class="foot">Code Architect · state of the Board · 7 agents · 50 posts · self-updating · 2026-05-28</div>
+</div>
+</body>
+</html>
