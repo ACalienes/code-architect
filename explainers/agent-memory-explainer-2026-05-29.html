@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Your Agents' Memory — What I Found & What I Want To Do</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c232d; --line:#2a323d;
+    --ink:#e6edf3; --muted:#9aa7b4; --faint:#6b7785;
+    --gold:#e3b341; --teal:#2dd4bf; --red:#f87171; --green:#56d364; --blue:#58a6ff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:radial-gradient(1200px 700px at 75% -10%,#15202b 0%,var(--bg) 55%);
+    color:var(--ink); font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;
+    padding:48px 20px 80px; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:860px;margin:0 auto}
+  .kicker{letter-spacing:.22em;text-transform:uppercase;font-size:12px;color:var(--gold);font-weight:700}
+  h1{font-size:34px;line-height:1.15;margin:10px 0 14px;letter-spacing:-.01em}
+  h1 span{color:var(--gold)}
+  .lede{color:var(--muted);font-size:18px;max-width:680px}
+  .rule{height:1px;background:linear-gradient(90deg,var(--gold),transparent);margin:34px 0 30px;border:0}
+  h2{font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--teal);margin:0 0 16px;font-weight:700}
+  .sec{margin:42px 0}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px 24px;margin:14px 0}
+  .card h3{font-size:18px;margin:0 0 6px;display:flex;align-items:center;gap:10px}
+  .card p{color:var(--muted)}
+  .ico{font-size:20px}
+  .grid{display:grid;gap:14px}
+  @media(min-width:640px){.grid.two{grid-template-columns:1fr 1fr}.grid.three{grid-template-columns:1fr 1fr 1fr}}
+  .analogy{background:var(--panel2);border-left:3px solid var(--teal);border-radius:0 10px 10px 0;padding:18px 22px;color:var(--ink)}
+  .analogy b{color:var(--teal)}
+  .danger{border-color:#5a2b2b;background:linear-gradient(180deg,#1f1517,var(--panel))}
+  .danger h3{color:var(--red)}
+  .fix{border-color:#234a45;background:linear-gradient(180deg,#10201d,var(--panel))}
+  .fix h3{color:var(--green)}
+  .stat{display:flex;gap:14px;align-items:baseline;margin:8px 0}
+  .stat .n{font-size:30px;font-weight:800;color:var(--gold);min-width:54px;text-align:right}
+  .stat .l{color:var(--muted)}
+  .steps{counter-reset:s;list-style:none;padding:0}
+  .steps li{position:relative;padding:16px 18px 16px 60px;background:var(--panel);border:1px solid var(--line);border-radius:12px;margin:10px 0}
+  .steps li::before{counter-increment:s;content:counter(s);position:absolute;left:16px;top:14px;width:30px;height:30px;border-radius:50%;background:var(--gold);color:#1a1a1a;font-weight:800;display:flex;align-items:center;justify-content:center}
+  .steps b{color:var(--ink)}
+  .steps small{color:var(--faint);display:block;margin-top:3px}
+  .flag{display:inline-block;background:#2a2113;color:var(--gold);border:1px solid #4a3c1a;font-size:12px;font-weight:700;padding:2px 9px;border-radius:20px;margin-left:6px;vertical-align:middle}
+  .cta{background:linear-gradient(135deg,#1d2730,#161b22);border:1px solid var(--gold);border-radius:16px;padding:28px;text-align:center;margin-top:10px}
+  .cta .go{font-size:22px;font-weight:800;color:var(--gold)}
+  .cta p{color:var(--muted);margin-top:8px}
+  .safe{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:18px}
+  .pill{background:var(--panel2);border:1px solid var(--line);border-radius:20px;padding:7px 14px;font-size:13px;color:var(--ink)}
+  .pill b{color:var(--green)}
+  .foot{color:var(--faint);font-size:13px;text-align:center;margin-top:40px}
+  .hl{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="kicker">Code Architect · 2026-05-29</div>
+  <h1>Your agents have <span>memories</span>.<br>Right now they aren't safe.</h1>
+  <p class="lede">You asked how we're doing on memory. I went and looked at the real thing on your laptop. Here's what's going on — no jargon — and the simple fix I've already built and tested.</p>
+
+  <hr class="rule">
+
+  <!-- WHAT -->
+  <div class="sec">
+    <h2>First — what is "agent memory"?</h2>
+    <div class="analogy">
+      Every agent — Kai, CFO, Enso, Framer, and the rest — keeps a <b>notebook</b>. Each time it works, it writes down what it learned: how you like things done, facts about clients, mistakes not to repeat. That notebook is what makes an agent get <b>smarter over time</b> instead of starting from zero every session.
+      <br><br>
+      You have <b>24 of these notebooks</b> on your laptop. Some are thick and well-kept (Kai has 178 pages, Enso 144). Together they're the accumulated brains of your whole team.
+    </div>
+  </div>
+
+  <!-- PROBLEMS -->
+  <div class="sec">
+    <h2>The problem I found — two things</h2>
+
+    <div class="card danger">
+      <h3><span class="ico">🔥</span> 1. The notebooks have no safety copy</h3>
+      <p>All your <span class="hl">other</span> work is copied to GitHub automatically — your off-site safety net. But these 24 notebooks live in a different spot on the laptop that <b>GitHub never sees</b>. The one backup that did exist was quietly copying an <b>empty notebook</b> — it had been pointed at the wrong place for weeks.</p>
+      <p style="margin-top:10px;color:var(--red)"><b>Plain version:</b> if your laptop died today, every agent's brain would be gone. No copy anywhere.</p>
+    </div>
+
+    <div class="card danger">
+      <h3><span class="ico">👻</span> 2. Two notebooks got "stranded"</h3>
+      <p>When a project folder gets renamed, the agent doesn't carry its notebook over — it silently starts a <b>brand-new empty one</b> and leaves the old, full notebook behind, frozen in time. Two of these stranded notebooks are sitting on your laptop right now (Kai's early-February brain, and a Lead Engine one). Nobody was told.</p>
+    </div>
+  </div>
+
+  <!-- FIX -->
+  <div class="sec">
+    <h2>The fix — I built three small tools</h2>
+    <div class="grid three">
+      <div class="card fix">
+        <h3><span class="ico">💾</span> Backup</h3>
+        <p>Copies all 24 notebooks to <b>two</b> safe places every hour: a <b>private GitHub vault</b> (off-site safety) and your <b>Mac Mini</b> (local copy).</p>
+      </div>
+      <div class="card fix">
+        <h3><span class="ico">🩹</span> De-fork</h3>
+        <p>Rescues the two stranded notebooks — folds their contents back into the live brains. <b>It never deletes anything.</b></p>
+      </div>
+      <div class="card fix">
+        <h3><span class="ico">🛡️</span> Fork-guard</h3>
+        <p>Watches for a notebook getting stranded again and <b>warns us</b> — so this can't quietly happen twice.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROOF -->
+  <div class="sec">
+    <h2>I already tested it (safely, no changes made)</h2>
+    <div class="card">
+      <div class="stat"><span class="n">24</span><span class="l">notebooks found and ready to back up</span></div>
+      <div class="stat"><span class="n">2</span><span class="l">stranded notebooks correctly spotted — the exact right two</span></div>
+      <div class="stat"><span class="n">0</span><span class="l">false alarms (it correctly left look-alike projects alone)</span></div>
+    </div>
+  </div>
+
+  <!-- ASK -->
+  <div class="sec">
+    <h2>What I need from you</h2>
+    <p style="color:var(--muted);margin-bottom:16px">It's all built and dry-run tested. I just need your OK to actually run it, in this order:</p>
+    <ol class="steps">
+      <li><b>Rescue the two stranded notebooks</b><small>Local only. Preserves them first, before anything else.</small></li>
+      <li><b>Create the private GitHub vault</b><small>A new, private repository just for these notebooks.</small></li>
+      <li><b>Run the first real backup</b> <span class="flag">this sends memory to GitHub</span><small>This is the moment the notebooks leave the laptop. The vault is private — same setup Kai already uses — but I'm flagging it so you're deciding it on purpose.</small></li>
+      <li><b>Turn on the hourly auto-backup</b><small>From then on it protects itself, quietly, every hour.</small></li>
+    </ol>
+
+    <div class="cta">
+      <div class="go">Just reply “go”</div>
+      <p>and I'll run steps 1–4 and report back. Nothing about this touches the Board work you're already mid-flight on — it's completely separate.</p>
+      <div class="safe">
+        <span class="pill"><b>✓</b> Never deletes anything</span>
+        <span class="pill"><b>✓</b> Already tested, no changes yet</span>
+        <span class="pill"><b>✓</b> Private vault, not public</span>
+        <span class="pill"><b>✓</b> Two copies, not one</span>
+      </div>
+    </div>
+  </div>
+
+  <p class="foot">This is step one of the bigger memory goal — keep every agent in its own lane, but let them safely learn from each other later. First we make sure no brain can be lost. Then we build the “peek” layer on top.</p>
+
+</div>
+</body>
+</html>

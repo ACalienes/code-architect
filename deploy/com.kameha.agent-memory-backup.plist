@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Fleet agent-memory backup — runs the deployed copy at ~/.kameha/bin hourly.
+  The job points at a STABLE path (not the repo working tree) so switching git branches
+  can never remove the script from disk and silently break the backup.
+  Deploy:
+    mkdir -p ~/.kameha/bin && cp scripts/backup-agent-memory.sh ~/.kameha/bin/
+    cp deploy/com.kameha.agent-memory-backup.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/com.kameha.agent-memory-backup.plist
+  Re-copy the script to ~/.kameha/bin whenever scripts/backup-agent-memory.sh changes.
+  Auto-memory changes slowly; hourly (only-if-changes) is ample.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.kameha.agent-memory-backup</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/zsh</string>
+        <string>/Users/alex/.kameha/bin/backup-agent-memory.sh</string>
+    </array>
+    <key>StartInterval</key>
+    <integer>3600</integer>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/tmp/kameha-agent-memory-backup-launchd.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/kameha-agent-memory-backup-launchd.log</string>
+</dict>
+</plist>
