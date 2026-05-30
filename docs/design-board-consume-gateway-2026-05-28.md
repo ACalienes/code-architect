@@ -212,3 +212,13 @@ Adversarial re-review of all six fixes (rounds 1+2). Findings re-verified closed
 - **DA-f (hardening, applied) — privilege grant must be scoped to GATED types.** The forgery gate was hard-coded to `fact.fact_type === 'supervisor_decision'` while `writeFactValidated` was called with a blanket `{ privileged: true }`. Safe today (one auth-grade type, gated), but a future auth-grade type would inherit `privileged` WITHOUT a supervise gate. **Fix:** gate generalized over `AUTH_GRADE_TYPES`; `privileged` is now `AUTH_GRADE_TYPES.has(fact_type)` — true only for types that just passed the alex+supervise gate. Behavior-preserving for supervisor_decision (37/37 green); closes the latent footgun.
 
 **Verdict:** PASS. Auth posture sound; per-instance lock sound; isolation sound. Ready for Codex round 3 confirm → deploy.
+
+## §11 — Phase 2 DEPLOYED + Phase 3 begun (2026-05-29)
+
+**Phase 2 deployed to the Mini (live).** Codex round 3 = READY (no findings). Restarted board-gateway + board-drainer; migrations applied (scopes/claim_id/lease_until present); all 14 existing tokens stay legacy publish-only (no publisher locked out); /health ok; new endpoints route + auth-gate (401 without token). Live DB + prior source backed up at `~/shared-layer/.deploy-backup-20260529-222849`. Committed `0d40a81` (session-8-board-consumption), pushed.
+
+**Phase 3 — backbone built (`board-consume-lib.js`, 10/10 tests).** Pure orchestration: poll /inbox → claim → handler → ack (ok) / quarantine (permanent) / leave (transient) / skip (no handler, never claimed). No external side effects. Injectable client → fully unit-tested.
+
+**Phase 3 — BINDING behavior decision (Alex, 2026-05-29): SURFACE-AS-READY, never auto-send.** A `supervisor_decision: approve` on a CFO draft makes the handler verify the draft is this agent's + approved, then mark it READY-TO-SEND and notify — the actual money-movement send still requires a final human tap. The Board approval is the AUTHORIZATION, not the trigger. Honors the standing "never auto-send payment" rule. Money-adjacent handlers never auto-execute the irreversible step.
+
+**Remaining Phase 3 (each its own Codex + DA gate before live):** CFO handler (needs CFO draft-format discovery; surface-as-ready) · re-enroll `alex` token with `supervise` + consumer tokens with `read,ack` · switch supervisor `/action` to publish `supervisor_decision` · deploy CFO consumer as pm2 sidecar · verify end-to-end.

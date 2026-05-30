@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Where We Are — Overall Progress</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c232d; --line:#2a323d;
+    --ink:#e6edf3; --muted:#9aa7b4; --faint:#6b7785;
+    --gold:#e3b341; --teal:#2dd4bf; --green:#56d364; --blue:#58a6ff; --dim:#3d4753;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:radial-gradient(1200px 700px at 75% -10%,#13202b 0%,var(--bg) 55%);
+    color:var(--ink);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;
+    padding:48px 20px 80px;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:900px;margin:0 auto}
+  .kicker{letter-spacing:.22em;text-transform:uppercase;font-size:12px;color:var(--gold);font-weight:700}
+  h1{font-size:34px;line-height:1.12;margin:10px 0 10px;letter-spacing:-.01em}
+  .lede{color:var(--muted);font-size:18px;max-width:720px}
+  .rule{height:1px;background:linear-gradient(90deg,var(--gold),transparent);margin:30px 0 26px;border:0}
+  h2{font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--teal);margin:0 0 14px;font-weight:700}
+  .sec{margin:38px 0}
+  /* live-now banner */
+  .live{display:grid;gap:12px}@media(min-width:640px){.live{grid-template-columns:1fr 1fr}}
+  .livecard{background:linear-gradient(180deg,#10201d,var(--panel));border:1px solid #234a45;border-radius:14px;padding:18px 20px}
+  .livecard .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);margin-right:8px;vertical-align:middle}
+  .livecard h3{font-size:16px;margin:0 0 4px;color:var(--green)}
+  .livecard p{color:var(--muted);font-size:14px}
+  /* phase tracker */
+  .track{margin:16px 0 8px}
+  .track h3{font-size:15px;color:var(--ink);margin-bottom:4px}
+  .track .sub{color:var(--faint);font-size:13px;margin-bottom:12px}
+  .bar{display:flex;gap:6px;margin:10px 0}
+  .seg{flex:1;height:8px;border-radius:4px;background:var(--dim)}
+  .seg.done{background:var(--green)} .seg.now{background:var(--gold)} .seg.next{background:var(--dim)}
+  .steps{list-style:none;padding:0;margin:8px 0 0}
+  .steps li{display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--line);font-size:14.5px}
+  .steps li:last-child{border-bottom:0}
+  .badge{flex-shrink:0;font-size:11px;font-weight:800;letter-spacing:.04em;padding:2px 9px;border-radius:20px;margin-top:2px}
+  .b-done{background:#13241b;color:var(--green);border:1px solid #234a2f}
+  .b-live{background:#102a26;color:var(--teal);border:1px solid #1f5048}
+  .b-next{background:#2a2113;color:var(--gold);border:1px solid #4a3c1a}
+  .b-later{background:#1a2029;color:var(--faint);border:1px solid var(--line)}
+  .steps b{color:var(--ink)} .steps span{color:var(--muted)}
+  .pct{float:right;font-size:13px;color:var(--gold);font-weight:700}
+  /* session wins */
+  .wins{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 22px}
+  .wins li{color:var(--muted);margin:6px 0;padding-left:4px}
+  .wins b{color:var(--ink)}
+  .north{background:var(--panel2);border-left:3px solid var(--gold);border-radius:0 10px 10px 0;padding:18px 22px;color:var(--ink)}
+  .north b{color:var(--gold)}
+  .foot{color:var(--faint);font-size:13px;text-align:center;margin-top:38px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="kicker">Code Architect · Progress · 2026-05-29</div>
+  <h1>Where we are</h1>
+  <p class="lede">Two big things moved today, and both are now <b style="color:var(--green)">live and real</b> — not designs, not drafts. Here's the whole board.</p>
+
+  <hr class="rule">
+
+  <div class="sec">
+    <h2>Live right now</h2>
+    <div class="live">
+      <div class="livecard">
+        <h3><span class="dot"></span>Your agents' memory is safe</h3>
+        <p>All 24 agent brains back up hourly to a private GitHub vault + your Mac Mini. The two stranded brains are rescued. A guard watches for it happening again. <b>Catastrophic-loss risk: closed.</b></p>
+      </div>
+      <div class="livecard">
+        <h3><span class="dot"></span>The Board's "action pipe" is deployed</h3>
+        <p>The hardened gateway every agent will read the Board through is live on the Mini — survived 2 adversarial code reviews + a security audit. <b>The pipe is built; one step from agents acting on your clicks.</b></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <h2>The Board — coordination → <i>action</i> <span class="pct">~80% to the closed loop</span></h2>
+    <div class="track">
+      <div class="sub">The journey from "agents can't talk" to "you approve something and the right agent does it."</div>
+      <div class="bar">
+        <div class="seg done"></div><div class="seg done"></div><div class="seg done"></div><div class="seg now"></div><div class="seg next"></div>
+      </div>
+      <ul class="steps">
+        <li><span class="badge b-done">DONE</span><div><b>Everyone connected</b> <span>— all 14 agents on one Board; client walls enforced (sessions 7–8).</span></div></li>
+        <li><span class="badge b-done">DONE</span><div><b>The write door</b> <span>— authenticated gateway so work anywhere can publish to the Board, no spoofing (session 9).</span></div></li>
+        <li><span class="badge b-live">LIVE TODAY</span><div><b>The read/ack pipe (Phase 2)</b> <span>— inbox/claim/ack/quarantine + forgery & auth guards. Hardened through 2 Codex rounds + DA, deployed.</span></div></li>
+        <li><span class="badge b-next">NEXT</span><div><b>Close the loop (Phase 3)</b> <span>— CFO reads your decisions and acts. Your "Approve TDB invoice" click finally fires.</span></div></li>
+        <li><span class="badge b-later">AFTER</span><div><b>Peek / cross-context</b> <span>— agents stay in their lane but pull each other's context to learn.</span></div></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="sec">
+    <h2>Memory — the foundation <span class="pct">floor complete</span></h2>
+    <div class="track">
+      <div class="sub">Make sure no brain can be lost; then let brains learn from each other safely.</div>
+      <div class="bar">
+        <div class="seg done"></div><div class="seg done"></div><div class="seg done"></div><div class="seg next"></div><div class="seg next"></div>
+      </div>
+      <ul class="steps">
+        <li><span class="badge b-live">LIVE TODAY</span><div><b>Backup + de-fork + fork-guard</b> <span>— the safety floor. Two off-laptop copies, hourly.</span></div></li>
+        <li><span class="badge b-done">DECIDED</span><div><b>The "peek" architecture</b> <span>— pull-federation; "narrow push, open scoped pull." Locks how agents share without contamination.</span></div></li>
+        <li><span class="badge b-later">LATER</span><div><b>Curation + recall</b> <span>— distill logs into reusable rules; measure what memory is actually used. Lower urgency.</span></div></li>
+        <li><span class="badge b-later">LATER</span><div><b>The lessons channel</b> <span>— one agent's hard-won lesson teaches the rest. (= peek, applied to learnings.)</span></div></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="sec">
+    <h2>What today moved</h2>
+    <div class="wins">
+      <ul style="list-style:none;padding:0">
+        <li>✅ <b>Found & fixed a silent data-loss risk</b> — agent memory had no off-site backup; the one that existed pointed at a dead copy. Now solved + automated.</li>
+        <li>✅ <b>Decided the cross-context architecture</b> — the principle that lets agents learn from each other without getting polluted.</li>
+        <li>✅ <b>Hardened the Board's action pipe through 3 review rounds</b> — Codex caught 6 real issues (2 critical); all folded. My own DA audit caught a 7th. 37/37 tests green.</li>
+        <li>✅ <b>Deployed Phase 2 to live production</b> — clean, backed up, verified, no publisher disrupted.</li>
+        <li>✅ <b>All code pushed off-laptop</b> to GitHub.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="sec">
+    <h2>The north star</h2>
+    <div class="north">
+      <b>Type a fact once → it reaches the agents who need it. Each agent stays in its own lane, but can peek into another's context to learn.</b><br><br>
+      We're close. The coordination layer (the Board) is live and one step from acting on your decisions automatically. The memory foundation that makes safe sharing possible is now solid. The "peek" layer that fully delivers the vision is designed and queued right behind the loop-closing step.
+    </div>
+  </div>
+
+  <p class="foot">Next move: Phase 3 — the CFO handler that turns your approvals into action. Then peek. · Code Architect</p>
+
+</div>
+</body>
+</html>
