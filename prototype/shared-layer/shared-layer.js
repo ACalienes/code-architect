@@ -39,6 +39,13 @@ const FACT_TYPES = new Set([
 ]);
 const VISIBILITY = new Set(['client', 'internal', 'fleet']);
 
+// Authorization-grade fact types: their mere existence authorizes a downstream agent ACTION, so they
+// must NEVER be mintable through a generic/raw write path (board-publish CLI, direct writeFact, the
+// mesh bridge). Only the authenticated gateway/supervisor path may create them, and it signals that by
+// passing { privileged: true } to writeFact AFTER it has verified alex-identity + supervise scope.
+// (board-consume Codex code-review P0 #2 — close the supervisor_decision forgery back-door.)
+const AUTH_GRADE_TYPES = new Set(['supervisor_decision']);
+
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS facts (
   fact_id       TEXT PRIMARY KEY,
@@ -133,11 +140,18 @@ function subscribe(db, agent, factType, clientScope) {
  * Trusted write path. Runs preflight, persists the fact, then routes it.
  * Returns { ok, fact_id, routed } or { ok:false, error }.
  */
-function writeFact(db, f) {
+function writeFact(db, f, opts = {}) {
   // ── Preflight (Codex B2/S6): reject at the door, before durable write ──
   if (!FACT_TYPES.has(f.fact_type)) {
     audit(db, 'write_rejected', { reason: 'unknown_fact_type', fact_type: f.fact_type });
     return { ok: false, error: `unknown fact_type '${f.fact_type}' (not in registry)` };
+  }
+  // ── Auth-grade guard (board-consume Codex code-review P0 #2): an authorization-grade fact can only
+  //    be created via the privileged gateway/supervisor path. Any raw caller (CLI, mesh bridge, direct
+  //    writeFact) is refused here so a forged "alex approved X" can never persist or route. ──
+  if (AUTH_GRADE_TYPES.has(f.fact_type) && !(opts && opts.privileged)) {
+    audit(db, 'write_rejected', { reason: 'auth_grade_requires_gateway', fact_type: f.fact_type, source: f.source_agent });
+    return { ok: false, error: `'${f.fact_type}' is authorization-grade and can only be created via the authenticated gateway/supervisor path` };
   }
   if (!VISIBILITY.has(f.visibility)) {
     return { ok: false, error: `invalid visibility '${f.visibility}'` };
@@ -295,4 +309,4 @@ function revoke(db, fact_id, reason) {
   });
 }
 
-module.exports = { openDb, applySchema, migrate, subscribe, writeFact, drain, revoke, FACT_TYPES, peek, ack, deadLetterDelivery, pendingStats };
+module.exports = { openDb, applySchema, migrate, subscribe, writeFact, drain, revoke, FACT_TYPES, AUTH_GRADE_TYPES, peek, ack, deadLetterDelivery, pendingStats };

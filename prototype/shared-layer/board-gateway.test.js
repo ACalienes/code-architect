@@ -211,13 +211,20 @@ test('claim: first wins 200, second-by-other 409', () => {
   assert.equal(b.status, 403);
 });
 
-test('claim: same-agent renewal returns 200 with renewal:true', () => {
+test('claim: renewal requires the SAME claim_id (Codex P1 #4 — per-instance lock)', () => {
   const { db, cfoPubTok, cfoConsTok } = setupConsume();
   const { delivery_id } = seedFor(db, cfoPubTok, 'cfo');
   const a = handleClaim(db, trow(db, cfoConsTok), delivery_id, { lease: '600' });
   assert.equal(a.status, 200); assert.equal(a.json.renewal, false);
-  const b = handleClaim(db, trow(db, cfoConsTok), delivery_id, { lease: '600' });
+  assert.ok(a.json.claim_id, 'fresh claim returns a server-issued claim_id');
+  // Renewal by the SAME instance (passing its claim_id) → 200 renewal:true.
+  const b = handleClaim(db, trow(db, cfoConsTok), delivery_id, { lease: '600', claim_id: a.json.claim_id });
   assert.equal(b.status, 200); assert.equal(b.json.renewal, true);
+  // A second instance of the SAME agent (no/old claim_id) cannot steal the live claim → 409.
+  const c = handleClaim(db, trow(db, cfoConsTok), delivery_id, { lease: '600' });
+  assert.equal(c.status, 409, 'same-agent different-instance must NOT auto-renew');
+  const d = handleClaim(db, trow(db, cfoConsTok), delivery_id, { lease: '600', claim_id: 'some-other-uuid' });
+  assert.equal(d.status, 409);
 });
 
 test('claim: rejected on wrong recipient (token agent != delivery recipient)', () => {
@@ -319,5 +326,123 @@ test('publish without publish scope is now blocked', () => {
   });
   assert.equal(r.status, 403);
   assert.match(r.json.error, /publish scope/);
+});
+
+// ── board-consume CODE-REVIEW fold (2026-05-29) — the 5 Codex findings ─────────────────────────────
+const { writeFact } = require('./shared-layer');
+const { writeFactValidated } = require('./registry');
+
+// Seed a CLIENT-scoped delivery (client_id=clientId) routed to `recipientAgent`.
+function seedClientFor(db, recipientAgent, clientId) {
+  const prodTok = enrollToken(db, { agent: 'dag-repo', client_id: clientId, can_produce: ['client_feedback'] });
+  const r = handlePublish(db, trow(db, prodTok), {
+    fact_type: 'client_feedback', visibility: 'client', data_class: 'client_confidential',
+    client_id: clientId, subject_type: 'topic', subject_id: 'cf1', payload: { sentiment: 'loved' },
+  });
+  assert.equal(r.status, 200, 'client seed publish should succeed');
+  const d = db.prepare('SELECT delivery_id FROM deliveries WHERE fact_id=? AND recipient_agent=?').get(r.json.fact_id, recipientAgent);
+  assert.ok(d, `expected a ${clientId} delivery to ${recipientAgent}`);
+  return { fact_id: r.json.fact_id, delivery_id: d.delivery_id };
+}
+
+test("P0 #1: client-bound token CANNOT claim/ack/quarantine another client's delivery", () => {
+  const { db } = setupConsume();
+  const { delivery_id } = seedClientFor(db, 'cfo', 'tdb');                  // a 'tdb' fact delivered to cfo
+  const cfoDagdc = enrollToken(db, { agent: 'cfo', client_id: 'dagdc', scopes: [SCOPE_READ, SCOPE_ACK] });
+  const claim = handleClaim(db, trow(db, cfoDagdc), delivery_id, {});
+  assert.equal(claim.status, 403); assert.match(claim.json.error, /cross-client/);
+  const ack = handleAck(db, trow(db, cfoDagdc), delivery_id);
+  assert.equal(ack.status, 403); assert.match(ack.json.error, /cross-client/);
+  const quar = handleQuarantine(db, trow(db, cfoDagdc), delivery_id, { error: 'x' });
+  assert.equal(quar.status, 403); assert.match(quar.json.error, /cross-client/);
+});
+
+test('P0 #1: matching-client token CAN claim+ack the client delivery (sanity)', () => {
+  const { db } = setupConsume();
+  const { delivery_id } = seedClientFor(db, 'cfo', 'tdb');
+  const cfoTdb = enrollToken(db, { agent: 'cfo', client_id: 'tdb', scopes: [SCOPE_READ, SCOPE_ACK] });
+  assert.equal(handleClaim(db, trow(db, cfoTdb), delivery_id, {}).status, 200);
+  assert.equal(handleAck(db, trow(db, cfoTdb), delivery_id).status, 200);
+});
+
+test('P0 #2: raw writeFact CANNOT mint supervisor_decision (back-door closed)', () => {
+  const { db } = setupConsume();
+  const r = writeFact(db, {
+    fact_type: 'supervisor_decision', visibility: 'internal', data_class: 'internal',
+    source_agent: 'kai', subject_type: 'topic', subject_id: 'x',
+    payload: { decision: 'approve', subject_fact_id: 'f1', supervisor_action_id: 'a1' },
+  });
+  assert.equal(r.ok, false); assert.match(r.error, /authorization-grade/);
+  assert.equal(db.prepare("SELECT COUNT(*) n FROM facts WHERE fact_type='supervisor_decision'").get().n, 0);
+});
+
+test('P0 #2: writeFactValidated without privilege also refuses supervisor_decision', () => {
+  const { db } = setupConsume();
+  const r = writeFactValidated(db, {
+    fact_type: 'supervisor_decision', visibility: 'internal', data_class: 'internal',
+    source_agent: 'kai', subject_id: 'x',
+    payload: { decision: 'approve', subject_fact_id: 'f1', supervisor_action_id: 'a1' },
+  });
+  assert.equal(r.ok, false); assert.match(r.error, /authorization-grade/);
+});
+
+test('P0 #2: privileged writeFact (the gateway path) DOES persist supervisor_decision', () => {
+  const { db } = setupConsume();
+  const r = writeFact(db, {
+    fact_type: 'supervisor_decision', visibility: 'internal', data_class: 'internal',
+    source_agent: 'alex', subject_type: 'topic', subject_id: 'x',
+    payload: { decision: 'approve', subject_fact_id: 'f1', supervisor_action_id: 'a1' },
+  }, { privileged: true });
+  assert.equal(r.ok, true); assert.ok(r.fact_id);
+});
+
+test('P1 #3: ack CANNOT resurrect a quarantined (dead) delivery', () => {
+  const { db, cfoPubTok, cfoConsTok } = setupConsume();
+  const { delivery_id } = seedFor(db, cfoPubTok, 'cfo');
+  assert.equal(handleQuarantine(db, trow(db, cfoConsTok), delivery_id, { error: 'permanent' }).status, 200);
+  const a = handleAck(db, trow(db, cfoConsTok), delivery_id);
+  assert.equal(a.status, 410, 'ack on a dead delivery must be refused');
+  const row = db.prepare('SELECT status, acked_at FROM deliveries WHERE delivery_id=?').get(delivery_id);
+  assert.equal(row.status, 'dead'); assert.equal(row.acked_at, null);
+});
+
+test('P1 #4: two same-agent consumer instances cannot both hold the claim', () => {
+  const { db, cfoPubTok, cfoConsTok } = setupConsume();
+  const { delivery_id } = seedFor(db, cfoPubTok, 'cfo');
+  const inst1 = handleClaim(db, trow(db, cfoConsTok), delivery_id, {});
+  assert.equal(inst1.status, 200); assert.ok(inst1.json.claim_id);
+  const inst2 = handleClaim(db, trow(db, cfoConsTok), delivery_id, {});       // different instance, no claim_id
+  assert.equal(inst2.status, 409, 'second instance locked out while lease is live');
+  // inst1 still owns it (renews with its claim_id).
+  const renew = handleClaim(db, trow(db, cfoConsTok), delivery_id, { claim_id: inst1.json.claim_id });
+  assert.equal(renew.status, 200); assert.equal(renew.json.renewal, true);
+});
+
+test('P2 #5: malformed (non-null) scopes FAILS CLOSED — denies all', () => {
+  const { db } = setupConsume();
+  const t = enrollToken(db, { agent: 'broken', scopes: [SCOPE_READ, SCOPE_PUBLISH] });
+  db.prepare("UPDATE gateway_tokens SET scopes='not json' WHERE agent='broken'").run();
+  const row = trow(db, t);
+  const p = handlePublish(db, row, { fact_type: 'status_update', visibility: 'internal', subject_id: 'x', payload: { status: 'u', detail: 'x' } });
+  assert.equal(p.status, 403, 'malformed scopes must not grant publish');
+  assert.equal(handleInbox(db, row, {}).status, 403, 'malformed scopes must not grant read');
+  // legacy NULL scopes stays publish-only (the intended back-compat), distinct from malformed.
+  const legacy = enrollToken(db, { agent: 'legacy' });
+  db.prepare("UPDATE gateway_tokens SET scopes=NULL WHERE agent='legacy'").run();
+  const lrow = trow(db, legacy);
+  assert.equal(handlePublish(db, lrow, { fact_type: 'status_update', visibility: 'internal', subject_id: 'x', payload: { status: 'u', detail: 'ok' } }).status, 200);
+  assert.equal(handleInbox(db, lrow, {}).status, 403);
+});
+
+test('P2 (round 2): client-bound /inbox does NOT starve behind older other-client rows', () => {
+  const { db } = setupConsume();
+  for (let i = 0; i < 60; i++) seedClientFor(db, 'cfo', 'tdb');        // 60 older other-client rows
+  const { delivery_id: dagId } = seedClientFor(db, 'cfo', 'dagdc');    // 1 allowed row, newest
+  const cfoDagdc = enrollToken(db, { agent: 'cfo', client_id: 'dagdc', scopes: [SCOPE_READ] });
+  const r = handleInbox(db, trow(db, cfoDagdc), { limit: '50' });      // limit smaller than the tdb backlog
+  assert.equal(r.status, 200);
+  assert.ok(r.json.deliveries.find(d => d.delivery_id === dagId),
+    'allowed dagdc row must surface even though 60 older tdb rows precede it under limit 50');
+  for (const d of r.json.deliveries) assert.equal(d.client_id, 'dagdc');   // never another client's row
 });
 

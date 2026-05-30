@@ -12,7 +12,7 @@
  *
  * Internal types use client_id=null (route to '*' subscribers). Pass --client to scope to one client.
  */
-const { openDb, writeFact, FACT_TYPES } = require('./shared-layer');
+const { openDb, writeFact, FACT_TYPES, AUTH_GRADE_TYPES } = require('./shared-layer');
 
 const arg = k => { const i = process.argv.indexOf('--' + k); return i > -1 ? process.argv[i + 1] : undefined; };
 const type = arg('type'), from = arg('from'), subject = arg('subject'), detail = arg('detail');
@@ -24,6 +24,9 @@ if (!type || !from || !detail) {
   process.exit(2);
 }
 if (!FACT_TYPES.has(type)) { console.error(`rejected: unknown fact_type '${type}'. valid: ${[...FACT_TYPES].join(', ')}`); process.exit(2); }
+// Auth-grade fact types (e.g. supervisor_decision) authorize downstream agent action — the CLI must
+// NEVER mint them. Only the authenticated gateway/supervisor path can (board-consume Codex P0 #2).
+if (AUTH_GRADE_TYPES.has(type)) { console.error(`rejected: '${type}' is authorization-grade — only the authenticated gateway/supervisor can create it, never the CLI.`); process.exit(2); }
 
 const db = openDb(process.env.HOME + '/.kameha/kameha-mesh.db');
 const payload = { status, detail };

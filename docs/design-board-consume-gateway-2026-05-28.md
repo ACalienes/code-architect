@@ -184,3 +184,31 @@ Adversarial self-review of the Codex-folded v2 surfaced five additional constrai
 - **DA-e (`gateway_actions` schema — fully specified).** Concrete: `gateway_actions(decision_fact_id TEXT NOT NULL, subject_fact_id TEXT NOT NULL, action_type TEXT NOT NULL, status TEXT NOT NULL CHECK (status IN ('intent','completed','failed','ambiguous')), agent TEXT NOT NULL, ts TEXT NOT NULL, error TEXT, ext_ref TEXT, PRIMARY KEY(decision_fact_id, subject_fact_id, action_type))`. `ext_ref` records the external system's receipt/ID where applicable (QuickBooks invoice id, send receipt id, etc.) for human reconciliation.
 
 **Verdict:** PASS to build with DA-a through DA-e as binding implementation constraints. Re-audit against them before deploy.
+
+---
+
+## §10d — CODE-REVIEW fold — Codex code-level round 1 → REVISE, all 5 folded (2026-05-29)
+
+Codex reviewed the BUILT Phase-2 code (not the design) and returned **REVISE** with 5 findings (2 P0, 2 P1, 1 P2). All folded; gateway suite green (36/36, incl. new coverage Codex named). Nothing was deployed — Phase 2 sat behind this gate.
+
+- **P0 #1 — client scope missing on claim/ack/quarantine.** `/inbox` scoped by `fact.client_id`, but the delivery-id endpoints only checked `recipient_agent`, so a client-bound token could act on another client's delivery by id. **Fix:** added a shared `clientAllowed(tokenRow, fact.client_id)` check (JOIN `facts`) to `handleClaim`/`handleAck`/`handleQuarantine` → 403 cross-client. Tests: cross-client claim/ack/quarantine denial + matching-client sanity.
+- **P0 #2 — `supervisor_decision` forgeable via raw write paths.** `board-publish.js` (trusts `--from`) and core `writeFact`/`shared-layer` accepted `supervisor_decision` with no gateway/supervise check; a forged "alex approved X" persisted + routed. **Fix:** `AUTH_GRADE_TYPES` set in shared-layer; `writeFact` refuses auth-grade types unless `opts.privileged`; gateway `handlePublish` passes `{privileged:true}` only after its alex+supervise gate; `writeFactValidated` forwards `opts`; `board-publish.js` rejects auth-grade types outright. Verified: raw `writeFact`, `writeFactValidated`, and the CLI all refused; privileged gateway path persists.
+- **P1 #3 — ack could resurrect a dead/quarantined delivery.** `handleAck` guarded only `acked_at IS NULL`. **Fix:** added `AND COALESCE(status,'pending') != 'dead'` to the ack UPDATE + a 410 for dead rows in both pre-check and disambiguation. Test: ack-after-quarantine stays `dead`, returns 410.
+- **P1 #4 — claim not a true single-executor lock for same-agent duplicates.** Same-agent claims were always treated as renewal, so two `board-consume-<agent>` instances could both claim+run. **Fix:** added a per-instance `claim_id` column; fresh/expired claims mint a server-issued `claim_id` via compare-and-swap UPDATE; renewal requires the matching `claim_id`; any other claimant (incl. same agent, different/no claim_id) gets 409 while the lease is live. Tests updated + added.
+- **P2 #5 — malformed scopes failed open to publish.** `tokenScopes` returned publish-only on JSON parse error. **Fix:** null/absent = legacy publish-only (intended); malformed non-null (parse error or non-array) = **deny all**; unknown scope strings filtered. Test: garbage scopes denies publish + read; legacy null stays publish-only.
+
+**Status (round 1):** folded + green → re-submit to Codex (round 2).
+
+### Code-review round 2 (2026-05-29) → REVISE, 1 P2, folded
+Codex confirmed all 5 round-1 fixes closed, and found one remaining starvation bug:
+- **P2 — client-bound `/inbox` could starve behind older other-client rows.** The client predicate was a *post-query JS filter* applied AFTER `LIMIT`, so a client-bound token whose allowed rows sort after a full page of other-client rows got an empty page (reproduced: 60 `tdb` + 1 `dagdc`, `limit=50` → count 0). **Fix:** moved the client predicate into the SQL `WHERE` (`AND (? IS NULL OR f.client_id = ? OR f.client_id IS NULL)`) before `ORDER/LIMIT`; removed the JS filter. Unbound token binds NULL → all rows. Regression test added (60 older other-client rows before an allowed one, limit 50 → allowed row still surfaces). Suite 37/37 green.
+
+**Status:** round 1 + round 2 folded, 37/37 green → CA-internal DA re-audit done (below) → Codex round 3 confirm → deploy on READY.
+
+## §10e — CA-internal DA re-audit of the full fold (2026-05-29) — PASS, 1 hardening applied
+
+Adversarial re-review of all six fixes (rounds 1+2). Findings re-verified closed: client scope (incl. the SQL-pushdown that also fixed starvation), the supervisor_decision back-door across CLI/raw/validated paths, ack-no-resurrect-dead, per-instance claim CAS (claim_id is a 122-bit server UUID; guessing is infeasible and cross-agent is blocked by the recipient check anyway), malformed-scopes fail-closed.
+
+- **DA-f (hardening, applied) — privilege grant must be scoped to GATED types.** The forgery gate was hard-coded to `fact.fact_type === 'supervisor_decision'` while `writeFactValidated` was called with a blanket `{ privileged: true }`. Safe today (one auth-grade type, gated), but a future auth-grade type would inherit `privileged` WITHOUT a supervise gate. **Fix:** gate generalized over `AUTH_GRADE_TYPES`; `privileged` is now `AUTH_GRADE_TYPES.has(fact_type)` — true only for types that just passed the alex+supervise gate. Behavior-preserving for supervisor_decision (37/37 green); closes the latent footgun.
+
+**Verdict:** PASS. Auth posture sound; per-instance lock sound; isolation sound. Ready for Codex round 3 confirm → deploy.

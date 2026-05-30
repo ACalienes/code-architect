@@ -1,5 +1,18 @@
 # Codex prompt — review the BUILT code for Board Consume gateway extensions (Phase 2)
 
+> **RE-REVIEW (round 2, 2026-05-29).** Round 1 returned REVISE with 5 findings; all folded (see `docs/design-board-consume-gateway-2026-05-28.md` §10d). Re-verify each fix actually closes the hole AND introduces no regression, then re-issue a verdict:
+> 1. **P0 #1** — client scope now enforced on `/claim`,`/ack`,`/quarantine` via `clientAllowed()` (JOIN facts). Confirm no delivery-id endpoint still checks only `recipient_agent`.
+> 2. **P0 #2** — `AUTH_GRADE_TYPES` guard in core `writeFact` (refuses unless `opts.privileged`); gateway passes privileged only post alex+supervise gate; `board-publish.js` rejects outright. Confirm NO path persists `supervisor_decision` without the gateway/supervise gate (CLI, raw `writeFact`, `writeFactValidated`, mesh bridge).
+> 3. **P1 #3** — `handleAck` now guards `COALESCE(status,'pending') != 'dead'` + returns 410 for dead. Confirm ack cannot flip a quarantined row to acked.
+> 4. **P1 #4** — per-instance `claim_id` + compare-and-swap UPDATE; renewal requires matching `claim_id`; same-agent different-instance → 409. Confirm two instances sharing an agent token cannot both hold a live claim.
+> 5. **P2 #5** — `tokenScopes` fails closed on malformed non-null scopes (deny all); null stays legacy publish-only. Confirm no fail-open.
+>
+> Suite: `node --test prototype/shared-layer/board-gateway.test.js` → 36/36 green (8 new tests cover the above). (One unrelated, pre-existing failure in `projection.test.js` is an environmental setgid dir-mode assertion, not in scope.)
+>
+> **RE-REVIEW (round 3, 2026-05-29).** Round 2 confirmed all round-1 fixes closed; found one P2 (now folded): client-bound `/inbox` applied the client filter in JS AFTER `LIMIT`, starving allowed rows behind a page of other-client rows. **Fix:** client predicate moved into SQL `WHERE` before `ORDER/LIMIT` (`AND (? IS NULL OR f.client_id = ? OR f.client_id IS NULL)`); post-query JS filter removed; regression test added (60 older other-client rows + limit 50 → allowed row still surfaces). Suite now **37/37 green**. Confirm the starvation is closed and no other endpoint relies on a post-LIMIT filter.
+>
+> Also folded a CA-DA hardening (§10e): the forgery gate + writeFact privilege are now generic over `AUTH_GRADE_TYPES` (privilege granted only to types that pass the alex+supervise gate), closing a latent footgun where a future auth-grade type could inherit a blanket privilege. Confirm no path grants `privileged` writeFact without the supervise gate.
+
 You are reviewing the **code** built against `docs/design-board-consume-gateway-2026-05-28.md` v2 (Codex-folded + DA-passed). The design itself you already reviewed and shaped. Now look at the implementation. Verdict: **READY** or **REVISE** with specific, actionable findings.
 
 Be adversarial — this code will guard every Alex-decision → agent-action loop. The corresponding write-side review caught a real spoofing hole; the equivalent risk on the read/ack side is unauthorized inbox read, double-execution via race, ack forgery, scope creep, or the supervisor_decision forgery the design specifically guards against.

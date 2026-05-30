@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Codex Review — Board Consume Phase 2 — Verdict</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c232d; --line:#2a323d;
+    --ink:#e6edf3; --muted:#9aa7b4; --faint:#6b7785;
+    --gold:#e3b341; --teal:#2dd4bf; --red:#f87171; --amber:#f0a35e; --green:#56d364; --blue:#58a6ff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:radial-gradient(1200px 700px at 75% -10%,#1f1518 0%,var(--bg) 55%);
+    color:var(--ink); font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,sans-serif;
+    padding:48px 20px 80px; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:880px;margin:0 auto}
+  .kicker{letter-spacing:.22em;text-transform:uppercase;font-size:12px;color:var(--gold);font-weight:700}
+  h1{font-size:32px;line-height:1.15;margin:10px 0 8px;letter-spacing:-.01em}
+  .verdict{display:inline-flex;align-items:center;gap:10px;background:#2a1518;border:1px solid #5a2b2b;color:var(--red);
+    font-weight:800;font-size:15px;letter-spacing:.08em;padding:8px 16px;border-radius:30px;margin:6px 0 14px}
+  .lede{color:var(--muted);font-size:18px;max-width:720px}
+  .rule{height:1px;background:linear-gradient(90deg,var(--red),transparent);margin:32px 0 26px;border:0}
+  h2{font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--teal);margin:0 0 16px;font-weight:700}
+  .sec{margin:38px 0}
+  .reassure{background:var(--panel2);border-left:3px solid var(--green);border-radius:0 10px 10px 0;padding:16px 22px;color:var(--ink)}
+  .reassure b{color:var(--green)}
+  .find{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px;margin:14px 0;position:relative;overflow:hidden}
+  .find::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px}
+  .find.p0::before{background:var(--red)} .find.p1::before{background:var(--amber)} .find.p2::before{background:var(--blue)}
+  .find .top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+  .sev{font-size:11px;font-weight:800;letter-spacing:.08em;padding:3px 10px;border-radius:20px}
+  .sev.p0{background:#2a1518;color:var(--red);border:1px solid #5a2b2b}
+  .sev.p1{background:#2a2113;color:var(--amber);border:1px solid #4a3c1a}
+  .sev.p2{background:#13212e;color:var(--blue);border:1px solid #1c3a52}
+  .find h3{font-size:17px;margin:0;flex:1;min-width:240px}
+  .lab{font-size:12px;color:var(--faint)}
+  .risk{color:var(--ink);margin:6px 0}
+  .risk b{color:var(--amber)}
+  .fix{color:var(--muted);font-size:15px;margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)}
+  .fix b{color:var(--teal)}
+  .anticip{display:inline-block;font-size:11px;color:var(--gold);background:#2a2113;border:1px solid #4a3c1a;border-radius:20px;padding:2px 9px;margin-left:4px}
+  .flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px}
+  .step{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:14px}
+  .step.now{border-color:var(--teal);color:var(--teal);font-weight:700}
+  .arrow{color:var(--faint)}
+  .foot{color:var(--faint);font-size:13px;text-align:center;margin-top:38px}
+  .grid2{display:grid;gap:14px}@media(min-width:640px){.grid2{grid-template-columns:1fr 1fr}}
+  .mini{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+  .mini .n{font-size:24px;font-weight:800;color:var(--gold)} .mini .l{color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="kicker">Codex Code Review · Board Consume Phase 2 · 2026-05-29</div>
+  <h1>The review came back.</h1>
+  <div class="verdict">● REVISE — 5 issues to fix before deploy</div>
+  <p class="lede">This is the code that will guard <b>every “Alex approved this → agent acts”</b> moment. We ran an adversarial review on purpose, before turning it on. It found 5 holes. <b>This is the system working</b> — they were caught in the lab, not in production.</p>
+
+  <div class="reassure" style="margin-top:18px">
+    <b>Nothing is live.</b> Phase 2 was never deployed — it was built and sitting behind exactly this gate. None of these issues touched anything running. We fix, re-test, re-review, <i>then</i> deploy.
+  </div>
+
+  <hr class="rule">
+
+  <div class="sec">
+    <h2>What Codex found — in plain English</h2>
+
+    <div class="find p0">
+      <div class="top"><span class="sev p0">P0 · critical</span><h3>1. A client-locked agent could touch another client's items</h3><span class="anticip">design intended this</span></div>
+      <p class="risk">An agent token locked to one client is correctly blocked from <i>reading</i> another client's inbox — but the <b>claim / ack / close</b> actions forgot the same lock. If it knew an item's ID, it could close out another client's item. <span class="lab">(The design said the client-lock should cover ack too; the code only put it on read.)</span></p>
+      <p class="fix"><b>Fix:</b> apply the same client check to all four endpoints + add tests that prove cross-client actions are denied.</p>
+    </div>
+
+    <div class="find p0">
+      <div class="top"><span class="sev p0">P0 · critical</span><h3>2. The “only Alex can approve” guard has a back door</h3><span class="anticip">DA flagged the root</span></div>
+      <p class="risk">The front door (the gateway) correctly refuses to let anyone but Alex publish an approval. But an <b>older, separate write path</b> doesn't enforce that — so an agent could forge an <b>“Alex approved this”</b> through the back. Codex confirmed a fake approval persists and routes. <span class="lab">(Our own design review had flagged that this old path trusts whoever it's told — the code didn't close it.)</span></p>
+      <p class="fix"><b>Fix:</b> make approval-grade facts impossible to create anywhere except the authenticated gateway/supervisor path. Block them in the old path outright.</p>
+    </div>
+
+    <div class="find p1">
+      <div class="top"><span class="sev p1">P1 · high</span><h3>3. A “dead / needs-review” item can be secretly revived</h3></div>
+      <p class="risk">When an item fails and gets quarantined (parked for human review), a <b>late ack can flip it back to “done”</b> — hiding a failure that should have stayed visible to you.</p>
+      <p class="fix"><b>Fix:</b> ack must refuse dead items (return “gone”), and we test the quarantine-then-ack ordering.</p>
+    </div>
+
+    <div class="find p1">
+      <div class="top"><span class="sev p1">P1 · high</span><h3>4. The “only one runner” lock isn't airtight for duplicate copies</h3></div>
+      <p class="risk">If two copies of the same agent's consumer run at once (same token), <b>both could grab the same item and both act on it</b> — a double-send risk (e.g. an invoice sent twice).</p>
+      <p class="fix"><b>Fix:</b> give each running copy its own claim ID and only let that exact owner renew — a true compare-and-swap lock.</p>
+    </div>
+
+    <div class="find p2">
+      <div class="top"><span class="sev p2">P2 · lower</span><h3>5. Corrupted permission data defaults to “allowed”</h3></div>
+      <p class="risk">If a token's permissions field is broken (garbled, not just empty), the code treats it as <b>“publish allowed”</b> instead of denying. Fails open instead of closed.</p>
+      <p class="fix"><b>Fix:</b> empty/legacy = publish-only (fine); <b>broken</b> = deny everything.</p>
+    </div>
+  </div>
+
+  <div class="sec">
+    <h2>The numbers</h2>
+    <div class="grid2">
+      <div class="mini"><div class="n">5</div><div class="l">issues to fold (2 critical, 2 high, 1 lower)</div></div>
+      <div class="mini"><div class="n">28 → 28+</div><div class="l">tests pass today; Codex named the missing cases I'll add</div></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <h2>What happens next</h2>
+    <div class="flow">
+      <span class="step now">① Fold all 5 fixes + add tests</span><span class="arrow">→</span>
+      <span class="step">② Full suite green</span><span class="arrow">→</span>
+      <span class="step">③ CA-internal DA (auth-touching)</span><span class="arrow">→</span>
+      <span class="step">④ Re-submit to Codex</span><span class="arrow">→</span>
+      <span class="step">⑤ READY → deploy Phase 2</span>
+    </div>
+    <p style="color:var(--muted);margin-top:14px">All five are well-scoped and the fixes are clear. This is a tighten-and-retest pass, not a redesign. The design held — the implementation needs to catch up to it in five spots.</p>
+  </div>
+
+  <p class="foot">Board Consume Phase 2 · adversarial code review · caught before deploy, as intended.</p>
+
+</div>
+</body>
+</html>

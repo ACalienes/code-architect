@@ -101,11 +101,11 @@ function validatePayload(registry, factType, payload, ver) {
  * stamp the schema version and hand off to the proven writeFact() (which still runs its own
  * preflight + routing). Drop-in for writeFact when the registry is enabled.
  */
-function writeFactValidated(db, fact, registry = defaultRegistry) {
+function writeFactValidated(db, fact, registry = defaultRegistry, opts = {}) {
   const v = validatePayload(registry, fact.fact_type, fact.payload);
   if (!v.ok) return { ok: false, error: `payload failed ${fact.fact_type} schema v${v.version || '?'}: ${v.errors.join('; ')}`, errors: v.errors };
   const stamped = { ...fact, payload: { ...(fact.payload || {}), _schema_ver: v.version } };
-  return writeFact(db, stamped);
+  return writeFact(db, stamped, opts);   // forward privilege (gateway sets {privileged:true} for auth-grade types)
 }
 
 /** Registry/core drift guard: the vocabulary and the core's accepted types must agree. */

@@ -11,8 +11,8 @@
  * called from here (DA-e: this module imports zero handlers).
  */
 const http = require('node:http');
-const { randomBytes, createHash, timingSafeEqual } = require('node:crypto');
-const { openDb, writeFact } = require('./shared-layer');
+const { randomBytes, createHash, timingSafeEqual, randomUUID } = require('node:crypto');
+const { openDb, writeFact, AUTH_GRADE_TYPES } = require('./shared-layer');
 const { withTx } = require('./db');
 const { writeFactValidated, defaultRegistry } = require('./registry');
 const { authzProduce, canonicalFact } = require('./identity');
@@ -70,10 +70,23 @@ CREATE TABLE IF NOT EXISTS gateway_quarantine (
 const SCOPE_PUBLISH = 'publish', SCOPE_READ = 'read', SCOPE_ACK = 'ack', SCOPE_ACT = 'act', SCOPE_SUPERVISE = 'supervise';
 const ALL_SCOPES = new Set([SCOPE_PUBLISH, SCOPE_READ, SCOPE_ACK, SCOPE_ACT, SCOPE_SUPERVISE]);
 function tokenScopes(row) {
-  if (!row.scopes) return new Set([SCOPE_PUBLISH]);   // legacy tokens (no scopes col data) = publish-only
-  try { return new Set(JSON.parse(row.scopes)); } catch (_) { return new Set([SCOPE_PUBLISH]); }
+  // null/absent = legacy token, intentionally publish-only. But a NON-null value that is malformed
+  // (parse error, or not a JSON array) must FAIL CLOSED — deny all scopes — never fall back to publish
+  // (board-consume Codex code-review P0/P2 #5). Unknown scope strings are filtered out defensively.
+  if (row.scopes == null) return new Set([SCOPE_PUBLISH]);
+  try {
+    const arr = JSON.parse(row.scopes);
+    if (!Array.isArray(arr)) return new Set();        // malformed shape → deny all
+    return new Set(arr.filter(s => ALL_SCOPES.has(s)));
+  } catch (_) { return new Set(); }                   // malformed non-null → deny all
 }
 const hasScope = (row, scope) => tokenScopes(row).has(scope);
+
+// Client-binding check shared by every delivery-id endpoint (Codex code-review P0 #1): an unbound
+// (internal) token sees all clients; a client-bound token may only touch its own client's facts or
+// internal (null-client) facts. factClientId comes from the JOINed facts row.
+const clientAllowed = (tokenRow, factClientId) =>
+  tokenRow.client_id == null || factClientId === tokenRow.client_id || factClientId == null;
 
 function ensureGatewayTables(db) {
   db.exec(GATEWAY_SCHEMA);
@@ -82,6 +95,7 @@ function ensureGatewayTables(db) {
     'ALTER TABLE gateway_tokens ADD COLUMN scopes TEXT',
     'ALTER TABLE deliveries     ADD COLUMN claimed_at TEXT',
     'ALTER TABLE deliveries     ADD COLUMN claimed_by TEXT',
+    'ALTER TABLE deliveries     ADD COLUMN claim_id TEXT',       // v2.1: per-instance claim owner (Codex P1 #4)
     'ALTER TABLE deliveries     ADD COLUMN lease_until TEXT',
     'ALTER TABLE deliveries     ADD COLUMN dead_reason TEXT',
     'ALTER TABLE deliveries     ADD COLUMN delivery_attempts INTEGER NOT NULL DEFAULT 0',
@@ -159,13 +173,15 @@ function handlePublish(db, tokenRow, rawBody) {
   fact.source_agent = tokenRow.agent;
   if (tokenRow.client_id != null) fact.client_id = tokenRow.client_id; // bound token → forced client scope
 
-  // v2 / Codex consume P0 #5 — `supervisor_decision` is the ONLY fact_type that authorizes downstream
-  // agent action. Forgery guard: must be posted by the 'alex' identity with the 'supervise' scope.
-  // Plain `decision` facts retain their original audit-only semantic.
-  if (fact.fact_type === 'supervisor_decision') {
-    if (tokenRow.agent !== 'alex' || !hasScope(tokenRow, SCOPE_SUPERVISE)) {
-      return { status: 403, json: { ok: false, error: 'unauthorized: supervisor_decision requires alex identity + supervise scope' } };
-    }
+  // v2 / Codex consume P0 #5 (+ CA-DA re-audit hardening) — an authorization-grade fact_type (today:
+  // supervisor_decision) authorizes downstream agent action. Forgery guard is GENERIC over
+  // AUTH_GRADE_TYPES (not a single hard-coded type): any such type requires the 'alex' identity + the
+  // 'supervise' scope. This is what later grants writeFact privilege — keep the two in lockstep so a
+  // future auth-grade type can never be granted privilege without passing this gate. Plain `decision`
+  // facts retain their original audit-only semantic.
+  const authGrade = AUTH_GRADE_TYPES.has(fact.fact_type);
+  if (authGrade && (tokenRow.agent !== 'alex' || !hasScope(tokenRow, SCOPE_SUPERVISE))) {
+    return { status: 403, json: { ok: false, error: `unauthorized: ${fact.fact_type} requires alex identity + supervise scope` } };
   }
   // v2 — to publish anything at all, the token needs `publish` scope (legacy tokens get this by default).
   if (!hasScope(tokenRow, SCOPE_PUBLISH)) {
@@ -185,7 +201,10 @@ function handlePublish(db, tokenRow, rawBody) {
         return { status: 409, json: { ok: false, error: 'idempotency_key reused with a different request' } };
       }
     }
-    const r = writeFactValidated(db, fact, defaultRegistry);
+    // privileged ONLY for auth-grade types that just passed the alex+supervise gate above. Non-auth
+    // types pass privileged:false (writeFact ignores it for them). This keeps the privilege grant
+    // strictly scoped to gated types — no blanket privilege that a future auth-grade type could inherit.
+    const r = writeFactValidated(db, fact, defaultRegistry, { privileged: authGrade });
     if (!r.ok) return { status: 422, json: { ok: false, error: r.error } };
     const resp = { ok: true, fact_id: r.fact_id, routed: r.routed };
     if (idk !== undefined) {
@@ -215,6 +234,9 @@ function handleInbox(db, tokenRow, query) {
   if (limit > INBOX_MAX) limit = INBOX_MAX;
   const nowIso = new Date().toISOString();
   // Deliveries unacked, and either not claimed OR claim expired OR self-claimed (so self can renew/see).
+  // Client predicate is IN THE SQL, before ORDER/LIMIT (Codex code-review round 2 P2): a post-query JS
+  // filter could starve a client-bound token whose allowed rows sort after a full page of other-client
+  // rows. Unbound token (client_id NULL) → the first bind is NULL, so the OR short-circuits to all rows.
   const rows = db.prepare(
     `SELECT d.delivery_id, d.fact_id, d.kind, d.scope, d.created_at, d.delivery_attempts,
             d.claimed_by, d.lease_until,
@@ -224,12 +246,11 @@ function handleInbox(db, tokenRow, query) {
         AND d.acked_at IS NULL
         AND COALESCE(d.status, 'pending') != 'dead'
         AND (d.claimed_at IS NULL OR d.lease_until IS NULL OR d.lease_until < ? OR d.claimed_by = ?)
+        AND (? IS NULL OR f.client_id = ? OR f.client_id IS NULL)
       ORDER BY d.created_at ASC, d.delivery_id ASC
       LIMIT ?`
-  ).all(tokenRow.agent, nowIso, tokenRow.agent, limit);
-  // Client-bound token: filter to its client's facts (or internal facts where client_id is null).
-  const filtered = tokenRow.client_id == null ? rows : rows.filter(r => r.client_id === tokenRow.client_id || r.client_id == null);
-  const deliveries = filtered.map(r => ({
+  ).all(tokenRow.agent, nowIso, tokenRow.agent, tokenRow.client_id, tokenRow.client_id, limit);
+  const deliveries = rows.map(r => ({
     delivery_id: r.delivery_id, fact_id: r.fact_id, kind: r.kind, scope: r.scope,
     created_at: r.created_at, delivery_attempts: r.delivery_attempts || 0,
     claimed_by: r.claimed_by, lease_until: r.lease_until,
@@ -240,30 +261,58 @@ function handleInbox(db, tokenRow, query) {
   return { status: 200, json: { ok: true, agent: tokenRow.agent, count: deliveries.length, deliveries } };
 }
 
-/** POST /claim/<delivery_id>?lease=<seconds> — atomic claim with TTL. Renewable by the same agent.
- *  Returns 200 { lease_until } on claim/renewal; 409 { claimed_by, lease_until } if held by another;
- *  404 if delivery doesn't exist; 403 if recipient mismatch; 410 if already acked or dead. */
+/** POST /claim/<delivery_id>?lease=<seconds>[&claim_id=<uuid>] — atomic, per-instance claim with TTL.
+ *  A claim is owned by a specific consumer INSTANCE, identified by a server-issued `claim_id` (NOT just
+ *  the agent), so two instances sharing the same agent token cannot both hold it (Codex P1 #4).
+ *   - fresh/expired delivery → server mints a new claim_id (returned); compare-and-swap takeover.
+ *   - holder renews by passing its own ?claim_id=<uuid> (matches the stored one).
+ *   - any other claimant (incl. same agent, different/absent claim_id) while the lease is live → 409.
+ *  Returns 200 { claim_id, lease_until, renewal }; 409 held-by-another; 404 missing; 403 recipient/
+ *  cross-client mismatch; 410 acked or dead. */
 function handleClaim(db, tokenRow, delivery_id, query) {
   if (!hasScope(tokenRow, SCOPE_READ)) return { status: 403, json: { ok: false, error: 'unauthorized: token lacks read scope' } };
   if (!okStr(delivery_id, 80)) return { status: 400, json: { ok: false, error: 'invalid delivery_id' } };
+  const reqClaimId = (query && okStr(query.claim_id, 80)) ? query.claim_id : null;
   let leaseS = Number(query && query.lease) || DEFAULT_LEASE_S;
   if (!Number.isFinite(leaseS) || leaseS < 1) leaseS = DEFAULT_LEASE_S;
   if (leaseS > MAX_LEASE_S) leaseS = MAX_LEASE_S;
   return withBusyRetry(() => withTx(db, () => {
-    const d = db.prepare('SELECT delivery_id, recipient_agent, status, claimed_by, claimed_at, lease_until, acked_at FROM deliveries WHERE delivery_id = ?').get(delivery_id);
+    const d = db.prepare(
+      `SELECT d.delivery_id, d.recipient_agent, d.status, d.claimed_by, d.claimed_at, d.claim_id, d.lease_until, d.acked_at, f.client_id
+         FROM deliveries d JOIN facts f ON f.fact_id = d.fact_id WHERE d.delivery_id = ?`).get(delivery_id);
     if (!d) return { status: 404, json: { ok: false, error: 'delivery not found' } };
     if (d.recipient_agent !== tokenRow.agent) return { status: 403, json: { ok: false, error: 'unauthorized: not the recipient' } };
+    if (!clientAllowed(tokenRow, d.client_id)) return { status: 403, json: { ok: false, error: 'unauthorized: cross-client delivery' } };
     if (d.acked_at) return { status: 410, json: { ok: false, error: 'already acked' } };
     if (d.status === 'dead') return { status: 410, json: { ok: false, error: 'delivery is dead' } };
-    // Already self-claimed → treat as renewal.
-    // Held by another agent and lease unexpired → 409.
-    if (d.claimed_at && !isPast(d.lease_until) && d.claimed_by !== tokenRow.agent) {
+
+    const heldLive = d.claimed_at && !isPast(d.lease_until);
+    if (heldLive) {
+      // Only the exact instance that holds the live claim may renew. Same-agent-but-different-instance → 409.
+      if (reqClaimId && d.claim_id === reqClaimId) {
+        const lease_until = isoPlusSeconds(leaseS);
+        const rn = db.prepare("UPDATE deliveries SET claimed_at = ?, lease_until = ? WHERE delivery_id = ? AND claim_id = ?")
+          .run(now(), lease_until, delivery_id, reqClaimId);
+        if (rn.changes > 0) return { status: 200, json: { ok: true, delivery_id, claim_id: reqClaimId, lease_until, renewal: true } };
+      }
       return { status: 409, json: { ok: false, error: 'already claimed', claimed_by: d.claimed_by, lease_until: d.lease_until } };
     }
+
+    // Fresh or expired → take it with a NEW claim_id, compare-and-swap on the prior unclaimed/expired state.
+    const claim_id = randomUUID();
     const lease_until = isoPlusSeconds(leaseS);
-    db.prepare("UPDATE deliveries SET claimed_by = ?, claimed_at = ?, lease_until = ? WHERE delivery_id = ?")
-      .run(tokenRow.agent, now(), lease_until, delivery_id);
-    return { status: 200, json: { ok: true, delivery_id, lease_until, renewal: d.claimed_by === tokenRow.agent } };
+    const nowIso = new Date().toISOString();
+    const info = db.prepare(
+      `UPDATE deliveries SET claimed_by = ?, claim_id = ?, claimed_at = ?, lease_until = ?
+        WHERE delivery_id = ? AND acked_at IS NULL AND COALESCE(status,'pending') != 'dead'
+          AND (claimed_at IS NULL OR lease_until IS NULL OR lease_until < ?)`)
+      .run(tokenRow.agent, claim_id, now(), lease_until, delivery_id, nowIso);
+    if (info.changes === 0) {
+      // Lost the race to another claimant between SELECT and UPDATE.
+      const d2 = db.prepare('SELECT claimed_by, lease_until FROM deliveries WHERE delivery_id = ?').get(delivery_id);
+      return { status: 409, json: { ok: false, error: 'already claimed', claimed_by: d2 && d2.claimed_by, lease_until: d2 && d2.lease_until } };
+    }
+    return { status: 200, json: { ok: true, delivery_id, claim_id, lease_until, renewal: false } };
   }));
 }
 
@@ -273,15 +322,24 @@ function handleAck(db, tokenRow, delivery_id /*, body */) {
   if (!hasScope(tokenRow, SCOPE_ACK)) return { status: 403, json: { ok: false, error: 'unauthorized: token lacks ack scope' } };
   if (!okStr(delivery_id, 80)) return { status: 400, json: { ok: false, error: 'invalid delivery_id' } };
   return withBusyRetry(() => withTx(db, () => {
-    const info = db.prepare("UPDATE deliveries SET acked_at = ?, acked_by = ?, status = 'acked' WHERE delivery_id = ? AND recipient_agent = ? AND acked_at IS NULL")
+    // Pre-check recipient + client scope + dead (Codex P0 #1 cross-client, P1 #3 no-resurrect-dead).
+    const pre = db.prepare(
+      `SELECT d.recipient_agent, d.acked_at, d.acked_by, d.status, f.client_id
+         FROM deliveries d JOIN facts f ON f.fact_id = d.fact_id WHERE d.delivery_id = ?`).get(delivery_id);
+    if (!pre) return { status: 404, json: { ok: false, error: 'delivery not found' } };
+    if (pre.recipient_agent !== tokenRow.agent) return { status: 403, json: { ok: false, error: 'unauthorized: not the recipient' } };
+    if (!clientAllowed(tokenRow, pre.client_id)) return { status: 403, json: { ok: false, error: 'unauthorized: cross-client delivery' } };
+    if (pre.status === 'dead') return { status: 410, json: { ok: false, error: 'delivery is dead (quarantined) — cannot ack' } };
+    // First-writer-wins atomic ack; the not-dead guard in the predicate stops any resurrect-on-race.
+    const info = db.prepare(
+      "UPDATE deliveries SET acked_at = ?, acked_by = ?, status = 'acked' WHERE delivery_id = ? AND recipient_agent = ? AND acked_at IS NULL AND COALESCE(status,'pending') != 'dead'")
       .run(now(), tokenRow.agent, delivery_id, tokenRow.agent);
     if (info.changes > 0) return { status: 200, json: { ok: true, delivery_id, first_ack: true } };
-    // Zero rows changed — disambiguate (Codex P1 #6).
-    const d = db.prepare('SELECT recipient_agent, acked_at, acked_by, status FROM deliveries WHERE delivery_id = ?').get(delivery_id);
-    if (!d) return { status: 404, json: { ok: false, error: 'delivery not found' } };
-    if (d.recipient_agent !== tokenRow.agent) return { status: 403, json: { ok: false, error: 'unauthorized: not the recipient' } };
-    if (d.acked_at && d.acked_by === tokenRow.agent) return { status: 200, json: { ok: true, delivery_id, first_ack: false, acked_at: d.acked_at } };
-    return { status: 409, json: { ok: false, error: 'already acked by another writer', acked_by: d.acked_by, acked_at: d.acked_at } };
+    // Zero rows changed — disambiguate (Codex P1 #6). Re-read in case a concurrent writer landed.
+    const d = db.prepare('SELECT acked_at, acked_by, status FROM deliveries WHERE delivery_id = ?').get(delivery_id);
+    if (d && d.status === 'dead') return { status: 410, json: { ok: false, error: 'delivery is dead (quarantined) — cannot ack' } };
+    if (d && d.acked_at && d.acked_by === tokenRow.agent) return { status: 200, json: { ok: true, delivery_id, first_ack: false, acked_at: d.acked_at } };
+    return { status: 409, json: { ok: false, error: 'already acked by another writer', acked_by: d && d.acked_by, acked_at: d && d.acked_at } };
   }));
 }
 
@@ -293,9 +351,12 @@ function handleQuarantine(db, tokenRow, delivery_id, body) {
   const reason = String((body && body.error) || 'unspecified').slice(0, 1000);
   const handler = String((body && body.handler) || '').slice(0, 100);
   return withBusyRetry(() => withTx(db, () => {
-    const d = db.prepare('SELECT delivery_id, fact_id, recipient_agent, acked_at, status FROM deliveries WHERE delivery_id = ?').get(delivery_id);
+    const d = db.prepare(
+      `SELECT d.delivery_id, d.fact_id, d.recipient_agent, d.acked_at, d.status, f.client_id
+         FROM deliveries d JOIN facts f ON f.fact_id = d.fact_id WHERE d.delivery_id = ?`).get(delivery_id);
     if (!d) return { status: 404, json: { ok: false, error: 'delivery not found' } };
     if (d.recipient_agent !== tokenRow.agent) return { status: 403, json: { ok: false, error: 'unauthorized: not the recipient' } };
+    if (!clientAllowed(tokenRow, d.client_id)) return { status: 403, json: { ok: false, error: 'unauthorized: cross-client delivery' } };
     if (d.acked_at) return { status: 410, json: { ok: false, error: 'delivery already acked — cannot quarantine' } };
     db.prepare('INSERT OR REPLACE INTO gateway_quarantine (delivery_id, fact_id, agent, handler, error, ts) VALUES (?, ?, ?, ?, ?, ?)')
       .run(delivery_id, d.fact_id, tokenRow.agent, handler || null, reason, now());
