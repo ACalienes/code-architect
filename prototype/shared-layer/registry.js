@@ -60,7 +60,9 @@ const defaultRegistry = {
   decision: { current: '1', versions: { '1':
     S(['text'], { text: { type: 'string' }, rationale: { type: 'string' } }) } },
   status_update: { current: '1', versions: { '1':
-    S(['status'], { status: { type: 'string' }, detail: { type: 'string' } }) } },
+    // `draft_ref` (Phase 3 §12.3): optional CFO_DIR-relative path so a cfo-draft status_update names the
+    // exact draft file. additionalProperties:false would otherwise reject it at the door — allowlist it.
+    S(['status'], { status: { type: 'string' }, detail: { type: 'string' }, draft_ref: { type: 'string' } }) } },
   work_order: { current: '1', versions: { '1':
     S(['task'], { task: { type: 'string' }, priority: { type: 'string', enum: ['low', 'med', 'high'] } }) } },
   // Added 2026-05-27 with the new coordination types. Kept PERMISSIVE (no tight status enums) to match
@@ -82,6 +84,58 @@ const defaultRegistry = {
       subject_fact_id:       { type: 'string' },
       supervisor_action_id:  { type: 'string' },
       rationale:             { type: 'string' },
+      // `context` (Phase 3 §12.2): trusted provenance the supervisor copies from the decided fact at
+      // click time — supervisor_decision is authorization-grade (only the alex+supervise token may
+      // publish it), so a handler can read this instead of a separate fact-fetch endpoint. The handler
+      // STILL re-checks subject_source_agent before acting (defense-in-depth).
+      context: { type: 'object', additionalProperties: false, properties: {
+        subject_source_agent: { type: 'string' },
+        draft_ref:            { type: 'string' },
+      } },
+    }) } },
+
+  // Added 2026-05-30 — boardroom pivot, project-logs integration (Path C hybrid). `source_ref` is the
+  // pointer back to the originating cold file (e.g. logs/projects.json#<id>) so files stay as reference
+  // while facts are the forward source of truth. All optional except the identity/required fields.
+  project: { current: '1', versions: { '1':
+    // source_ref is REQUIRED — Path C means every fact carries provenance back to its cold file (Codex MED).
+    S(['project_id', 'name', 'source_ref'], {
+      project_id: { type: 'string' },
+      name:       { type: 'string' },
+      client:     { type: 'string' },
+      partner:    { type: 'string' },
+      workflow:   { type: 'string' },                                            // production | content | …
+      stage:      { type: 'string' },                                            // label or number-as-string
+      // FREE STRING, not an enum: real projects.json holds active/archived/completed/on_hold/template_ready/
+      // current/… — a fixed enum would REJECT real data on ingest (Codex MED). Provenance over policing.
+      status:     { type: 'string' },
+      next_steps: { type: 'string' },
+      source_ref: { type: 'string' },
+    }) } },
+  production_event: { current: '1', versions: { '1':
+    S(['event', 'occurred_on', 'source_ref'], {
+      event:        { type: 'string' },
+      occurred_on:  { type: 'string' },                                          // ISO date
+      project_ref:  { type: 'string' },                                          // → a project fact's project_id
+      client:       { type: 'string' },
+      location:     { type: 'string' },
+      hours:        { type: 'string' },
+      engagement:   { type: 'string' },                                          // White-Label | Direct | …
+      deliverables: { type: 'string' },
+      status:       { type: 'string', enum: ['scheduled', 'in_progress', 'completed', 'logged'] },
+      source_ref:   { type: 'string' },
+    }) } },
+  // The Phase-1 health emitter's fact — watches the boardroom (the new system of record) itself.
+  health_alert: { current: '1', versions: { '1':
+    S(['severity', 'subject'], {
+      severity:   { type: 'string', enum: ['info', 'warn', 'critical'] },
+      subject:    { type: 'string' },                                            // what (process / mesh / disk)
+      condition:  { type: 'string' },                                            // e.g. process_down | flapping | backlog | recovered
+      detail:     { type: 'string' },
+      metric:     { type: 'string' },
+      value:      { type: 'string' },
+      threshold:  { type: 'string' },
+      source:     { type: 'string' },                                            // pm2 | mesh | disk | log
     }) } },
 };
 

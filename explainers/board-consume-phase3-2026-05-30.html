@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Board Consume · Phase 3 — CFO consumer + supervisor switch</title>
+<style>
+  :root{
+    --bg:#0b0e14; --panel:#121722; --panel2:#0f1420; --ink:#e7ecf3; --muted:#8b97a8;
+    --line:#1e2633; --accent:#6ea8fe; --good:#41d18b; --warn:#f0b34a; --bad:#f0707a;
+    --chip:#1a2230; --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;line-height:1.5}
+  a{color:var(--accent);text-decoration:none}
+  .wrap{max-width:980px;margin:0 auto;padding:40px 24px 80px}
+  .kicker{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  h1{font-size:30px;margin:.25em 0 .15em;letter-spacing:-.02em}
+  h2{font-size:18px;margin:38px 0 14px;letter-spacing:-.01em;display:flex;align-items:center;gap:10px}
+  h2::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--accent);transform:rotate(45deg)}
+  .sub{color:var(--muted);font-size:15px;max-width:72ch}
+  .bar{height:1px;background:linear-gradient(90deg,var(--line),transparent);margin:26px 0 0}
+  .grid{display:grid;gap:14px}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  @media(max-width:720px){.g3{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}
+  .card .n{font-size:26px;font-weight:700;letter-spacing:-.02em}
+  .card .l{color:var(--muted);font-size:13px;margin-top:2px}
+  .chip{display:inline-flex;align-items:center;gap:6px;background:var(--chip);border:1px solid var(--line);
+    border-radius:999px;padding:4px 11px;font-size:12.5px;color:var(--muted);font-weight:600}
+  .dot{width:7px;height:7px;border-radius:50%}
+  .ok{background:var(--good)} .wn{background:var(--warn)} .ac{background:var(--accent)}
+  .pill{font:600 11px/1 var(--mono);padding:3px 7px;border-radius:6px;letter-spacing:.02em;white-space:nowrap}
+  .pill.high{background:rgba(240,112,122,.14);color:#ff9aa2;border:1px solid rgba(240,112,122,.3)}
+  .pill.med{background:rgba(240,179,74,.14);color:#ffce80;border:1px solid rgba(240,179,74,.3)}
+  .pill.fix{background:rgba(65,209,139,.13);color:#7fe7b4;border:1px solid rgba(65,209,139,.3)}
+  .pill.acc{background:rgba(110,168,254,.13);color:#a9c8ff;border:1px solid rgba(110,168,254,.3)}
+  table{width:100%;border-collapse:collapse;font-size:14px;margin-top:4px}
+  th,td{text-align:left;padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em;font-weight:600}
+  td code,.mono{font-family:var(--mono);font-size:12.5px;color:#bcd2ff}
+  .flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:10px;margin-top:6px}
+  .step{flex:1;min-width:150px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .step .t{font-weight:700;font-size:14px;margin-bottom:4px}
+  .step .d{color:var(--muted);font-size:12.5px}
+  .arrow{display:flex;align-items:center;color:var(--muted);font-size:20px}
+  .never{margin-top:12px;border:1px dashed rgba(240,112,122,.45);background:rgba(240,112,122,.06);
+    border-radius:12px;padding:12px 14px;font-size:13.5px;color:#ffb3b8}
+  ul.tight{margin:6px 0 0;padding-left:18px} ul.tight li{margin:5px 0;color:var(--muted);font-size:14px}
+  ul.tight li b{color:var(--ink);font-weight:600}
+  .foot{margin-top:40px;color:var(--muted);font-size:12.5px;border-top:1px solid var(--line);padding-top:16px}
+  .gate{background:linear-gradient(180deg,#13233a,#0f1828);border:1px solid #1f3553;border-radius:14px;padding:18px 20px}
+  .gate ol{margin:8px 0 0;padding-left:20px} .gate li{margin:7px 0;font-size:14px}
+  .tagrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="kicker">Code Architect · The Board · session 12 · 2026-05-30</div>
+  <h1>Board Consume — Phase&nbsp;3</h1>
+  <p class="sub">Closing the loop: an approval you click on the supervisor view reaches the agent that
+  acts on it. This session built the <b>CFO consumer</b> and switched the supervisor to publish an
+  authorization-grade decision — under one binding rule: <b>surface-as-ready, never auto-send.</b></p>
+
+  <div class="tagrow">
+    <span class="chip"><span class="dot ac"></span>Built</span>
+    <span class="chip"><span class="dot ok"></span>4 Codex rounds folded</span>
+    <span class="chip"><span class="dot ok"></span>CA-DA passed</span>
+    <span class="chip"><span class="dot ok"></span>77 / 78 tests green</span>
+    <span class="chip"><span class="dot wn"></span>Deploy gated on your go-ahead</span>
+  </div>
+
+  <div class="bar"></div>
+
+  <h2>The loop it builds</h2>
+  <div class="flow">
+    <div class="step"><div class="t">You approve</div><div class="d">Click Approve on a CFO invoice/estimate in the supervisor view (:3352).</div></div>
+    <div class="arrow">→</div>
+    <div class="step"><div class="t">supervisor_decision</div><div class="d">Supervisor publishes an authorization-grade fact (only the alex+supervise token can).</div></div>
+    <div class="arrow">→</div>
+    <div class="step"><div class="t">CFO consumer</div><div class="d">Laptop-side. Verifies it's CFO's <i>own</i> draft + approved.</div></div>
+    <div class="arrow">→</div>
+    <div class="step"><div class="t">Surfaces READY</div><div class="d">Writes <code>.ready.json</code> + echoes "READY TO SEND" to the Board.</div></div>
+  </div>
+  <div class="never">🔒 <b>No money path exists in the consumer.</b> Its only effects are a local marker file and a status echo — the actual invoice send stays a final human tap in CFO. Surface-as-ready is enforced by <i>absence of capability</i>, not a flag.</div>
+
+  <h2>By the numbers</h2>
+  <div class="grid g3">
+    <div class="card"><div class="n">8</div><div class="l">files changed / added</div></div>
+    <div class="card"><div class="n">77<span style="color:var(--muted);font-size:16px">/78</span></div><div class="l">tests green · 1 pre-existing env fail</div></div>
+    <div class="card"><div class="n">4</div><div class="l">Codex rounds · 3 HIGH + 2 MED folded</div></div>
+  </div>
+
+  <h2>The Codex review saga</h2>
+  <p class="sub">Every round caught something real. This is the gate doing its job — the symlink hardening alone took three passes to fully close.</p>
+  <table>
+    <thead><tr><th>Round</th><th>Finding</th><th>Resolution</th></tr></thead>
+    <tbody>
+      <tr><td><span class="pill high">R1 · HIGH</span></td><td>Fresh UUID per click → replay returns <b>409</b>, not idempotent</td><td><span class="pill fix">FOLDED</span> deterministic <code>supervisor_action_id</code> (sha256 of idem key) → byte-identical body</td></tr>
+      <tr><td><span class="pill high">R1 · HIGH</span></td><td>Lexical path check missed a symlinked drafts dir → sidecar written outside the tree</td><td><span class="pill fix">FOLDED</span> <code>realpathSync</code> containment + lstat-refuse symlink sidecar</td></tr>
+      <tr><td><span class="pill med">R1 · MED</span></td><td><code>approved_at</code> drifts on echo retry</td><td><span class="pill fix">FOLDED</span> stamp from delivery-creation time (stable)</td></tr>
+      <tr><td><span class="pill high">R2 · HIGH</span></td><td>The <i>temp</i> file itself was symlink-followable (predictable name)</td><td><span class="pill fix">FOLDED</span> unguessable name + <code>O_CREAT|O_EXCL|O_NOFOLLOW</code> + atomic rename</td></tr>
+      <tr><td><span class="pill med">R3 · MED</span></td><td>Symlink <code>alias.json→notes.txt</code> overwrote an in-tree non-draft file</td><td><span class="pill fix">FOLDED</span> re-check <code>.json</code> suffix on the <i>resolved</i> path</td></tr>
+      <tr><td><span class="pill high">R3 · HIGH</span></td><td>Supervisor <code>/action</code> token readable from the unauthenticated page</td><td><span class="pill acc">ACCEPTED-RISK</span> Tailscale-boundary posture; no-auto-send bounds blast radius. Tailscale-identity gate filed next.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>How it's wired (the safe shortcuts)</h2>
+  <ul class="tight">
+    <li><b>Routing</b> — CFO subscribes to <code>supervisor_decision</code>; every subscriber gets all of them, so the handler <b>self-filters</b> by subject authorship (acts only on its own draft).</li>
+    <li><b>Trust without a new endpoint</b> — the supervisor embeds a trusted <code>context{subject_source_agent, draft_ref}</code>; safe because only the alex+supervise token can publish that fact type (the Phase-2 forgery gate).</li>
+    <li><b>Producer fix</b> — the <code>cfo-draft</code> fact now carries <code>draft_ref</code> so the approval names the exact file. Idempotency key unchanged → no re-posts.</li>
+    <li><b>Idempotent replay</b> — distinct <code>alex:sd:</code> key prefix avoids colliding with legacy decisions; re-clicking Approve is a clean 200, not a 409.</li>
+  </ul>
+
+  <h2>What's left — the finish line</h2>
+  <div class="gate">
+    <div style="font-weight:700;font-size:15px;margin-bottom:2px">Two gated steps · both need your go-ahead</div>
+    <ol>
+      <li><b>Codex round 4</b> — confirm the round-3 fixes are clean (#2 folded; #1 noted as accepted). Prompt is ready to paste.</li>
+      <li><b>Deploy + verify</b> (DA's binding order): re-enroll <code>alex(publish,supervise)</code> + <code>cfo(publish,read,ack)</code> → subscribe <code>cfo→supervisor_decision</code> → deploy supervisor + producer to the Mini → run the CFO consumer laptop-side → approve the TDB invoice → confirm <code>.ready.json</code> + the Board echo. <b>Nothing auto-sends.</b></li>
+    </ol>
+  </div>
+  <ul class="tight" style="margin-top:14px">
+    <li><b>Filed for next:</b> harden the supervisor surface with a Tailscale identity gate (the accepted-risk follow-up).</li>
+    <li><b>Not yet committed</b> — staged nothing (per-commit go-ahead); the prior Phase-3 backbone commit <code>4ec60e4</code> is also still unpushed.</li>
+  </ul>
+
+  <div class="foot">
+    Code Architect · branch <span class="mono">session-8-board-consumption</span> · design of record:
+    <span class="mono">docs/design-board-consume-gateway-2026-05-28.md §12</span> ·
+    Board gateway live on the Mini (:3351) · supervisor view (:3352).
+  </div>
+</div>
+</body>
+</html>

@@ -32,7 +32,7 @@ const supervisorToken = () => _superToken || (_superToken = fs.readFileSync(SUPE
 // device can POST forged 'Alex approved' facts). Token auto-generated on first run, persisted 0600,
 // then embedded SERVER-SIDE in the rendered HTML so the browser sends it back as
 // `X-Supervisor-Action` on every /action POST. Rotate by deleting the file and restarting.
-const { randomBytes, timingSafeEqual } = require('node:crypto');
+const { randomBytes, timingSafeEqual, createHash } = require('node:crypto');
 const path = require('node:path');
 const SUPERVISOR_ACTION_TOKEN_FILE = process.env.SUPERVISOR_ACTION_TOKEN_FILE || `${HOME}/.kameha/supervisor.token`;
 let _supActionToken = null;
@@ -114,7 +114,9 @@ function snapshot() {
     const recipStmt = b.prepare('SELECT recipient_agent FROM deliveries WHERE fact_id = ?');
     for (const f of facts) f.recipients = recipStmt.all(f.fact_id).map(r => r.recipient_agent);
     // Subject_ids Alex has already decided on (approved/rejected) — used to drop them from "needs you".
-    const decided = new Set(b.prepare("SELECT DISTINCT subject_id FROM facts WHERE fact_type='decision' AND source_agent='alex' AND revoked_at IS NULL").all().map(r => r.subject_id).filter(Boolean));
+    // Union BOTH the legacy `decision` AND the new authorization-grade `supervisor_decision` (§12.5) —
+    // approvals now publish supervisor_decision, so without the union an approved item would reappear.
+    const decided = new Set(b.prepare("SELECT DISTINCT subject_id FROM facts WHERE fact_type IN ('decision','supervisor_decision') AND source_agent='alex' AND revoked_at IS NULL").all().map(r => r.subject_id).filter(Boolean));
     return { facts, projects, cycles, decided };
   } finally { b.close(); }
 }
@@ -471,25 +473,61 @@ async function readBody(req, max = 64 * 1024) {
     req.on('error', reject);
   });
 }
+// Resolve the decided fact's provenance so a supervisor_decision can carry TRUSTED context
+// (subject_source_agent + draft_ref) — a consumer reads this instead of a separate fact-fetch endpoint
+// (§12.2). ca-mesh items carry a mesh message_id (not a board fact) → no row → empty context.
+// Deterministic, UUID-shaped action id derived from the idempotency key — STABLE across re-clicks so the
+// published fact body is byte-identical. A fresh UUID per click made re-approval a "same key + different
+// body" request → the gateway's (key + request-hash) idempotency returns 409 instead of a clean idempotent
+// 200 (Codex Phase-3 finding #1). Re-clicking Approve on the same item IS the same logical action.
+function stableActionId(key) {
+  const h = createHash('sha256').update(key).digest('hex');
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20, 32)}`;
+}
+
+function lookupSubjectContext(id) {
+  try {
+    const db = new DatabaseSync(BOARD_DB, { readOnly: true });
+    try {
+      const row = db.prepare('SELECT source_agent, payload FROM facts WHERE fact_id = ?').get(String(id));
+      if (!row) return {};
+      const ctx = { subject_source_agent: row.source_agent };
+      try { const p = JSON.parse(row.payload); if (p && typeof p.draft_ref === 'string') ctx.draft_ref = p.draft_ref; } catch (_) {}
+      return ctx;
+    } finally { db.close(); }
+  } catch (_) { return {}; }
+}
+
 async function postSupervisorAction({ kind, id, action, comment }) {
   if (!['approve', 'reject', 'comment', 'dismiss'].includes(action)) throw new Error('unknown action');
   const safeKind = String(kind || 'item').slice(0, 32);
   const safeId   = String(id || '').slice(0, 80);
-  let fact_type, payload;
+  let body;
   if (action === 'comment') {
     if (!comment || !String(comment).trim()) throw new Error('comment required');
-    fact_type = 'status_update';
-    payload = { status: 'comment', detail: `re ${safeKind} ${safeId.slice(0,12)}: ${String(comment).slice(0, 400)}` };
+    body = {
+      fact_type: 'status_update', visibility: 'internal', data_class: 'internal',
+      subject_type: safeKind, subject_id: safeId,
+      payload: { status: 'comment', detail: `re ${safeKind} ${safeId.slice(0,12)}: ${String(comment).slice(0, 400)}` },
+      idempotency_key: `alex:comment:${safeId}`.slice(0, 180),
+    };
   } else {
-    fact_type = 'decision';
-    const text = action === 'approve' ? 'Approved' : action === 'reject' ? 'Rejected' : 'Dismissed (no longer relevant)';
-    payload = { text, rationale: `Alex ${action}d ${safeKind} ${safeId.slice(0, 40)} via supervisor` };
+    // approve/reject/dismiss → an AUTHORIZATION-GRADE `supervisor_decision` (§12.5). Only the alex+supervise
+    // token may publish this fact_type (gateway forgery-gate). Distinct `alex:sd:` idempotency prefix so a
+    // re-approval is NOT shadowed by a legacy `decision` fact's `alex:<action>:` key (that collision → 409).
+    const context = lookupSubjectContext(safeId);
+    const idemKey = `alex:sd:${action}:${safeId}`.slice(0, 180);
+    body = {
+      fact_type: 'supervisor_decision', visibility: 'internal', data_class: 'internal',
+      subject_type: safeKind, subject_id: safeId,
+      payload: {
+        decision: action, subject_fact_id: safeId, supervisor_action_id: stableActionId(idemKey),
+        rationale: `Alex ${action}d ${safeKind} ${safeId.slice(0, 40)} via supervisor`,
+        ...(Object.keys(context).length ? { context } : {}),
+      },
+      idempotency_key: idemKey,
+    };
   }
-  const body = {
-    fact_type, visibility: 'internal', data_class: 'internal',
-    subject_type: safeKind, subject_id: safeId,
-    payload, idempotency_key: `alex:${action}:${safeId}`.slice(0, 180),
-  };
   const r = await fetch(GATEWAY_URL + '/publish', {
     method: 'POST',
     headers: { 'authorization': 'Bearer ' + supervisorToken(), 'content-type': 'application/json' },

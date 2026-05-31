@@ -63,7 +63,10 @@ function collect() {
     const latest = alerts[alerts.length - 1];
     if (latest) events.push({ key: 'alert-state:' + latest.summary, subject: 'financial-alert', detail: `${latest.severity ? `[${latest.severity}] ` : ''}current financial alerts — ${latest.summary}` });
   }
-  for (const f of walk(path.join(CFO_DIR, 'logs', 'drafts'))) events.push({ key: 'draft:' + path.relative(CFO_DIR, f), subject: 'cfo-draft', detail: `drafted ${titleFromFile(f)}` });
+  // `ref` = the draft's CFO_DIR-relative path. Carried into the fact payload as `draft_ref` (Phase 3,
+  // §12.3) so a supervisor approval can name EXACTLY which draft was approved — all cfo-draft facts
+  // otherwise share subject_id 'cfo-draft'. The idempotency key is unchanged, so this never re-posts.
+  for (const f of walk(path.join(CFO_DIR, 'logs', 'drafts'))) events.push({ key: 'draft:' + path.relative(CFO_DIR, f), subject: 'cfo-draft', ref: path.relative(CFO_DIR, f), detail: `drafted ${titleFromFile(f)}` });
   for (const f of walk(path.join(CFO_DIR, 'logs', 'closes'))) events.push({ key: 'close:' + path.relative(CFO_DIR, f), subject: 'cfo-close', detail: `closed the books: ${titleFromFile(f)}` });
   return events;
 }
@@ -79,7 +82,9 @@ function quarantine(agent, e, reason) {
 
 /** Emit one event. Returns 'ok' | 'permanent' | 'transient'. */
 async function emitOne(e, db) {
-  const fact = { fact_type: 'status_update', visibility: 'internal', data_class: 'internal', subject_type: 'finance', subject_id: e.subject, payload: { status: 'update', detail: e.detail } };
+  const payload = { status: 'update', detail: e.detail };
+  if (e.ref) payload.draft_ref = e.ref;   // §12.3 — lets a supervisor approval resolve the exact draft file
+  const fact = { fact_type: 'status_update', visibility: 'internal', data_class: 'internal', subject_type: 'finance', subject_id: e.subject, payload };
   if (REMOTE) {
     let r;
     try { r = await _postFact({ url: REMOTE, token: _token, idempotencyKey: 'cfo:' + e.key, fact }); }

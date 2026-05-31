@@ -222,3 +222,78 @@ Adversarial re-review of all six fixes (rounds 1+2). Findings re-verified closed
 **Phase 3 — BINDING behavior decision (Alex, 2026-05-29): SURFACE-AS-READY, never auto-send.** A `supervisor_decision: approve` on a CFO draft makes the handler verify the draft is this agent's + approved, then mark it READY-TO-SEND and notify — the actual money-movement send still requires a final human tap. The Board approval is the AUTHORIZATION, not the trigger. Honors the standing "never auto-send payment" rule. Money-adjacent handlers never auto-execute the irreversible step.
 
 **Remaining Phase 3 (each its own Codex + DA gate before live):** CFO handler (needs CFO draft-format discovery; surface-as-ready) · re-enroll `alex` token with `supervise` + consumer tokens with `read,ack` · switch supervisor `/action` to publish `supervisor_decision` · deploy CFO consumer as pm2 sidecar · verify end-to-end.
+
+---
+
+## §12 — Phase 3 build design (2026-05-30, session 12)
+
+Concrete decisions that resolve the open mechanics of §5–§7 against discovered reality. Built this session; gated by Codex + CA-DA before deploy.
+
+### 12.0 Discovered reality (drives everything below)
+- CFO drafts are QuickBooks-shaped invoice/estimate **JSON files, laptop-local** (`~/Desktop/Code/CFO/logs/drafts/*.json`). The Mini has none — the real CFO work is on the laptop. ⟹ **the CFO consumer runs laptop-side**, polling the Mini gateway over Tailscale, exactly like `board-emit-cfo.js` already does in REMOTE mode. (A Mini-side consumer literally cannot see the drafts it must mark ready.)
+- Routing is **subscription-based** (`shared-layer.js` trusted router): an agent receives a delivery iff it `subscribe`s to the `fact_type` and client scope matches. There is **no** author-resolution routing. **No agent subscribes to `supervisor_decision` yet**; CFO subscribes to `decision`/`objective`/`question`/`status_update`/`task` (the pre-v2 set).
+- The `cfo-draft` Board fact (`status_update`, `subject_id:'cfo-draft'`) currently carries only a human title (`detail:"drafted <name>"`), **not** the draft's file path — insufficient to resolve *which* draft was approved (all CFO drafts share `subject_id:'cfo-draft'`).
+
+### 12.1 Routing — subscription + self-filter (no router change)
+Add `subscribe(cfo, 'supervisor_decision', '*')`. The trusted router stays untouched (lowest risk). Every `supervisor_decision` subscriber receives **all** of them; the handler **self-filters by subject authorship** (the §6/§8 defense-in-depth: act only if the decided fact is *mine*). This is the same posture every future per-agent handler inherits.
+
+### 12.2 Subject resolution — trusted embedded context (no new gateway read endpoint)
+`supervisor_decision` is **authorization-grade**: only the token bound to identity `alex` with the `supervise` scope can publish it (forgery gate `AUTH_GRADE_TYPES`, proven in §10d/§10e). Its payload is therefore **provenance-trustworthy**. So the supervisor — which already holds the decided fact at click time — **embeds a `context` object** into the `supervisor_decision`:
+```
+context: { subject_source_agent: <decided fact's source_agent>, draft_ref: <decided fact payload.draft_ref|null> }
+```
+The handler reads `context` directly — **no `GET /fact/<id>` endpoint is added** (smaller attack surface; nothing new to scope-check). The handler still independently re-checks `subject_source_agent === 'cfo'` (defense-in-depth) before acting.
+
+### 12.3 Producer fix — `cfo-draft` carries `draft_ref`
+`board-emit-cfo.js` threads the draft's repo-relative path into the fact payload as `payload.draft_ref` (the producer already knows it — it's in the event `key`). **The idempotency key is unchanged** (`cfo:draft:<relpath>`), so already-posted drafts are NOT re-posted; only the payload of *new* posts gains the field. The supervisor reads `draft_ref` to populate `context` (12.2).
+
+### 12.4 Handler contract (CFO) — SURFACE-AS-READY (both surfaces)
+`board-consume-cfo.js` registers a `supervisor_decision` handler on `board-consume-lib`. Per the binding decision + the chosen "Both Board + local" surface:
+1. `decision !== 'approve'` → `{ok:true}` (ack-noop; reject/dismiss need no CFO action).
+2. `context.subject_source_agent !== 'cfo'` → `{ok:true}` (not our draft; ack-noop, never spin).
+3. Resolve `context.draft_ref` → `<CFO_DIR>/<draft_ref>`. Missing/unresolvable → `{ok:false, permanent, reason}` → quarantine (surfaced, not retried forever).
+4. Write `<draft>.ready.json` **sidecar** (provenance: `approved`, `decision_fact_id`, `supervisor_action_id`, `approved_at`, `by:'alex'`) — idempotent (re-approve overwrites identically).
+5. Emit a `status_update` back to the Board via CFO's publish token: `payload.status:'ready_to_send'`, detail `"<draft> — READY TO SEND (needs your final tap)"`, idempotency `cfo:ready:<draft_ref>`. So the supervisor surfaces it.
+6. **Never sends.** The money-movement send stays a final human tap in CFO. Returns `{ok:true}` → ack.
+
+A `status_update`/comment handler (annotate the draft with Alex's comment) is a thin follow-on, same lib, lower stakes.
+
+### 12.5 Supervisor `/action` switch
+`board-supervisor.js`: approve/reject/dismiss now publish a **`supervisor_decision`** (was plain `decision`):
+- payload `{ decision: <approve|reject|dismiss>, subject_fact_id: <decided id>, supervisor_action_id: <generated UUID per click>, rationale, context: {subject_source_agent, draft_ref} }`.
+- The fact's `subject_id` stays = the decided id (so dedup keeps working).
+- **comment** stays a `status_update` (unchanged).
+- The supervisor must use an `alex` token enrolled with `publish,supervise` (else the gateway 403s the auth-grade publish).
+- **Dedup regression fix:** the "already decided" filters (`board-supervisor.js` ~L117/L159/L293) keyed on `fact_type='decision'` must now **union** `('decision','supervisor_decision')`, or approved items reappear in "what needs you." Legacy `decision` facts stay honored (audit-only for action, still dedup the view).
+- The `ca-mesh` PATCH-to-mesh-api special case (L502) is preserved.
+
+### 12.6 Enrollment / scopes
+`gateway-enroll.js` gains `--scopes=publish,supervise` (and `read,ack`). Re-enroll: `alex` → `publish,supervise`; `cfo` → `publish,read,ack`. All other tokens stay legacy publish-only (untouched). `alex`'s existing publish token is replaced (rotation = the supervisor reads the new token file).
+
+### 12.8 Codex Phase-3 code-review round 1 (2026-05-30) → REVISE, all 3 folded
+Codex ran the suite (incl. its own repros) and returned REVISE:
+- **HIGH #1 — approval replay not idempotent.** Fresh `randomUUID()` per `/action` click → same `alex:sd:approve:<id>` key but different body → gateway `(key + request-hash)` idempotency returns **409**, not a clean 200 (repro confirmed). **Fix:** `supervisor_action_id` is now **deterministic** — `stableActionId(idemKey)` = sha256(idempotency_key) in 8-4-4-4-12 layout. Re-click → byte-identical body → idempotent 200. New integration test `board-supervisor-idem.test.js` proves 200-not-409 + forgery-gate intact.
+- **HIGH #2 — `resolveDraft()` symlink escape.** Lexical `path.resolve` + prefix check missed a symlinked dir under `logs/drafts` → sidecar written outside the tree (repro: `logs/drafts/linked -> /tmp/outside` wrote `/tmp/outside/invoice.ready.json`, handler returned ok). **Fix:** `realpathSync` BOTH the drafts root and the actual draft and require the resolved draft inside the resolved root; `lstat`-refuse a symlink AT the sidecar path; write via **temp+rename** (replaces, never follows, a planted symlink). Two new regression tests.
+- **MED #3 — sidecar provenance drift.** `approved_at: now()` was stamped at retry time → a transient-echo retry rewrote a later timestamp. **Fix:** stamp `approved_at` from the **delivery creation time** (`d.created_at`), stable across retries. New regression test.
+- Suite after fold: **74/75** (the 1 fail = pre-existing `projection.test.js` setgid/tmpdir env assertion, out of scope). Codex's other dimensions came back **Confirmed** (no auto-send path; self-filter sound; spoofing gate closed across all write paths; dedup union correct; scopes fail-loud).
+
+### 12.9 Codex Phase-3 code-review round 2 (2026-05-30) → REVISE, 1 HIGH folded
+Round 1's symlink fix closed the symlinked-parent + final-sidecar cases, but Codex found a residual: the
+**temp file itself** was symlink-followable. The temp path `<draft>.ready.json.tmp-<pid>` was predictable,
+so a pre-planted symlink there was followed by `writeFileSync`, and `renameSync` then moved that symlink
+into the sidecar slot (repro confirmed: outside target written, sidecar left a symlink). **Fix:** write the
+temp via an **exclusive, no-follow** open — unguessable name (`randomBytes(8)`) + `O_CREAT|O_EXCL|O_WRONLY|O_NOFOLLOW`,
+write through the fd, then atomic rename; cleanup + permanent-fail on error. `O_EXCL` refuses to open an
+existing path (incl. a symlink); rename's replace-semantics also closes the lstat→rename TOCTOU on the
+final path. Two new tests: a flag-capture assertion (O_EXCL|O_CREAT|O_NOFOLLOW present) and a direct
+attack repro (symlink planted at the temp path → write refused, nothing written outside). All other
+round-1 fixes re-confirmed closed; no-auto-send / self-filter / forgery-gate / dedup / scopes all Confirmed.
+Suite after fold: **76/77** (CFO consumer 16/16; the 1 fail = the pre-existing `projection.test.js` setgid env assertion).
+
+### 12.10 Codex Phase-3 code-review round 3 (2026-05-30) → REVISE (1 MED folded, 1 HIGH accepted-risk)
+- **MED #2 — symlinked `.json` draft could overwrite an in-tree non-draft file.** `resolveDraft()` checked the suffix on the lexical `draft_ref`, but `readyPath` was computed from `realAbs` without re-checking — so `logs/drafts/alias.json -> logs/drafts/notes.txt` resolved `realAbs` to `notes.txt` (no `.json` suffix to swap) and the provenance write **overwrote `notes.txt`**. **Fix:** re-check `realAbs.endsWith('.json') && !.ready.json` AFTER realpath; reject a draft that really resolves to a non-draft file. New regression test (alias.json→notes.txt refused, notes.txt untouched). Suite 77/78.
+- **HIGH #1 — supervisor `/action` token is readable by anyone who can GET the page.** `board-supervisor.js` embeds the long-lived `X-Supervisor-Action` token in unauthenticated HTML (the Phase-1 DA-a mechanism); any tailnet client — incl. a compromised Mini-local agent (all run as unix `kai`) — can read `window.__SUP_TOK` and POST forged approve/reject/dismiss. **Decision (Alex, 2026-05-30): ACCEPTED-RISK for Phase 3 ship.** Rationale: (a) it's the existing Tailscale-boundary posture already accepted (single-user Mini; multi-user/hard-identity deferred — see `[[feedback_multi_user_mini_deferred]]`); (b) the **no-auto-send** guarantee (§12.7) bounds blast radius to a forged *ready flag + Board echo* — **no money can move**; (c) it is NOT a regression introduced by this diff. **Follow-up filed (immediate next task): front the supervisor with `tailscale serve` + verified identity headers (`Tailscale-User-Login=alex`) gating both the page GET and `POST /action`.** Until then the private tailnet is the supervisor's auth boundary.
+- All other dimensions re-Confirmed by Codex (no auto-send, self-filter, forgery gate, idempotent replay, dedup union, stable approved_at, echo retry, producer idempotency, scopes).
+
+### 12.7 Why no auto-send is structurally guaranteed (DA pre-answer)
+The consumer (`board-consume-lib`) is pure orchestration — it has **no** payment primitive. The CFO handler's only outward effects are: (a) a local `.ready.json` write, (b) a `status_update` Board publish. Neither moves money. The QuickBooks/invoice send lives in CFO's own skill, reachable only by a human at the laptop. There is no code path from "approve on Board" to "money sent." SURFACE-AS-READY is enforced by *absence of capability*, not by a flag.

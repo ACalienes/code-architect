@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Boardroom Pivot — design memo (2026-05-30)</title>
+<style>
+  :root{
+    --bg:#0b0e14; --panel:#121722; --panel2:#0f1420; --ink:#e7ecf3; --muted:#8b97a8;
+    --line:#1e2633; --accent:#6ea8fe; --good:#41d18b; --warn:#f0b34a; --bad:#f0707a;
+    --chip:#1a2230; --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;line-height:1.55}
+  a{color:var(--accent);text-decoration:none}
+  .wrap{max-width:1000px;margin:0 auto;padding:40px 24px 90px}
+  .kicker{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  h1{font-size:30px;margin:.25em 0 .15em;letter-spacing:-.02em}
+  h2{font-size:19px;margin:42px 0 6px;letter-spacing:-.01em;display:flex;align-items:center;gap:10px}
+  h2 .num{font:700 12px/1 var(--mono);color:var(--accent);background:rgba(110,168,254,.12);
+    border:1px solid rgba(110,168,254,.3);border-radius:7px;padding:5px 8px}
+  h3{font-size:15px;margin:22px 0 8px;color:var(--ink)}
+  .sub{color:var(--muted);font-size:15px;max-width:80ch}
+  .bar{height:1px;background:linear-gradient(90deg,var(--line),transparent);margin:22px 0 0}
+  .grid{display:grid;gap:14px}
+  .g3{grid-template-columns:repeat(3,1fr)} .g4{grid-template-columns:repeat(4,1fr)}
+  @media(max-width:760px){.g3,.g4{grid-template-columns:1fr 1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
+  .card .n{font-size:24px;font-weight:700;letter-spacing:-.02em}
+  .card .l{color:var(--muted);font-size:12.5px;margin-top:2px}
+  .chip{display:inline-flex;align-items:center;gap:6px;background:var(--chip);border:1px solid var(--line);
+    border-radius:999px;padding:4px 11px;font-size:12.5px;color:var(--muted);font-weight:600}
+  .dot{width:7px;height:7px;border-radius:50%}
+  .ok{background:var(--good)} .wn{background:var(--warn)} .bd{background:var(--bad)} .ac{background:var(--accent)}
+  .pill{font:600 11px/1 var(--mono);padding:3px 7px;border-radius:6px;letter-spacing:.02em;white-space:nowrap}
+  .p-keep{background:rgba(65,209,139,.13);color:#7fe7b4;border:1px solid rgba(65,209,139,.3)}
+  .p-retire{background:rgba(240,112,122,.13);color:#ff9aa2;border:1px solid rgba(240,112,122,.3)}
+  .p-decide{background:rgba(240,179,74,.13);color:#ffce80;border:1px solid rgba(240,179,74,.3)}
+  .p-now{background:rgba(110,168,254,.13);color:#a9c8ff;border:1px solid rgba(110,168,254,.3)}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:6px}
+  th,td{text-align:left;padding:10px 11px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.07em;font-weight:600}
+  td code,.mono{font-family:var(--mono);font-size:12px;color:#bcd2ff}
+  .callout{border-radius:12px;padding:13px 15px;font-size:13.5px;margin-top:14px;border:1px solid}
+  .c-good{border-color:rgba(65,209,139,.4);background:rgba(65,209,139,.07);color:#aef0cf}
+  .c-warn{border-color:rgba(240,179,74,.4);background:rgba(240,179,74,.07);color:#ffdca0}
+  .c-info{border-color:rgba(110,168,254,.4);background:rgba(110,168,254,.07);color:#cfe0ff}
+  .c-bad{border-color:rgba(240,112,122,.4);background:rgba(240,112,122,.07);color:#ffc2c6}
+  ul.tight{margin:8px 0 0;padding-left:18px} ul.tight li{margin:6px 0;color:var(--muted);font-size:14px}
+  ul.tight li b{color:var(--ink);font-weight:600}
+  pre{background:#0a0d13;border:1px solid var(--line);border-radius:11px;padding:14px 16px;overflow:auto;
+    font-family:var(--mono);font-size:12px;color:#cfe0ff;line-height:1.5}
+  pre .k{color:#ff9aa2} pre .s{color:#7fe7b4} pre .c{color:var(--muted)}
+  .foot{margin-top:42px;color:var(--muted);font-size:12.5px;border-top:1px solid var(--line);padding-top:16px}
+  .tagrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+  .lane{display:flex;gap:12px;align-items:flex-start;margin-top:10px}
+  .lane .ph{flex:0 0 86px;font:700 12px/1.3 var(--mono);color:var(--accent);padding-top:13px}
+  .lane .body{flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:13px 15px}
+  .lane .body .t{font-weight:700;font-size:14px} .lane .body .d{color:var(--muted);font-size:13px;margin-top:3px}
+  .ask{background:linear-gradient(180deg,#13233a,#0f1828);border:1px solid #1f3553;border-radius:14px;padding:18px 20px;margin-top:16px}
+  .ask ol{margin:8px 0 0;padding-left:20px} .ask li{margin:8px 0;font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="kicker">Code Architect · design memo · 2026-05-30 · DESIGN-FIRST — no code written yet</div>
+  <h1>Boardroom pivot — sanity check, ingest migration & project-logs integration</h1>
+  <p class="sub">You paused <code>kai-bot</code> + <code>kai-dashboard</code> and made the boardroom (the Shared Layer) the system of record.
+  This memo answers your four questions from live read-only investigation of the Mini. <b>Nothing here is built</b> — it's for you to
+  iterate on before any code. Decisions you need to confirm are collected at the bottom.</p>
+
+  <div class="tagrow">
+    <span class="chip"><span class="dot ok"></span>Pivot is SAFE — no hard breakage</span>
+    <span class="chip"><span class="dot wn"></span>3 bounded degradations (recoverable)</span>
+    <span class="chip"><span class="dot ac"></span>Path C (Hybrid) recommended</span>
+    <span class="chip"><span class="dot ok"></span>board-emit-cfo root cause found</span>
+  </div>
+
+  <div class="bar"></div>
+
+  <!-- ============ 1 ============ -->
+  <h2><span class="num">1</span> Sanity check — does pausing kai-bot break anything?</h2>
+  <p class="sub"><b>Verdict: No agent has a hard, blocking dependency on kai-bot.</b> It exposes no HTTP port — nothing connects <i>to</i> it;
+  it's a polling/cron client. <code>mesh-api</code> (still up) owns delivery, claims, acks and the 24h TTL sweep for <i>every</i> agent — kai-bot was just one consumer.
+  The boardroom substrate is untouched (the supervisor reads the <code>code-architect</code> inbox, not Kai's). What kai-bot's pause causes is <b>bounded, recoverable degradation</b>, not breakage.</p>
+
+  <table>
+    <thead><tr><th>What degrades</th><th>Evidence</th><th>Risk</th><th>Mitigation</th></tr></thead>
+    <tbody>
+      <tr><td><b>Kai's mesh inbox has no drainer</b> — mesh-poller (inside kai-bot) was the only thing claiming/completing kai-addressed messages</td><td><code>/inbox/kai?status=delivered</code> = 100+ and climbing (KMG, ~4/min)</td><td><span class="pill p-decide">degrades · self-bounding</span></td><td>Backlog auto-expires at 24h TTL (no DB blowup). Real fix = the <b>Phase-3 board-consume drainer generalized to Kai</b> (see §5).</td></tr>
+      <tr><td><b>Mesh→Alex notifications don't surface</b> — Approve/Reject buttons, digests routed through kai-bot</td><td>mesh-poller routed kai traffic to Telegram/email</td><td><span class="pill p-decide">degrades</span></td><td>The <b>supervisor view (:3352) is now the surfacing path</b>. Anything that needs you appears there, not Telegram.</td></tr>
+      <tr><td><b>Inbound iMessages stored but not classified/surfaced</b></td><td>poller writes <code>kaimoku.db</code> (73MB, live) + <code>imessage-events.jsonl</code>; the consumer (scanner/watcher) is in kai-bot</td><td><span class="pill p-decide">degrades · silent</span></td><td>Data is safe; watcher resumes from <code>last_rowid</code> with explicit catch-up. Or migrate to <code>board-emit-imessage</code> (§2).</td></tr>
+      <tr><td>Delegation responses queue unprocessed</td><td><code>~/kai-inbox/</code> + <code>delegations.json</code></td><td><span class="pill p-decide">degrades</span></td><td>Persist on disk; recoverable on restart.</td></tr>
+      <tr><td>kai-bot self-heal is dead (its health cron lives inside it)</td><td>health-monitor runs as a kai-bot cron</td><td><span class="pill p-keep">none — intended</span></td><td>Good: the pause holds. <code>pm2 save</code> ran after stop, so a reboot restores it <i>stopped</i>.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout c-good">✅ <b>No live agent contract is broken and the mesh cannot corrupt.</b> The one visible symptom — the KMG→Kai backlog — is self-cleaning via TTL. KMG is fire-and-forget; it does not block on a Kai reply.</div>
+  <div class="callout c-warn">⚠️ <b>The mesh-poller deadlock is dormant, not fixed.</b> The bloat file (<code>mesh-poller-state.json</code>) and all poller logic live only in kai-bot, so it can't fire while paused. <b>My call: retire-with-the-bot</b> — don't invest in patching mesh-poller.js; its job migrates to a boardroom drainer (§5). But <b>truncate/repair that state file before any kai-bot restart</b>, or the loop returns.</div>
+
+  <!-- ============ 2 ============ -->
+  <h2><span class="num">2</span> Ingest migration — phased, no blind spots</h2>
+  <p class="sub">Per your rule: <b>don't kill an intake until its boardroom replacement is built AND verified.</b> Most of these are already dark
+  (kai-bot is stopped), so the real task is <i>build the replacement, verify it, then declare the old path retired</i>. The iMessage poller stays alive as your exception until its emitter ships.
+  Build order is by value × how-much-it-protects-the-new-system-of-record.</p>
+
+  <div class="lane"><div class="ph">PHASE 0<br>substrate</div><div class="body"><div class="t">Harden the boardroom before riding weight on it</div><div class="d">Fix <code>board-emit-cfo</code> (§4) · author the missing <code>shared-layer/ecosystem.config.js</code> so every board-* process has a committed, reproducible launch spec · truncate the stuck mesh-poller state file. <b>Verify:</b> all board-* processes show steady restart counts for 30 min across a sync-pull.</div></div></div>
+  <div class="lane"><div class="ph">PHASE 1<br>health</div><div class="body"><div class="t">Health monitor → <code>board-emit-health</code> <span class="pill p-keep">KEEP — first</span></div><div class="d">Highest priority: it watches the new SoR itself. Standalone emitter reads pm2 + mesh health → emits <code>health_alert</code> facts to the supervisor. <b>Verify:</b> kill a test process → a critical <code>health_alert</code> appears on the Board within one cycle.</div></div></div>
+  <div class="lane"><div class="ph">PHASE 2<br>production</div><div class="body"><div class="t">Shoot scheduler + production log → <code>board-emit-production</code> <span class="pill p-keep">KEEP</span></div><div class="d">Core business data. Emits <code>production_event</code> + <code>project</code> facts (schemas in §3) from <code>production-log.jsonl</code> + <code>projects.json</code>. <b>Verify:</b> a known shoot round-trips into a queryable fact with a <code>source_ref</code> pointer.</div></div></div>
+  <div class="lane"><div class="ph">PHASE 3<br>finance</div><div class="body"><div class="t">QuickBooks sync → extend <code>board-emit-cfo</code> <span class="pill p-keep">KEEP</span></div><div class="d">CFO already emits alerts. Add invoice/payment stage-transition facts; fix the <code>~/CFO/logs/drafts</code> gap (§4) so draft facts flow. <b>Verify:</b> a stage change emits one fact; a draft emits a <code>cfo-draft</code> with <code>draft_ref</code>.</div></div></div>
+  <div class="lane"><div class="ph">PHASE 4<br>email</div><div class="body"><div class="t">Gmail scan → <code>board-emit-email</code> <span class="pill p-keep">KEEP — you're email-first</span></div><div class="d">Surface replies-needing-action as facts. Heaviest (Gmail OAuth on the host). <b>Verify:</b> a flagged thread becomes a fact that appears under "what needs you."</div></div></div>
+  <div class="lane"><div class="ph">PHASE 5<br>calendar</div><div class="body"><div class="t">Calendar polling → <code>board-emit-calendar</code> <span class="pill p-keep">KEEP</span></div><div class="d">Shoot scheduling + briefings. Emits upcoming-shoot facts. <b>Verify:</b> a calendar shoot surfaces ahead of time.</div></div></div>
+  <div class="lane"><div class="ph">PHASE 6<br>imessage</div><div class="body"><div class="t">iMessage inbound → <code>board-emit-imessage</code> <span class="pill p-decide">DECIDE</span></div><div class="d">Poller stays; add an emitter that consumes <code>imessage-events.jsonl</code> → facts (client comms). <b>Then</b> retire the kai-bot scanner. <b>Verify:</b> a new text becomes a fact before the old scanner path is removed.</div></div></div>
+
+  <h3>Retire / defer / relocate</h3>
+  <table>
+    <thead><tr><th>Intake</th><th>Call</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>Daily digest + morning briefing (Claude-API narrative)</td><td><span class="pill p-retire">RETIRE → rebuild board-native</span></td><td>The supervisor view <i>is</i> the briefing now ("what needs you"). Don't port the narrative generator; if you want a daily summary, build it board-native later.</td></tr>
+      <tr><td>Hourly git backup of <code>logs/</code></td><td><span class="pill p-decide">KEEP (short-term) → obsolete under Path C</span></td><td>Stays as cold backup while files are still authoritative. Once events emit as facts (Path C), the git backup of historical logs becomes archival only.</td></tr>
+      <tr><td>Sheets sync (bidirectional)</td><td><span class="pill p-decide">DECIDE per sheet</span></td><td>Low priority. Tell me which sheets still matter and direction; most are likely read-only references now.</td></tr>
+      <tr><td>Action gate (T1/T2/T3 policy)</td><td><span class="pill p-now">RELOCATE → mesh-api / board-policy</span></td><td>Policy, not intake. For boardroom actions it's already partly enforced by the gateway scopes + supervisor auth. Proposal: fold tier policy into mesh-api or a small <code>board-policy</code> module rather than resurrecting it in a bot.</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ============ 3 ============ -->
+  <h2><span class="num">3</span> Project logs ↔ boardroom — the path + first schemas</h2>
+  <div class="callout c-info">📌 <b>Correction to the brief (verified against live Mini code):</b> <code>objective</code>, <code>question</code>, and <code>task</code> fact-types are <b>NOT missing</b> — they're already defined in <code>registry.js</code> + <code>FACT_TYPES</code> (added 5/27–5/28), alongside <code>supervisor_decision</code>. So the two schemas the project-logs work needs are <b>new</b> ones, not those. (Kai's task-list #8 is stale on this point.)</div>
+
+  <h3>Recommendation: <span style="color:var(--good)">Path C — Hybrid</span></h3>
+  <p class="sub">Matches your read, and it's the only one that's both safe and pragmatic given the scale: <code>~/kai/logs/</code> is <b>~220 MB across 150+ heterogeneous files</b>. Backfilling all of it as facts (Path A) is a heavy, schema-exploding, risky migration; pointer-only (Path B) leaves two systems of record. <b>Path C:</b> new events emit as facts going forward · historical files stay as cold reference · every fact carries a <code>source_ref</code> pointer so the boardroom indexes file paths for search. One forward source of truth; history stays where it is until/if it's worth backfilling.</p>
+
+  <div class="grid g3">
+    <div class="card"><div class="n" style="color:var(--bad)">A</div><div class="l">Ingest-all-as-facts — single source, fully queryable, but heaviest migration + schema design for 150+ files. Overkill now.</div></div>
+    <div class="card"><div class="n" style="color:var(--warn)">B</div><div class="l">Pointer-only — lightest, but two systems of record (the risk you flagged). Boardroom never holds the real data.</div></div>
+    <div class="card" style="border-color:rgba(65,209,139,.5)"><div class="n" style="color:var(--good)">C ✓</div><div class="l">Hybrid — forward facts + <code>source_ref</code> index to cold files. Phased, pragmatic, one forward SoR.</div></div>
+  </div>
+
+  <h3>The two fact-types to add first (serve project logs directly)</h3>
+  <p class="sub">Modeled on the real shapes of <code>projects.json</code> (project records) and <code>production-log.jsonl</code> (shoot events). Written in the existing <code>registry.js</code> <code>S(required, props)</code> style; <code>source_ref</code> is the Path-C pointer.</p>
+  <pre><span class="c">// projects.json → a queryable project record (the boardroom's project model)</span>
+<span class="k">project</span>: { current: <span class="s">'1'</span>, versions: { <span class="s">'1'</span>:
+  S([<span class="s">'project_id'</span>, <span class="s">'name'</span>], {
+    project_id: { type: <span class="s">'string'</span> },
+    name:       { type: <span class="s">'string'</span> },
+    client:     { type: <span class="s">'string'</span> },
+    partner:    { type: <span class="s">'string'</span> },
+    workflow:   { type: <span class="s">'string'</span> },                            <span class="c">// production | content | …</span>
+    stage:      { type: <span class="s">'string'</span> },                            <span class="c">// label or number-as-string</span>
+    status:     { type: <span class="s">'string'</span>, enum: [<span class="s">'active'</span>,<span class="s">'blocked'</span>,<span class="s">'done'</span>,<span class="s">'archived'</span>] },
+    next_steps: { type: <span class="s">'string'</span> },
+    source_ref: { type: <span class="s">'string'</span> } } ) } },                      <span class="c">// logs/projects.json#&lt;project_id&gt;</span>
+
+<span class="c">// production-log.jsonl → one shoot/production lifecycle event, linked to a project</span>
+<span class="k">production_event</span>: { current: <span class="s">'1'</span>, versions: { <span class="s">'1'</span>:
+  S([<span class="s">'event'</span>, <span class="s">'occurred_on'</span>], {
+    event:        { type: <span class="s">'string'</span> },                           <span class="c">// "PALMETTO BAY — Day 2"</span>
+    occurred_on:  { type: <span class="s">'string'</span> },                           <span class="c">// ISO date</span>
+    project_ref:  { type: <span class="s">'string'</span> },                           <span class="c">// → a project fact's project_id</span>
+    client:       { type: <span class="s">'string'</span> },
+    location:     { type: <span class="s">'string'</span> },
+    hours:        { type: <span class="s">'string'</span> },
+    engagement:   { type: <span class="s">'string'</span> },                           <span class="c">// White-Label | Direct | …</span>
+    deliverables: { type: <span class="s">'string'</span> },
+    status:       { type: <span class="s">'string'</span>, enum: [<span class="s">'scheduled'</span>,<span class="s">'in_progress'</span>,<span class="s">'completed'</span>,<span class="s">'logged'</span>] },
+    source_ref:   { type: <span class="s">'string'</span> } } ) } },                     <span class="c">// logs/production-log.jsonl#&lt;eventId&gt;</span></pre>
+  <p class="sub">These two unlock the project board: <code>project</code> gives the queryable record (stage, client, next steps), <code>production_event</code> the lifecycle stream against it. They also exercise the Path-C <code>source_ref</code> pointer, validating the hybrid before we scale to other log types.</p>
+
+  <!-- ============ 4 ============ -->
+  <h2><span class="num">4</span> board-emit-cfo restart loop — diagnosed</h2>
+  <div class="callout c-warn">🔍 <b>My first hypothesis (missing <code>--watch</code>) was wrong — and I'm flagging that rather than burying it.</b> The script <i>is</i> launched with <code>--watch</code> and is currently stable at 22h uptime. The real cause is different.</div>
+  <ul class="tight">
+    <li><b>Root cause:</b> two things named "watch" collided. PM2's own process flag <code>watch: true</code> is set (in <code>dump.pm2</code>) with <b>no <code>ignore_watch</code></b>, so PM2 reloads the process on <i>any</i> file change in <code>cwd = /Users/kai/shared-layer</code> — and <code>sync-repos.sh</code> ff-pulls + redeploys touch that dir. The "13 restarts in 16 min" was a clustered redeploy/sync burst, not a clean-exit loop. The benign SQLite warning was a red herring.</li>
+    <li><b>Fix (proposed, not applied):</b> turn OFF PM2's filesystem watch, keep the script's own loop flag, persist it:
+      <pre>pm2 delete board-emit-cfo
+<span class="c"># relaunch with PM2 watch OFF, script --watch ON</span>
+CFO_DIR=/Users/kai/CFO pm2 start board-emit-cfo.js --name board-emit-cfo \
+  --no-watch -- --watch
+pm2 save</pre>
+      …and codify it in the new <code>shared-layer/ecosystem.config.js</code> (<code>watch:false, autorestart:true, args:'--watch', env:{CFO_DIR:'/Users/kai/CFO'}</code>) so it survives <code>pm2 resurrect</code>.</li>
+    <li><b>Secondary (real, separate) issue:</b> <code>CFO_DIR=/Users/kai/CFO</code> is set, but <code>~/CFO/logs/drafts</code> <b>does not exist</b> on the Mini — so the emitter surfaces financial <i>alerts</i> but emits <b>zero draft/close facts</b>. This is the same path Phase-3's CFO consumer depends on. Needs: confirm where CFO actually writes drafts on the Mini, then fix the sub-path. (Note: this is also why a Mini-side Phase-3 CFO consumer would see nothing — reinforcing the laptop-hosted consumer decision.)</li>
+    <li><b>Verify after fix:</b> <code>pm2 describe</code> shows watch ✘ / args <code>--watch</code> ✔; restart count holds steady across a sync-pull; uptime climbs; the <code>[emit-cfo] watching …</code> line prints once.</li>
+  </ul>
+
+  <!-- ============ 5 ============ -->
+  <h2><span class="num">5</span> The thread that ties it together</h2>
+  <p class="sub">The biggest degradation (Kai's mesh inbox has no drainer) and the work already in flight are the <b>same problem</b>:
+  the <b>Phase-3 board-consume library</b> I just built is a generic poll→claim→handle→ack consumer. Kai becoming a boardroom consumer
+  (instead of the mesh-poller that deadlocked) is exactly that library with a Kai handler. So the pivot doesn't orphan Kai's inbox — it
+  redirects it onto the consumer backbone we already have. That's the clean replacement for mesh-poller, and it's why "retire-with-the-bot" is the right call on the deadlock.</p>
+  <div class="callout c-info">ℹ️ <b>On "ping me on the mesh":</b> with kai-bot down, a mesh message addressed to Kai will <i>not</i> surface to you (the poller that routed mesh→Telegram is the paused process). The live surface is now this HTML + the <b>supervisor view (:3352)</b>. Worth noting as we wire notifications: until a board-native notifier exists, the supervisor view is the only path that reaches you.</div>
+
+  <!-- ============ ask ============ -->
+  <h2><span class="num">→</span> What I need from you (before any code)</h2>
+  <div class="ask">
+    <ol>
+      <li><b>Confirm Path C</b> (hybrid) for project logs — or redirect to A/B.</li>
+      <li><b>Confirm the two schemas</b> (<code>project</code>, <code>production_event</code>) — or tell me what fields you'd add/drop.</li>
+      <li><b>Confirm the build order</b> (Phase 0 substrate → health → production → finance → email → calendar → imessage), or re-rank.</li>
+      <li><b>board-emit-cfo fix</b> — approve the PM2 <code>--no-watch</code> fix + the new <code>ecosystem.config.js</code> (touches the Mini's PM2 state; gated on your go).</li>
+      <li><b>Sheets</b> — which sheets still matter, and direction?</li>
+      <li><b>Action gate</b> — OK to relocate T1/T2/T3 into mesh-api / a <code>board-policy</code> module rather than rebuild it in a bot?</li>
+    </ol>
+    Once you've marked these up, I'll turn the confirmed pieces into a phased build plan — each emitter gated per your per-commit rule, each verified before any old path is declared retired. Phase-3 (CFO consumer) stays parked at its deploy gate until you say which to do first.
+  </div>
+
+  <div class="foot">
+    Code Architect · read-only Mini investigation 2026-05-30 · design-first, no code written ·
+    sources: live <code>pm2 jlist</code> / <code>mesh-api :3341</code> / <code>~/kai/logs/</code> / <code>~/shared-layer/{registry,shared-layer,board-emit-cfo}.js</code> ·
+    related: Phase-3 design <span class="mono">docs/design-board-consume-gateway-2026-05-28.md §12</span>.
+  </div>
+</div>
+</body>
+</html>

@@ -36,6 +36,11 @@ const FACT_TYPES = new Set([
   // Plain `decision` facts retain their original audit-only meaning. Handlers must check for THIS
   // fact type with payload.decision in {approve,reject,dismiss} — see docs/design-board-consume-gateway.
   'supervisor_decision',
+  // Added 2026-05-30 (boardroom pivot — project-logs integration, Path C hybrid). These let kai-bot's
+  // historical log files (projects.json, production-log.jsonl) flow INTO the boardroom as forward facts,
+  // each carrying a `source_ref` pointer back to the cold file (so files stay as reference, facts are the
+  // forward source of truth). `health_alert` is the Phase-1 health emitter's fact (watches the SoR itself).
+  'project', 'production_event', 'health_alert',
 ]);
 const VISIBILITY = new Set(['client', 'internal', 'fleet']);
 
@@ -45,6 +50,12 @@ const VISIBILITY = new Set(['client', 'internal', 'fleet']);
 // passing { privileged: true } to writeFact AFTER it has verified alex-identity + supervise scope.
 // (board-consume Codex code-review P0 #2 — close the supervisor_decision forgery back-door.)
 const AUTH_GRADE_TYPES = new Set(['supervisor_decision']);
+
+// Provenance-required types (Path C): a project-logs fact is only useful if it points back to its cold
+// source file, so `source_ref` must be present on EVERY write path — not just the registry/gateway one.
+// Enforced in core writeFact (like AUTH_GRADE_TYPES) so raw writeFact / board-publish CLI / LOCAL emitters
+// can't persist a provenance-less fact (Codex). The registry also requires it on the validated path.
+const PROVENANCE_REQUIRED = new Set(['project', 'production_event']);
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS facts (
@@ -155,6 +166,11 @@ function writeFact(db, f, opts = {}) {
   }
   if (!VISIBILITY.has(f.visibility)) {
     return { ok: false, error: `invalid visibility '${f.visibility}'` };
+  }
+  // Provenance guard (Path C): these types MUST carry source_ref on every path, incl. raw writeFact (Codex).
+  if (PROVENANCE_REQUIRED.has(f.fact_type) && !(f.payload && typeof f.payload.source_ref === 'string' && f.payload.source_ref)) {
+    audit(db, 'write_rejected', { reason: 'missing_source_ref', fact_type: f.fact_type, source: f.source_agent });
+    return { ok: false, error: `'${f.fact_type}' requires payload.source_ref (Path C provenance)` };
   }
   if (f.data_class === 'client_confidential' && !f.client_id) {
     audit(db, 'write_rejected', { reason: 'missing_client_scope', fact_type: f.fact_type });

@@ -396,6 +396,25 @@ test('P0 #2: privileged writeFact (the gateway path) DOES persist supervisor_dec
   assert.equal(r.ok, true); assert.ok(r.fact_id);
 });
 
+// ── Path-C provenance guard (Codex boardroom Phase-0/1 fold): source_ref required on EVERY path ──
+test('Path C: raw writeFact REJECTS project/production_event without source_ref', () => {
+  const { db } = setupConsume();
+  for (const ft of ['project', 'production_event']) {
+    const payload = ft === 'project' ? { project_id: 'p1', name: 'X' } : { event: 'e', occurred_on: '2026-02-19' };
+    const r = writeFact(db, { fact_type: ft, visibility: 'internal', data_class: 'internal', source_agent: 'kai', subject_id: 'x', payload });
+    assert.equal(r.ok, false, `${ft} without source_ref must be refused on the raw path`);
+    assert.match(r.error, /source_ref/);
+    assert.equal(db.prepare('SELECT COUNT(*) n FROM facts WHERE fact_type=?').get(ft).n, 0, `${ft} must not persist`);
+  }
+});
+
+test('Path C: raw writeFact ACCEPTS project/production_event WITH source_ref', () => {
+  const { db } = setupConsume();
+  const r = writeFact(db, { fact_type: 'project', visibility: 'internal', data_class: 'internal', source_agent: 'kai',
+    subject_id: 'p1', payload: { project_id: 'p1', name: 'X', source_ref: 'logs/projects.json#p1' } });
+  assert.equal(r.ok, true); assert.ok(r.fact_id);
+});
+
 test('P1 #3: ack CANNOT resurrect a quarantined (dead) delivery', () => {
   const { db, cfoPubTok, cfoConsTok } = setupConsume();
   const { delivery_id } = seedFor(db, cfoPubTok, 'cfo');
